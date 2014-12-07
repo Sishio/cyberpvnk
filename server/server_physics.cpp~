@@ -1,0 +1,145 @@
+#include "server_physics.h"
+
+extern std::vector<coord_t*> coord;
+extern std::vector<coord_t*> coord_updated;
+extern std::vector<model_t*> model;
+extern std::vector<model_t*> model_updated;
+
+static double physics_time = 0;
+static double old_time = 0;
+
+static int coord_size;
+
+static void check_model(coord_t *a, model_t *b){
+	if(b == nullptr && a->model != nullptr){
+		b = a->model;
+	}
+}
+
+static char model_overlap(double *a, double *b){
+	if(a[0] <= b[1]){
+		return 1;
+		if(a[1] >= b[0]){
+			return 2;
+		}
+	}
+	return 0;
+}
+
+//static double straight_velocity(coord_t *a){
+//	return sqrt((a->x_vel*a->x_vel) + (a->y_vel*a->y_vel));
+//}
+
+static void gravity(coord_t *a, model_t *b = nullptr){
+	check_model(a,b);
+	a->y_vel -= 9.81*physics_time;
+}
+
+static bool overlap(coord_t *a, coord_t *b){
+	double x[2] = {0},x_[2] = {0};
+	double y[2] = {0},y_[2] = {0};
+	double z[2] = {0},z_[2] = {0};
+	b->model->get_size(x,y,z);
+	x[0] += b->x;
+	x[1] += b->x;
+	y[0] += b->y;
+	y[1] += b->y;
+	z[0] += b->z;
+	z[1] += b->z;
+	a->model->get_size(x_,y_,z_);
+	x_[0] += a->x;
+	x_[1] += a->x;
+	y_[0] += a->y;
+	y_[1] += a->y;
+	z_[0] += a->z;
+	z_[1] += a->z;
+	if(model_overlap(x,x_) == 2){
+		if(model_overlap(y,y_) == 2){
+			if(model_overlap(z,z_) == 2){
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+static bool same_sign(double *a, double *b){
+	if(sign(a) != sign(b)){
+		return false;
+	}
+	return true;
+}
+
+static void interaction(coord_t *a, coord_t *b){
+	if(overlap(a,b)){
+		if(same_sign(&a->x_vel,&b->x_vel)){
+			if(a->x_vel > b->x_vel){
+				b->x_vel = a->x_vel;
+			}else{
+				a->x_vel = b->x_vel;
+			}
+		}else{
+			const double mul = 1+(.25*physics_time);
+			a->x_vel /= mul;
+			b->x_vel /= mul;
+		}
+		if(same_sign(&a->y_vel,&b->y_vel)){
+			if(a->y_vel > b->y_vel){
+				b->y_vel = a->y_vel;
+			}else{
+				a->y_vel = b->y_vel;
+			}
+		}else{
+			const double mul = 1+(.25*physics_time);
+			a->y_vel /= mul;
+			b->y_vel /= mul;
+		}
+		if(same_sign(&a->z_vel,&b->z_vel)){
+			if(a->z_vel > b->z_vel){
+				b->z_vel = a->z_vel;
+			}else{
+				a->z_vel = b->z_vel;
+			}
+		}else{
+			const double mul = 1+(.25*physics_time);
+			a->z_vel /= mul;
+			b->z_vel /= mul;
+		}
+	}
+}
+
+static void sanity_check(coord_t *a){
+	if(a->mobile == false){
+		a->x_vel = a->y_vel = a->z_vel = 0;
+	}
+}
+
+static void sanity_check_inner_loop(coord_t *a, coord_t *b){
+	if(a->array->id_match(b->array->id)){
+		coord_t **c = &a;
+		coord_t **d = &b;
+		if(c == d){
+			delete b;
+			b = nullptr;
+		}
+		c = nullptr;
+		d = nullptr;
+	}
+}
+
+void physics_engine(){
+	double new_time = get_time();
+	physics_time = new_time-old_time;
+	old_time = new_time;
+	coord_size = coord.size();
+	for(int i = 0;i < coord_size;i++){
+		coord_t *a = coord[i];
+		gravity(a);
+		for(int n = i+1;n < coord_size;n++){
+			interaction(a,coord[n]); // with other objects
+			sanity_check_inner_loop(a,coord[n]);
+		}
+		sanity_check(a);
+		a = nullptr;
+	}
+}

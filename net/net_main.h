@@ -1,0 +1,36 @@
+#ifndef NET_H
+	#define NET_H
+	#include "net_serial.h"
+	#include "net_ip.h"
+	#include "thread"
+	#include "../util/util_main.h"
+	#define NET_PACKET_COORD_T_ID 0 // any single char*acter would work fine.
+	#define NET_PACKET_MODEL_T_ID 1
+	#define NET_MAJOR_SEPERATOR '\027' // end of trans. block
+	#define NET_MINOR_SEPERATOR '\037' // unit seperator
+	#define NET_SCANF_COORD_T "%d %d %f %f %f %f %f" // type, id, x,y,z,x_angle,y_angle
+	#define NET_SCANF_MODEL_T "%d %d %s %d" // type, id, alias, type (the data is sent seperately)
+	#define NET_MTU 512 // chunk the data (used in the encoding and decoding code).
+	// major seperaters seperate packets from each other and minor seperators seperate items from inside of a packet
+	#define NET_COORD 0
+	#define NET_MODEL 1
+	#define NET_MAJOR_START '\01'
+	#define NET_MINOR_START '\02'
+	#define NET_MAJOR_END '\04'
+	#define NET_MINOR_END '\03'
+	class net_t{
+	public:
+		int init_parse_parameters(int,char**);
+		int init_initialize_subsystems(int,char**);
+		std::string encode_data(unsigned char, void*);
+		net_serial_t *serial;
+		net_ip_t *ip;
+		void blank();
+		int init(int,char**);
+		int loop();
+		void close();
+		std::string read();
+		int write(std::string data, int port = 0, std::string ip_ = "");
+	};
+	extern void net_loop(net_t*);
+#endif
