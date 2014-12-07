@@ -134,7 +134,13 @@ int main(int argc, char **argv){
 	argv_ = argv;
 	init();
 	signal(SIGINT, signal_handler);
-	for(unsigned long int i = 0;i < 2048;i++) new_init_coord_t();
+	for(unsigned long int i = 0;i < 32768;i++){
+		new_init_coord_t();
+		unsigned long int a = coord.size()-1;
+		coord[a]->x = gen_rand();
+		coord[a]->y = gen_rand();
+		coord[a]->z = gen_rand();
+	}
 	printf("Starting the main loop\n");
 	while(terminate == false){
 		physics_engine();

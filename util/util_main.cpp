@@ -21,7 +21,7 @@ int util_shell(int function,char* parameter){ // Keeps most of the OS pre-proces
 	return return_value;
 }
 
-void ms_sleep(double ms){
+void ms_sleep(long double ms){
 	#ifdef __linux
 		usleep((unsigned int)(1000*ms));
 	#elif USE_SDL
@@ -63,7 +63,7 @@ short int warn_if_true(bool a, char* details = NULL){
 	return 0;
 }
 
-bool double_cmp(double a,double b,double degree_of_error){
+bool double_cmp(long double a,long double b,long double degree_of_error){
 	if(a-degree_of_error < b){
 		if(a+degree_of_error > b){
 			return true;
@@ -72,17 +72,17 @@ bool double_cmp(double a,double b,double degree_of_error){
 	return false;
 }
 
-double get_time(){
+long double get_time(){
 	#ifdef _WIN32
 		return SDL_GetTicks()/1000; // piece of crap timer, needs sleep
 	#elif __linux // possibly OS X?
 		timespec a;
 		clock_gettime(CLOCK_MONOTONIC, &a); // greatest timer in the world, does not need any sleep
-		return (double)a.tv_nsec/(double)1000000000.0;
+		return a.tv_sec + ((long double)a.tv_nsec/(long double)1000000000.0);
 	#endif
 }
 
-bool sign(double *a){
+bool sign(long double *a){
 	if(*a > 0){
 		return true;
 	}

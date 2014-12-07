@@ -24,21 +24,21 @@
 	#define UTIL_TIME_SECOND 1
 	class timer_struct_t{
 	private:
-		double start_time;
-		double end_time;
+		long double start_time;
+		long double end_time;
 		int type;
 	public:
 		void start_timer();
 		void end_timer();
-		double get_time(int);
+		long double get_time(int);
 	};
 	extern int util_shell(int,char*);
-	extern void ms_sleep(double);
+	extern void ms_sleep(long double);
 	extern unsigned long int gen_rand(unsigned int a = UINT_MAX);
 	extern short int term_if_true(bool, char*);
 	extern short int warn_if_true(bool, char*);
-	extern bool double_cmp(double a,double b,double degree_of_error = (double)0.001);
+	extern bool long_double_cmp(long double a,long double b,long double degree_of_error = (long double)0.001);
 	extern bool probably_equal(int,int);
-	extern double get_time();
-	extern bool sign(double*);
+	extern long double get_time();
+	extern bool sign(long double*);
 #endif

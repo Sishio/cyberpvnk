@@ -3,27 +3,27 @@
 void coord_t::init(){
 	x = y = z = x_angle = y_angle = x_vel = y_vel = z_vel = 0;
 	physics_time = 0;
-	old_time = 0;
+	old_time = get_time();
 	model = nullptr;
 	mobile = true;
 	array = new array_t(ARRAY_HEADER_COORD_T);
-	array->double_array.push_back(&x);
-	array->double_array.push_back(&y);
-	array->double_array.push_back(&z);
-	array->double_array.push_back(&x_angle);
-	array->double_array.push_back(&y_angle);
-	array->double_array.push_back(&x_vel);
-	array->double_array.push_back(&y_vel);
-	array->double_array.push_back(&z_vel);
+	array->long_double_array.push_back(&x);
+	array->long_double_array.push_back(&y);
+	array->long_double_array.push_back(&z);
+	array->long_double_array.push_back(&x_angle);
+	array->long_double_array.push_back(&y_angle);
+	array->long_double_array.push_back(&x_vel);
+	array->long_double_array.push_back(&y_vel);
+	array->long_double_array.push_back(&z_vel);
 }
 
 void coord_t::print(){
-	printf("X:%f\tY:%f\tZ:%f\n",x,y,z);
-	printf("Vel_x:%f\tVel_Y:%f\tVel_z:%f\n",x_vel,y_vel,z_vel);
-	printf("X_angle:%f\tY_angle:%f\n",x_angle,y_angle);
+	printf("X:%Lf\tY:%Lf\tZ:%Lf\n",x,y,z);
+	printf("Vel_x:%Lf\tVel_Y:%Lf\tVel_z:%Lf\n",x_vel,y_vel,z_vel);
+	printf("X_angle:%Lf\tY_angle:%Lf\n",x_angle,y_angle);
 }
 
-void coord_t::set_x_angle(bool add, double a){
+void coord_t::set_x_angle(bool add, long double a){
 	if(add){
 		x_angle += a;
 		while(x_angle > 360) x_angle -= 360;
@@ -31,7 +31,7 @@ void coord_t::set_x_angle(bool add, double a){
 	}else x_angle = a;
 }
 
-void coord_t::set_y_angle(bool add, double a){
+void coord_t::set_y_angle(bool add, long double a){
 	if(add){
 		y_angle += a;
 		while(y_angle > 360) y_angle -= 360;
@@ -49,7 +49,7 @@ void model_t::init(){
 	array = new array_t(ARRAY_HEADER_MODEL_T);
 }
 
-void model_t::get_size(double *x, double *y, double *z){
+void model_t::get_size(long double *x, long double *y, long double *z){
 	const int vertex_size = v.size();
 	for(int i = 0;i < vertex_size;i++){
 		if(x[0] > v[i][0]){
@@ -117,11 +117,11 @@ void client_t::init(){
 	net.init();
 	array = new array_t(ARRAY_HEADER_CLIENT_T);
 	for(unsigned int i = 0;i < coord->array->int_array.size();i++) coord->array->int_array.push_back(coord->array->int_array[i]);
-	for(unsigned int i = 0;i < coord->array->double_array.size();i++) coord->array->double_array.push_back(coord->array->double_array[i]);
-	for(unsigned int i = 0;i < coord->array->double_array.size();i++) coord->array->double_array.push_back(coord->array->double_array[i]);
+	for(unsigned int i = 0;i < coord->array->long_double_array.size();i++) coord->array->long_double_array.push_back(coord->array->long_double_array[i]);
+	for(unsigned int i = 0;i < coord->array->string_array.size();i++) coord->array->string_array.push_back(coord->array->string_array[i]);
         for(unsigned int i = 0;i < model->array->int_array.size();i++) model->array->int_array.push_back(model->array->int_array[i]);
-        for(unsigned int i = 0;i < model->array->double_array.size();i++) model->array->double_array.push_back(model->array->double_array[i]);
-        for(unsigned int i = 0;i < model->array->double_array.size();i++) model->array->double_array.push_back(model->array->double_array[i]);
+        for(unsigned int i = 0;i < model->array->long_double_array.size();i++) model->array->long_double_array.push_back(model->array->long_double_array[i]);
+        for(unsigned int i = 0;i < model->array->string_array.size();i++) model->array->string_array.push_back(model->array->string_array[i]);
 }
 
 void client_t::close(){

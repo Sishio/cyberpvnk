@@ -1,5 +1,6 @@
 CC=clang++
-CFLAGS=-std=c++11 -Wall -Werror -Wextra -Wno-error=unused-parameter -g
+MACROS=
+CFLAGS=-std=c++11 -Wall -Werror -Wextra -g -Wno-error=unused-parameter $(MACROS)
 LINKER=-lSDL2 -lm -lGL -lSDL2_net -pthread
 
 server:

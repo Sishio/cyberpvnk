@@ -17,22 +17,23 @@
 		std::vector<std::vector<std::vector<int> > > f;  // faces
 		void init();
 		void load(std::string);
-		void get_size(double*,double*,double*);
+		void get_size(long double*, long double*, long double*);
 		void close();
 	};
 	class coord_t{
 	public:
 		array_t *array;
-		double x,y,z,x_angle,y_angle;
-		double x_vel,y_vel,z_vel;
-		double physics_time;
-		double old_time;
+		long double x,y,z,x_angle,y_angle;
+		long double x_vel,y_vel,z_vel;
+		long double physics_time;
+		long double old_time;
 		bool mobile;
 		void init();
 		void print();
-		void set_x_angle(bool,double);
-		void set_y_angle(bool,double);
+		void set_x_angle(bool,long double);
+		void set_y_angle(bool,long double);
 		void close();
+		std::vector<unsigned long int> nearby_coord;
 		model_t *model;
 	};
 	class net_data_t{

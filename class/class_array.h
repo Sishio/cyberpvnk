@@ -19,7 +19,7 @@
 		int header;
 		unsigned long int id;
 		std::vector<int*> int_array;
-		std::vector<double*> double_array;
+		std::vector<long double*> long_double_array;
 		std::vector<std::string*> string_array;
 		array_t(int);
 		bool id_match(unsigned long int);

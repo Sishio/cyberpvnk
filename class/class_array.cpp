@@ -20,19 +20,19 @@ std::string array_t::gen_string(){
 		int_string += wrap(ARRAY_ITEM_SEPARATOR_START,std::to_string(*int_array[i]),ARRAY_ITEM_SEPARATOR_END);
 	}
 	int_string = wrap(ARRAY_TYPE_SEPARATOR_START,int_string,ARRAY_TYPE_SEPARATOR_END);
-	static int double_size = double_array.size();
-	std::string double_string = "";
-	for(int i = 0;i < double_size;i++){
-		double_string += wrap(ARRAY_ITEM_SEPARATOR_START,std::to_string(*double_array[i]),ARRAY_ITEM_SEPARATOR_END);
+	static int long_double_size = long_double_array.size();
+	std::string long_double_string = "";
+	for(int i = 0;i < long_double_size;i++){
+		long_double_string += wrap(ARRAY_ITEM_SEPARATOR_START,std::to_string(*long_double_array[i]),ARRAY_ITEM_SEPARATOR_END);
 	}
-	double_string = wrap(ARRAY_TYPE_SEPARATOR_START,double_string,ARRAY_TYPE_SEPARATOR_END);
+	long_double_string = wrap(ARRAY_TYPE_SEPARATOR_START,long_double_string,ARRAY_TYPE_SEPARATOR_END);
 	static int string_size = string_array.size();
 	std::string string_string = "";
 	for(int i = 0;i < string_size;i++){
 		string_string += wrap(ARRAY_ITEM_SEPARATOR_START,*string_array[i],ARRAY_ITEM_SEPARATOR_END);
 	}
 	string_string = wrap(ARRAY_TYPE_SEPARATOR_START,string_string,ARRAY_TYPE_SEPARATOR_END);
-	return std::to_string(header) + int_string + double_string + string_string;
+	return std::to_string(header) + int_string + long_double_string + string_string;
 }
 
 void array_t::parse_string(std::string a){
@@ -49,10 +49,10 @@ void array_t::parse_string(std::string a){
 			*int_array[i] = atoi(data.c_str());
 			array[0] = array[0].substr(array[0].find_first_of(ARRAY_ITEM_SEPARATOR_END)+1,sizeof(array[0].c_str()));
 		}
-		static int double_size = double_array.size();
-		for(int i = 0;i < double_size;i++){
+		static int long_double_size = long_double_array.size();
+		for(int i = 0;i < long_double_size;i++){
 			std::string data = array[1].substr(array[i].find_first_of(ARRAY_ITEM_SEPARATOR_START),array[1].find_first_of(ARRAY_ITEM_SEPARATOR_END));
-			*double_array[i] = atof(data.c_str());
+			*long_double_array[i] = atof(data.c_str());
 			array[1] = array[1].substr(array[1].find_first_of(ARRAY_ITEM_SEPARATOR_END)+1,sizeof(array[1]));
 		}
 		static int string_size = string_array.size();
@@ -67,5 +67,5 @@ void array_t::parse_string(std::string a){
 void array_t::close(){
 	int_array.clear();
 	string_array.clear();
-	double_array.clear();
+	long_double_array.clear();
 }
