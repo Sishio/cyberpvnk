@@ -12,5 +12,7 @@ rm -r util/obj
 mkdir util/obj
 rm -r server/obj
 mkdir server/obj
+rm -r net/obj
+mkdir net/obj
 rm -r bin
 mkdir bin
