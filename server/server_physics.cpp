@@ -1,9 +1,27 @@
+/*
+Czech_mate by Daniel
+This file is part of Czech_mate.
+
+Czech_mate is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License Version 2 as published by
+the Free Software Foundation, 
+
+Czech_mate is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #include "server_physics.h"
 
 extern std::vector<coord_t*> coord;
 extern std::vector<coord_extra_t> coord_extra;
 extern std::vector<model_t*> model;
 extern std::vector<model_extra_t> model_extra;
+extern int scan_model_for_id(int);
+extern bool terminate;
 
 extern thread_t *thread;
 
@@ -20,7 +38,6 @@ static bool once_per_second = false;
 #define X_PLANE 'x'
 #define Y_PLANE 'y'
 #define Z_PLANE 'z'
-#define THREAD_COUNT 2
 
 static bool overlap_single_plane(const long double *a){ // 0 & 1 are the minimum and maximum for one, 2 & 3 are the same for the other respectively
 	return (a[0] >= a[4] && a[1] <= a[3]);
@@ -34,8 +51,11 @@ static void coord_get_model_size(coord_t *a, long double *x, long double *y, lon
 	x[0] = x[1] = a->x;
 	y[0] = y[1] = a->y;
 	z[0] = z[1] = a->z;
-	if(a->model != nullptr){
-		a->model->get_size(&x[0],&y[0],&z[0]);
+	if(a->model_id != -1){
+		int model_entry = scan_model_for_id(a->model_id);
+		if(model_entry != -1){
+			model[model_entry]->get_size(&x[0],&y[0],&z[0]);
+		}
 	}
 }
 
@@ -80,7 +100,7 @@ static void interaction_overlap_correct_velocities(long double *a, long double *
 }
 
 static void interaction(coord_t *a, coord_t *b){
-	if(unlikely(overlap(a,b))){
+	if(overlap(a,b)){
 		interaction_overlap_correct_velocities(&a->x_vel,&b->x_vel);
 		interaction_overlap_correct_velocities(&a->y_vel,&b->y_vel);
 		interaction_overlap_correct_velocities(&a->z_vel,&b->z_vel);
@@ -88,7 +108,8 @@ static void interaction(coord_t *a, coord_t *b){
 }
 
 static bool coord_check_if_nearby_in_vector(std::vector<unsigned long int> *a, unsigned long int b, unsigned int *c){
-	for(*c = 0;*c < a->size();*c += 1){
+	unsigned int a_size = a->size();
+	for(*c = 0;*c < a_size;*c += 1){
 		if((*a)[*c] == b){
 			return true;
 		}
@@ -108,21 +129,23 @@ static void coord_check_if_nearby_update(std::vector<unsigned long int> *a, unsi
 }
 
 static void coord_check_if_nearby(unsigned long int i, unsigned long int n){
-	bool overlap_ = overlap(coord[i],coord[n],5);
+	bool overlap_ = overlap(coord[i],coord[n],5); // should it be there?
 	coord_check_if_nearby_update(&coord[i]->nearby_coord,n,overlap_);
 	coord_check_if_nearby_update(&coord[n]->nearby_coord,i,overlap_);
 }
 
-static void physics_engine_loop_ops(unsigned long int i){
-	for(unsigned long int n = i+1;n < coord_size;n++){
-		coord_check_if_nearby(i,n);
+static void physics_engine_loop_ops(){
+	for(unsigned long int i = 0;i < coord_size;i++){
+		for(unsigned long int n = i+1;n < coord_size;n++){
+			coord_check_if_nearby(i,n);
+			if(unlikely(terminate)){
+				return;
+			}
+		}
 	}
 }
 
 static void physics_engine_loop(unsigned long int *i){
-	if(once_per_second){
-		static std::thread a(physics_engine_loop_ops,*i);
-	}
 	const unsigned long int i_size = coord[*i]->nearby_coord.size();
 	for(unsigned long int n = 0;n < i_size;n++){
 		interaction(coord[*i],coord[n]);
@@ -154,14 +177,21 @@ static void update_vector_sizes(){
 
 void physics_engine(){
 	update_vector_sizes();
-	if(coord.size() > 0){
+	if(likely(coord_size > 0)){
 		printf("physics_time:%Lf\n",coord[0]->physics_time);
 		total_time += coord[0]->physics_time;
 		once_per_second_time += coord[0]->physics_time;
 		once_per_second_update();
 	}
+	if(once_per_second){
+		if(coord_size > OPS_THRESHOLD){ // I need to make a header file full of macros so people can put their own data into here
+			static std::thread a(physics_engine_loop_ops);
+		}else{
+			physics_engine_loop_ops();
+		}
+	}
 	#ifndef DISABLE_PHYSICS_THREAD
-	if(coord_size > 1024){
+	if(coord_size > MAIN_PHYSICS_THRESHOLD){
 	#else
 	if(false){
 	#endif
@@ -187,7 +217,6 @@ void physics_engine(){
 
 void new_init_coord_t(){
 	coord.push_back(new coord_t);
-	coord[coord.size()-1]->init();
 	coord_extra_t b;
 	coord_extra.push_back(b);
 	term_if_true(coord_extra.size() != coord.size(),const_cast<char*>("coord_extra.size() != coord.size()"));
@@ -206,7 +235,6 @@ void delete_close_coord_t(coord_t *a){
 
 void new_init_model_t(){
 	model.push_back(new model_t);
-	model[model.size()-1]->init();
 	model_extra_t b;
 	model_extra.push_back(b);
 	term_if_true(model_extra.size() != model.size(),(char*)"model sizes do not match\n");
@@ -225,18 +253,16 @@ void delete_close_model_t(model_t *a){
 }
 
 static void coord_physics_iteration(coord_t *a){
-	term_if_true(a == nullptr || a == nullptr,(char*)"coord_physics_iteration a is NULL\n");
+	//term_if_true(a == nullptr || a == nullptr,(char*)"coord_physics_iteration a is NULL\n");
 	long double time = get_time();
 	a->physics_time = time-a->old_time;
 	a->old_time = time;
-	if(a->physics_time > 0){
-		if(a->mobile){
-			a->x += a->x_vel*a->physics_time;
-			a->y_vel += GRAVITY_RATE*a->physics_time;
-			a->y += a->y_vel*a->physics_time;
-			a->z += a->z_vel*a->physics_time;
-		}else{
-			a->x_vel = a->y_vel = a->z_vel = 0;
-		}
+	if(a->mobile){
+		a->x += a->x_vel*a->physics_time;
+		a->y_vel += GRAVITY_RATE*a->physics_time;
+		a->y += a->y_vel*a->physics_time;
+		a->z += a->z_vel*a->physics_time;
+	}else{
+		a->x_vel = a->y_vel = a->z_vel = 0;
 	}
 }

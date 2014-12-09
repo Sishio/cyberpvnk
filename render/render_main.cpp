@@ -127,15 +127,13 @@ void render_t::init_load_models(){
 	}*/
 }
 
-int render_t::init(int argc, char** argv){
-	int return_value = 0;
+render_t::render_t(int argc, char** argv){
 	init_configure_buffer();
 	init_subsystems();
 	blank();
 	init_parse_parameters(argc,argv);
 	init_generate_window(); // also takes care of gl* defaults
 	// OpenGL powers go under the rules
-	return return_value;
 }
 
 void render_t::loop_render_buffer(){
@@ -177,10 +175,8 @@ void render_t::loop_update(){
 
 void render_t::loop_init(){
 	glClearColor(0,0,0,1);
-	if(probably_equal(tick,0) == false){
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-	}
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
 	for(int i = 0;i < 2;i++){
 		if(i == 0) glMatrixMode(GL_MODELVIEW);
 		else glMatrixMode(GL_PROJECTION);
@@ -206,7 +202,7 @@ void render_t::loop_render_screen(){
 
 int render_t::loop(){ // TODO: Divide this up into smaller chunks
 	int return_value = 0;
-	if(tick%100 == 0) render_context = SDL_GL_CreateContext(render_screen);
+	if(tick%100) render_context = SDL_GL_CreateContext(render_screen);
 	loop_init();
 	loop_update();
 	loop_render_buffer();

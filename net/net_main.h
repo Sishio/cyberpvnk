@@ -1,7 +1,24 @@
+/*
+Czech_mate by Daniel
+This file is part of Czech_mate.
+
+Czech_mate is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License Version 2 as published by
+the Free Software Foundation, 
+
+Czech_mate is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #ifndef NET_H
 	#define NET_H
 	#include "net_serial.h"
 	#include "net_ip.h"
+	#include "net_store.h" // stores the data
 	#include "thread"
 	#include "../util/util_main.h"
 	#define NET_PACKET_COORD_T_ID 0 // any single char*acter would work fine.
@@ -26,11 +43,12 @@
 		net_serial_t *serial;
 		net_ip_t *ip;
 		void blank();
-		int init(int,char**);
+		net_t(int,char**);
 		int loop();
 		void close();
 		std::string read();
-		int write(std::string data, int port = 0, std::string ip_ = "");
+		int write(std::string, net_ip_connection_data_t);
+		int write(std::string, net_serial_connection_data_t);
 	};
 	extern void net_loop(net_t*);
 #endif

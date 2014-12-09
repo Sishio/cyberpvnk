@@ -1,10 +1,26 @@
+/*
+Czech_mate by Daniel
+This file is part of Czech_mate.
+
+Czech_mate is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License Version 2 as published by
+the Free Software Foundation, 
+
+Czech_mate is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #include "class_main.h"
 
-void coord_t::init(){
+coord_t::coord_t(){
 	x = y = z = x_angle = y_angle = x_vel = y_vel = z_vel = 0;
 	physics_time = 0;
 	old_time = get_time();
-	model = nullptr;
+	model_id = -1;
 	mobile = true;
 	array = new array_t(ARRAY_HEADER_COORD_T);
 	array->long_double_array.push_back(&x);
@@ -15,6 +31,7 @@ void coord_t::init(){
 	array->long_double_array.push_back(&x_vel);
 	array->long_double_array.push_back(&y_vel);
 	array->long_double_array.push_back(&z_vel);
+	array->int_array.push_back(&model_id);
 }
 
 void coord_t::print(){
@@ -45,7 +62,7 @@ void coord_t::close(){
 	array = nullptr;
 }
 
-void model_t::init(){
+model_t::model_t(){
 	array = new array_t(ARRAY_HEADER_MODEL_T);
 }
 
@@ -76,10 +93,10 @@ void model_t::load_parse_vector(std::string a){
 	ss << a;
 	ss >> data[0] >> data[1] >> data[2] >> data[3];
 	std::vector<double> b;
+	b.push_back(atof(data[1].c_str()));
+	b.push_back(atof(data[2].c_str()));
+	b.push_back(atof(data[3].c_str()));
 	v.push_back(b);
-	v[v.size()-1].push_back(atof(data[1].c_str()));
-	v[v.size()-1].push_back(atof(data[2].c_str()));
-	v[v.size()-1].push_back(atof(data[3].c_str()));
 }
 
 void model_t::load(std::string a){
@@ -109,19 +126,20 @@ void model_t::close(){
 	array = nullptr;
 }
 
-void client_t::init(){
+client_t::client_t(){
+	printf("\tAllocating & initializing coord\n");
 	coord = new coord_t;
+	printf("\tAllocating & initializing model\n");
 	model = new model_t;
-	coord->init();
-	model->init();
-	net.init();
+	printf("\tAllocating & initializing array\n");
 	array = new array_t(ARRAY_HEADER_CLIENT_T);
-	for(unsigned int i = 0;i < coord->array->int_array.size();i++) coord->array->int_array.push_back(coord->array->int_array[i]);
-	for(unsigned int i = 0;i < coord->array->long_double_array.size();i++) coord->array->long_double_array.push_back(coord->array->long_double_array[i]);
-	for(unsigned int i = 0;i < coord->array->string_array.size();i++) coord->array->string_array.push_back(coord->array->string_array[i]);
-        for(unsigned int i = 0;i < model->array->int_array.size();i++) model->array->int_array.push_back(model->array->int_array[i]);
-        for(unsigned int i = 0;i < model->array->long_double_array.size();i++) model->array->long_double_array.push_back(model->array->long_double_array[i]);
-        for(unsigned int i = 0;i < model->array->string_array.size();i++) model->array->string_array.push_back(model->array->string_array[i]);
+	printf("\tLoading data into the array\n");
+	for(unsigned long int i = 0;i < coord->array->int_array.size();i++) array->int_array.push_back(coord->array->int_array[i]);
+	for(unsigned long int i = 0;i < coord->array->long_double_array.size();i++) array->long_double_array.push_back(coord->array->long_double_array[i]);
+	for(unsigned long int i = 0;i < coord->array->string_array.size();i++) array->string_array.push_back(coord->array->string_array[i]);
+        for(unsigned long int i = 0;i < model->array->int_array.size();i++) array->int_array.push_back(model->array->int_array[i]);
+        for(unsigned long int i = 0;i < model->array->long_double_array.size();i++) array->long_double_array.push_back(model->array->long_double_array[i]);
+        for(unsigned long int i = 0;i < model->array->string_array.size();i++) array->string_array.push_back(model->array->string_array[i]);
 }
 
 void client_t::close(){
@@ -132,7 +150,7 @@ void client_t::close(){
 	coord = nullptr;
 	model = nullptr;
 }
-void net_data_t::init(){
+net_data_t::net_data_t(){
 	ip = "";
 	port = 0;
 }

@@ -38,13 +38,12 @@ int net_t::init_initialize_subsystems(int argc, char** argv){
 	return 0;
 }
 
-int net_t::init(int argc, char** argv){
+net_t::net_t(int argc, char** argv){
 	ip = nullptr;
 	serial = nullptr;
 	blank();
 	init_parse_parameters(argc,argv);
 	init_initialize_subsystems(argc,argv);
-	return 0;
 }
 
 int net_t::loop(){
@@ -55,12 +54,15 @@ int net_t::loop(){
 	}else printf("No networking protocol has been selected. Your 2 options (as parameters) are --net-ip and --net-serial.\n");
 	return 0;
 }
-int net_t::write(std::string data, int port, std::string ip_){ // the data should be sent to the server regardless
-	if(ip != nullptr){
-		ip->write(data,port,ip_);
-	}else if(serial != nullptr){
-		serial->write(data);
-	}
+int net_t::write(std::string data, net_ip_connection_data_t a){ // the data should be sent to the server regardless
+	term_if_true(ip == nullptr,(char*)"ip write when ip == nullptr\n");
+	ip->write(data,a);
+	return 0;
+}
+
+int net_t::write(std::string data, net_serial_connection_data_t a){
+	term_if_true(serial == nullptr,(char*)"serial write when serial == nullptr\n");
+	serial->write(data,a);
 	return 0;
 }
 

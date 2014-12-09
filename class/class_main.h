@@ -1,6 +1,23 @@
+/*
+Czech_mate by Daniel
+This file is part of Czech_mate.
+
+Czech_mate is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License Version 2 as published by
+the Free Software Foundation, 
+
+Czech_mate is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #ifndef CLASS_MAIN_H
 	#define CLASS_MAIN_H
 	#include "class_array.h"
+	#include "class_extra.h"
 	#include "sstream"
 	#include "vector"
 	#define COORD_POINTER_SIZE 1024
@@ -15,7 +32,7 @@
 		std::vector<std::vector<double> > vn;    // vector normal
 		std::vector<std::vector<double> > vp;
 		std::vector<std::vector<std::vector<int> > > f;  // faces
-		void init();
+		model_t();
 		void load(std::string);
 		void get_size(long double*, long double*, long double*);
 		void close();
@@ -28,19 +45,19 @@
 		long double physics_time;
 		long double old_time;
 		bool mobile;
-		void init();
+		coord_t();
 		void print();
 		void set_x_angle(bool,long double);
 		void set_y_angle(bool,long double);
 		void close();
 		std::vector<unsigned long int> nearby_coord;
-		model_t *model;
+		int model_id;
 	};
 	class net_data_t{
 	public:
 		std::string ip;
 		unsigned short int port;
-		void init();
+		net_data_t();
 	};
 	class client_t{
 	public:
@@ -48,7 +65,7 @@
 		coord_t *coord;
 		model_t *model;
 		net_data_t net;
-		void init();
+		client_t();
 		void close();
 	};
 #endif

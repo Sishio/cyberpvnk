@@ -1,3 +1,19 @@
+/*
+Czech_mate by Daniel
+This file is part of Czech_mate.
+
+Czech_mate is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License Version 2 as published by
+the Free Software Foundation, 
+
+Czech_mate is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #ifndef C_INPUT_H
 	#define C_INPUT_H
 	#include "../main.h"
@@ -60,9 +76,8 @@
 			SDL_Event event;
 			void standard_input_check();
 		public:
-			coord_t *coord;
 			void blank();
-			int init(int,char**);
+			input_t(int,char**);
 			bool query_key(input_buffer_t* buffer = NULL,int sdl_key = 0,char key = '\0');
 			int loop();
 			void close();

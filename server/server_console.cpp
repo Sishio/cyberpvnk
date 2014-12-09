@@ -10,7 +10,7 @@ extern std::vector<coord_t*> coord;
 net_t *console_net;
 
 void console_init(){
-	console_net = new net_t;
+	console_net = new net_t(argc_,argv_);
 	console_net->ip = new net_ip_t;
 	console_net->ip->init(argc_, argv_);
 	console_net->ip->set_receive_port(NET_CONSOLE_PORT);

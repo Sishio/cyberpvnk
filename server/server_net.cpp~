@@ -1,0 +1,38 @@
+#include "server_net.h"
+
+net_t *net;
+
+void net_engine(){
+	// remember, the net->loop is in another thread that started with net->init
+	std::string data = "";
+	while((data = net->read()) != ""){
+		switch(data[0]){
+		case ARRAY_HEADER_COORD_T:
+			if(true){
+				coord_t a;
+				a.array->parse_string(data);
+				store_coord_t(a,&coord,&coord_extra);
+			}
+			break;
+		case ARRAY_HEADER_MODEL_T:
+			if(true){
+				model_t a;
+				a.array->parse_string(data);
+				store_model_t(a,&model,&model_extra);
+			}
+			break;
+		//case ARRAY_HEADER_CLIENT_T:
+		//	if(true){
+		//		client_t a;
+		//		a.init();
+		//		a.array->parse_string(data);
+		//		store_client_t(a);
+		//	}
+		//	break;
+		default: // either no data or the first digit is zero
+			break;
+		}
+	}
+	send_model_t();
+	send_coord_t(); // everything
+}

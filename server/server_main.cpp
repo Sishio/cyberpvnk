@@ -28,13 +28,7 @@ static void init_load_map_parse_line(std::string *a){
 		b->set_x_angle(false,atof(a[4].c_str()));
 		b->set_y_angle(false,atof(a[5].c_str()));
 		b->array->id = atoi(a[6].c_str());
-		unsigned long int model_id = atoi(a[7].c_str());
-		for(unsigned long int i = 0;i < model.size();i++){
-			if(model[i]->array->id_match(model_id)){
-				b->model = model[i];
-				break;
-			}
-		}
+		b->model_id = atoi(a[7].c_str());
 	}
 }
 
@@ -85,13 +79,21 @@ static void init_load_models(std::string model_list_name = "model.list"){
 }
 
 static void init(){
-	net = new net_t;
-	net->init(argc_,argv_);
+	net = new net_t(argc_,argv_);
 	console_init();
 	thread = new thread_t;
 	thread->init(argc_,argv_);
 	init_load_models();
 	init_load_map();
+}
+
+int scan_model_for_id(int id){
+	for(int i = 0;i < model.size();i++){
+		if(model[i]->array->id_match(id)){
+			return i;
+		}
+	}
+	return -1;
 }
 
 static void close(){
@@ -134,7 +136,7 @@ int main(int argc, char **argv){
 	argv_ = argv;
 	init();
 	signal(SIGINT, signal_handler);
-	for(unsigned long int i = 0;i < 32768;i++){
+	for(unsigned long int i = 0;i < 1024;i++){
 		new_init_coord_t();
 		unsigned long int a = coord.size()-1;
 		coord[a]->x = gen_rand();
@@ -148,5 +150,6 @@ int main(int argc, char **argv){
 		console_engine();
 	}
 	close();
+	ms_sleep(1000); // wait for threads without references to stop
 	return 0;
 }

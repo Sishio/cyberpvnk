@@ -1,5 +1,11 @@
 #include "net_ip.h"
 
+net_ip_connection_data_t::net_ip_connection_data_t(){
+	ip = "";
+	port = 0;
+	connection_type = NET_IP_CONNECTION_TYPE_UNDEFINED;
+}
+
 void net_ip_info_t::blank(){
 	server_ip = (char*)"127.0.0.1";
 	server_port = 0;
