@@ -26,9 +26,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "string"
 	#include "SDL2/SDL.h"
 	#include "SDL2/SDL_net.h"
-	class net_ip_connection_data_t{
+	class net_ip_connection_info_t{
 	public:
-		net_ip_connection_data_t();
+		net_ip_connection_info_t();
 		char connection_type; // UDP or TCP
 		std::string ip;
 		unsigned short int port;
@@ -62,7 +62,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void set_receive_port(unsigned short int);
 		int init(int,char**);
 		std::string read();
-		int write(std::string, unsigned short int, std::string);
+		int write(std::string, net_ip_connection_info_t);
 		void send_now(net_ip_write_buffer_t);
 		std::string receive_now();
 		void loop();

@@ -54,13 +54,13 @@ int net_t::loop(){
 	}else printf("No networking protocol has been selected. Your 2 options (as parameters) are --net-ip and --net-serial.\n");
 	return 0;
 }
-int net_t::write(std::string data, net_ip_connection_data_t a){ // the data should be sent to the server regardless
+int net_t::write(std::string data, net_ip_connection_info_t a){ // the data should be sent to the server regardless
 	term_if_true(ip == nullptr,(char*)"ip write when ip == nullptr\n");
 	ip->write(data,a);
 	return 0;
 }
 
-int net_t::write(std::string data, net_serial_connection_data_t a){
+int net_t::write(std::string data, net_serial_connection_info_t a){
 	term_if_true(serial == nullptr,(char*)"serial write when serial == nullptr\n");
 	serial->write(data,a);
 	return 0;

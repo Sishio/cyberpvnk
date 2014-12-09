@@ -18,6 +18,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define NET_SERIAL_H
 	#include "cstdio"
 	#include "iostream"
+	class net_serial_connection_info_t{
+		net_serial_connection_info_t();
+		char port;
+	};
 	class net_serial_t{
 	public:
 		void blank();
@@ -25,6 +29,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void loop();
 		void close();
 		std::string read();
-		void write(std::string);
+		void write(std::string, net_serial_connection_info_t);
 	};
 #endif

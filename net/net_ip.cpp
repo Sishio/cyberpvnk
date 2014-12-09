@@ -1,6 +1,6 @@
 #include "net_ip.h"
 
-net_ip_connection_data_t::net_ip_connection_data_t(){
+net_ip_connection_info_t::net_ip_connection_info_t(){
 	ip = "";
 	port = 0;
 	connection_type = NET_IP_CONNECTION_TYPE_UNDEFINED;
@@ -52,13 +52,13 @@ std::string net_ip_t::read(){
 	return (std::string)"";
 }
 
-int net_ip_t::write(std::string data, unsigned short int port, std::string ip){
+int net_ip_t::write(std::string data, net_ip_connection_info_t b){
 	int return_value = 0;
 	const int outbound_size = write_buffer.size();
 	for(int i = 0;i < outbound_size;i++){
 		if(write_buffer[i].data == ""){
-			write_buffer[i].port = port;
-			write_buffer[i].ip = ip;
+			write_buffer[i].port = b.port;
+			write_buffer[i].ip = b.ip;
 			write_buffer[i].data = data;
 			break;
 		}

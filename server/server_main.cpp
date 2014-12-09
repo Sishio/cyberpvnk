@@ -88,7 +88,7 @@ static void init(){
 }
 
 int scan_model_for_id(int id){
-	for(int i = 0;i < model.size();i++){
+	for(unsigned int i = 0;i < model.size();i++){
 		if(model[i]->array->id_match(id)){
 			return i;
 		}

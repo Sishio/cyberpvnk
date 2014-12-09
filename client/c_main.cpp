@@ -96,6 +96,7 @@ int main(int argc, char **argv){
 	#endif
 	while(terminate == false){
 		loop();
+		printf("Ended one iteration\n");
 		tick++;
 	}
 	close();

@@ -150,7 +150,3 @@ void client_t::close(){
 	coord = nullptr;
 	model = nullptr;
 }
-net_data_t::net_data_t(){
-	ip = "";
-	port = 0;
-}

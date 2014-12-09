@@ -23,7 +23,11 @@ static void net_engine_parse(std::string *a){
 }
 static coord_t *old_coord = nullptr;
 
+static net_ip_connection_info_t server_connection_info;
+
 void net_engine(){
+	server_connection_info.ip = "127.0.0.1";
+	server_connection_info.port = 50000;
 	std::string a;
 	while((a = net->read()) != ""){
 		net_engine_parse(&a);
@@ -32,7 +36,7 @@ void net_engine(){
 		old_coord = new coord_t;
 	}
 	if(memcmp(&old_coord,self->coord,sizeof(coord_t)) != 0){
-		net->write(self->array->gen_string(), server_connection_data);
+		net->write(self->array->gen_string(), server_connection_info);
 	}
 	memcpy(&old_coord,self->coord,sizeof(coord_t)); //padding
 }

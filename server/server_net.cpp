@@ -10,7 +10,7 @@ static void send_coord_t(){
 			const unsigned long int client_size = client.size();
 			for(unsigned long int n = 0;n < client_size;n++){
 				if(client[n] != nullptr){
-					net->write(data,client[n]->net.port,client[n]->net.ip);
+					net->write(data,client[n]->net_ip_connection_info);
 				}
 			}
 		}
@@ -25,7 +25,7 @@ static void send_model_t(){
 			const unsigned long int client_size = client.size();
 			for(unsigned long int n = 0;n < client_size;n++){
 				if(client[i] != nullptr){
-					net->write(data,client[i]->net.port,client[n]->net.ip);
+					net->write(data,client[n]->net_ip_connection_info);
 				}
 			}
 		}

@@ -47,8 +47,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		int loop();
 		void close();
 		std::string read();
-		int write(std::string, net_ip_connection_data_t);
-		int write(std::string, net_serial_connection_data_t);
+		int write(std::string, net_ip_connection_info_t);
+		int write(std::string, net_serial_connection_info_t);
 	};
 	extern void net_loop(net_t*);
 #endif

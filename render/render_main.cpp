@@ -202,12 +202,13 @@ void render_t::loop_render_screen(){
 
 int render_t::loop(){ // TODO: Divide this up into smaller chunks
 	int return_value = 0;
-	if(tick%100) render_context = SDL_GL_CreateContext(render_screen);
+	const bool update_render_context = tick%100 == 0;
+	if(update_render_context) render_context = SDL_GL_CreateContext(render_screen);
 	loop_init();
 	loop_update();
 	loop_render_buffer();
 	loop_render_screen();
-	if(tick%100 == 0) SDL_GL_DeleteContext(render_context);
+	if(update_render_context) SDL_GL_DeleteContext(render_context);
 	return return_value;
 }
 

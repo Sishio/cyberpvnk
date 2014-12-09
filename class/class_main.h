@@ -18,6 +18,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define CLASS_MAIN_H
 	#include "class_array.h"
 	#include "class_extra.h"
+	#include "../net/net_ip.h"
+	#include "../net/net_serial.h"
 	#include "sstream"
 	#include "vector"
 	#define COORD_POINTER_SIZE 1024
@@ -53,18 +55,12 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<unsigned long int> nearby_coord;
 		int model_id;
 	};
-	class net_data_t{
-	public:
-		std::string ip;
-		unsigned short int port;
-		net_data_t();
-	};
 	class client_t{
 	public:
 		array_t *array;
 		coord_t *coord;
 		model_t *model;
-		net_data_t net;
+		net_ip_connection_info_t net_ip_connection_info;
 		client_t();
 		void close();
 	};
