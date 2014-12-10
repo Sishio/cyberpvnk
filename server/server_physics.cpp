@@ -219,15 +219,17 @@ void new_init_coord_t(){
 	coord.push_back(new coord_t);
 	coord_extra_t b;
 	coord_extra.push_back(b);
+	update_vector_sizes();
 	term_if_true(coord_extra.size() != coord.size(),const_cast<char*>("coord_extra.size() != coord.size()"));
 }
 
 void delete_close_coord_t(coord_t *a){
 	for(unsigned long int i = 0;i < coord_size;i++){
 		if(a == coord[i]){
-			delete coord[i];
-			a = coord[i] = nullptr;
 			coord.erase(coord.begin()+i);
+			update_vector_sizes();
+			delete a;
+			a = nullptr;
 			break;
 		}
 	}
@@ -237,6 +239,7 @@ void new_init_model_t(){
 	model.push_back(new model_t);
 	model_extra_t b;
 	model_extra.push_back(b);
+	update_vector_sizes();
 	term_if_true(model_extra.size() != model.size(),(char*)"model sizes do not match\n");
 }
 
@@ -244,18 +247,19 @@ void delete_close_model_t(model_t *a){
 	const int model_size = model.size();
 	for(int i = 0;i < model_size;i++){
 		if(a == model[i]){
-			delete a;
-			a = model[i] = nullptr;
 			model.erase(model.begin()+i);
+			update_vector_sizes();
+			delete a;
+			a = nullptr;
 			break;
 		}
 	}
 }
 
 static void coord_physics_iteration(coord_t *a){
-	//term_if_true(a == nullptr || a == nullptr,(char*)"coord_physics_iteration a is NULL\n");
+	term_if_true(a == nullptr,(char*)"coord_physics_iteration a is NULL\n"); // the overhead is minimal
 	long double time = get_time();
-	a->physics_time = time-a->old_time;
+	a->physics_time = time-(a->old_time);
 	a->old_time = time;
 	if(a->mobile){
 		a->x += a->x_vel*a->physics_time;

@@ -18,7 +18,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "signal.h"
 
 std::vector<coord_t*> coord;
+std::vector<coord_extra_t> coord_extra;
 std::vector<model_t*> model;
+std::vector<model_extra_t> model_extra;
 std::vector<client_t*> client;
 
 client_t *self = nullptr;

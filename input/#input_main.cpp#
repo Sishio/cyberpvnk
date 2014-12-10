@@ -161,9 +161,57 @@ int input_t::loop(){
 	/*
 	TODO: Add joystick support and map the buttons to keyboard keys
 	*/
+	standard_input_check();
 	return return_value;
 }
 
+void input_t::standard_input_check(){
+	for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
+		if(input_buffer[i] != nullptr){
+			if(input_buffer[i]->type == INPUT_TYPE_MOUSE_MOTION){ // In order to have a mouse_motion, the screen has to be initialized and thus the renderer has to be initialized, thus nullptrifying the check
+				float x_angle_add = (float)(input_buffer[i]->int_data[INPUT_TYPE_MOUSE_MOTION_X]-(int)((render->rules.x_res/2)));
+				float y_angle_add = (float)(input_buffer[i]->int_data[INPUT_TYPE_MOUSE_MOTION_Y]-(int)((render->rules.y_res/2)));
+				if(self->coord != nullptr){
+					self->coord->set_x_angle(true,y_angle_add);
+					self->coord->set_y_angle(true,x_angle_add);
+				}
+				delete[] input_buffer[i]->int_data;
+				input_buffer[i]->int_data = nullptr;
+				delete input_buffer[i];
+				input_buffer[i] = nullptr;
+				SDL_WarpMouseInWindow(render->render_screen,(render->rules.x_res/2),(render->rules.y_res/2));
+			}else if(input_buffer[i]->type == INPUT_TYPE_KEYBOARD){
+				if(input_buffer[i]->int_data[INPUT_TYPE_KEYBOARD_KEY] == SDLK_f){
+					ms_sleep(5000);
+				}
+			}
+		}
+	}
+}
+void input_t::standard_input_check(){                                                                                                                
+  for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){                                                                                           
+    if(input_buffer[i] != nullptr){                                                                                                      
+      if(input_buffer[i]->type == INPUT_TYPE_MOUSE_MOTION){ // In order to have a mouse_motion, the screen has to be initialized a\
+	nd thus the renderer has to be initialized, thus nullptrifying the check                                                                             
+	  float x_angle_add = (float)(input_buffer[i]->int_data[INPUT_TYPE_MOUSE_MOTION_X]-(int)((render->rules.x_res/2)));    
+	float y_angle_add = (float)(input_buffer[i]->int_data[INPUT_TYPE_MOUSE_MOTION_Y]-(int)((render->rules.y_res/2)));    
+	if(self->coord != nullptr){                                                                                          
+	  self->coord->set_x_angle(true,y_angle_add);                                                                  
+	  self->coord->set_y_angle(true,x_angle_add);                                                                  
+	}                                                                                                                    
+	delete[] input_buffer[i]->int_data;                                                                                  
+	input_buffer[i]->int_data = nullptr;                                                                                 
+	delete input_buffer[i];                                                                                              
+	input_buffer[i] = nullptr;                                                                                           
+	SDL_WarpMouseInWindow(render->render_screen,(render->rules.x_res/2),(render->rules.y_res/2));                        
+      }else if(input_buffer[i]->type == INPUT_TYPE_KEYBOARD){                                                                      
+	if(input_buffer[i]->int_data[INPUT_TYPE_KEYBOARD_KEY] == SDLK_f){                                                    
+	  ms_sleep(5000);                                                                                              
+	}                                                                                                                    
+      }                                                                                                                            
+    }                                                                                                                                    
+  }                                                                                                                                            
+}
 bool input_t::query_key(input_buffer_t *buffer,int sdl_key,char key){ // This is used for debugging more than anything (all of the other code would be put into the main function here and not stranded in the classes in the code at random spots).
 	bool return_value = false;
 	if(sdl_key == -1 && key == '\0' && buffer != nullptr){

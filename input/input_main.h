@@ -70,12 +70,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void close();
 	};
 	class input_t{
-		private:
+		public:
 			bool is_used;
 			input_buffer_t **input_buffer;
 			SDL_Event event;
-			void standard_input_check();
-		public:
 			void blank();
 			input_t(int,char**);
 			bool query_key(input_buffer_t* buffer = NULL,int sdl_key = 0,char key = '\0');

@@ -1,3 +1,20 @@
+/*
+Czech_mate by Daniel
+This file is part of Czech_mate.
+
+Czech_mate is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License Version 2 as published by
+the Free Software Foundation, 
+
+Czech_mate is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "server_net.h"
 
 net_t *net;
@@ -9,7 +26,7 @@ static void send_coord_t(){
 			std::string data = coord[i]->array->gen_string();
 			const unsigned long int client_size = client.size();
 			for(unsigned long int n = 0;n < client_size;n++){
-				if(client[n] != nullptr){
+				if(likely(client[n] != nullptr)){
 					net->write(data,client[n]->net_ip_connection_info);
 				}
 			}
@@ -64,5 +81,5 @@ void net_engine(){
 		}
 	}
 	send_model_t();
-	send_coord_t(); // everything
+	send_coord_t();
 }

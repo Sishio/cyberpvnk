@@ -80,6 +80,15 @@ static void init_load_models(std::string model_list_name = "model.list"){
 
 static void init(){
 	net = new net_t(argc_,argv_);
+	if(net->ip->connection_info.port == 0){
+		net->ip->connection_info.port = NET_IP_SERVER_RECEIVE_PORT;
+	}
+	if(net->ip->connection_info.ip == ""){ // local or global?
+		net->ip->connection_info.ip = "127.0.0.1";
+	}
+	if(net->ip->connection_info.connection_type == NET_IP_CONNECTION_TYPE_UNDEFINED){
+		net->ip->connection_info.connection_type = NET_IP_CONNECTION_TYPE_UDP;
+	}
 	console_init();
 	thread = new thread_t;
 	thread->init(argc_,argv_);

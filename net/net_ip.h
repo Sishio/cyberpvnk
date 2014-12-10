@@ -16,11 +16,12 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef NET_IP_H
 	#define NET_IP_H
-	#define NET_IP_CLIENT_PORT 50000
 	#define NET_IP_MTU 256
 	#define NET_IP_CONNECTION_TYPE_UNDEFINED 0
 	#define NET_IP_CONNECTION_TYPE_UDP 1
 	#define NET_IP_CONNECTION_TYPE_TCP 2
+	#define NET_IP_SERVER_RECEIVE_PORT 50000
+	#define NET_IP_CLIENT_RECEIVE_PORT 50001
 	#include "cstdio"
 	#include "vector"
 	#include "string"
@@ -58,6 +59,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		UDPpacket *outbound_packet;
 		UDPpacket *inbound_packet;
 	public:
+		net_ip_connection_info_t connection_info;
 		void blank();
 		void set_receive_port(unsigned short int);
 		int init(int,char**);
