@@ -1,0 +1,8 @@
+Hey, let's not use the headers for the types anymore because I have a better idea:
+	Let's make one array of all of the arrays
+	The client will search through all of the arrays to find a matching ID
+	It feeds the data into the correspoinding array
+
+Since the array system is very minimal, I would like to make multiple ports to send the data over since I am too lazy to write some packet ID code:
+	50000 will be for the class data
+	50002 will be for the connection data along with everything else

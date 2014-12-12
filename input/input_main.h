@@ -45,10 +45,13 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		#define INPUT_TYPE_MOUSE_SCROLL_UP 0
 		#define INPUT_TYPE_MOUSE_SCROLL_DOWN 1
 	// add support for joysticks and cool things later on
-	struct input_buffer_t{
+	class input_buffer_t{
+	public:
+		input_buffer_t();
+		~input_buffer_t();
+		array_t *array;
 		int type;
-		int *int_data; // I cannot think of a need for floats as of now (we are only taking in the data, we are NOT processing it)
-		int int_data_size;
+		int int_data[8];
 	};
 	class input_settings_mouse_t{
 	public:

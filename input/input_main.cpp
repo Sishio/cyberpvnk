@@ -26,10 +26,32 @@ char *event_key_to_key(SDL_Keycode);
 extern render_t *render;
 extern client_t *self;
 
+extern void delete_array(array_t*);
+
 input_buffer_t input_buffer_blank;
+
+input_buffer_t::input_buffer_t(){
+	array = new_array();
+	array->int_array.push_back(&type);
+	for(unsigned int i = 0;i < 8;i++){
+		array->int_array.push_back(&int_data[i]);
+	}
+	type = 0;
+	for(unsigned int i = 0;i < 8;i++){
+		int_data[i] = 0;
+	}
+}
+
+input_buffer_t::~input_buffer_t(){
+	delete_array(array);
+	array = nullptr;
+}
+
 void input_t::blank(){
 	is_used = false;
-	for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++) input_buffer[i] = nullptr;
+	for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
+		input_buffer[i] = nullptr;
+	}
 }
 
 input_t::input_t(int argc,char** argv){
@@ -49,11 +71,9 @@ int input_t::loop(){
 	int return_value = 0;
 	int available_input = 0;
 	for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
-		if(input_buffer[i] != nullptr && input_buffer[i]->int_data != nullptr){
+		if(input_buffer[i] != nullptr){
 			if(input_buffer[i]->type != INPUT_TYPE_KEYBOARD){ // keyboard events are uninitialized when the key is let up.
 				printf("%d\n",input_buffer[i]->type);
-				delete[] input_buffer[i]->int_data;
-				input_buffer[i]->int_data = nullptr;
 				delete input_buffer[i];
 				input_buffer[i] = nullptr;
 			}
@@ -75,12 +95,6 @@ int input_t::loop(){
 				break;
 			}
 			input_buffer[available_input]->type = INPUT_TYPE_MOUSE_MOTION;
-			input_buffer[available_input]->int_data_size = INPUT_TYPE_MOUSE_MOTION_INT_SIZE;
-			input_buffer[available_input]->int_data = new int[INPUT_TYPE_MOUSE_MOTION_INT_SIZE];
-			if(term_if_true(input_buffer[available_input]->int_data == nullptr,(char*)"input_buffer->int_data") == TERMINATE){
-				return_value = TERMINATE;
-				break;
-			}
 			input_buffer[available_input]->int_data[INPUT_TYPE_MOUSE_MOTION_X] = event.motion.x;
 			input_buffer[available_input]->int_data[INPUT_TYPE_MOUSE_MOTION_Y] = event.motion.y;
 			break;
@@ -99,8 +113,6 @@ int input_t::loop(){
 					if(input_buffer[i] != nullptr){
 						if(input_buffer[i]->type == INPUT_TYPE_KEYBOARD){
 							if(input_buffer[i]->int_data[INPUT_TYPE_KEYBOARD_KEY] == event.key.keysym.sym){
-								delete[] input_buffer[i]->int_data;
-								input_buffer[i]->int_data = nullptr;
 								delete input_buffer[i];
 								input_buffer[i] = nullptr;
 								break;
@@ -122,7 +134,6 @@ int input_t::loop(){
 					for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
 						if(input_buffer[i] != nullptr){
 							if(input_buffer[i]->type == INPUT_TYPE_KEYBOARD){
-								assert(input_buffer[i]->int_data != nullptr);
 								if(input_buffer[i]->int_data[INPUT_TYPE_KEYBOARD_KEY] == event.key.keysym.sym){
 									found_key = true;
 									break;
@@ -138,12 +149,6 @@ int input_t::loop(){
 						break;
 					}
 					input_buffer[available_input]->type = INPUT_TYPE_KEYBOARD;
-					input_buffer[available_input]->int_data_size = INPUT_TYPE_KEYBOARD_INT_SIZE;
-					input_buffer[available_input]->int_data = new int[INPUT_TYPE_KEYBOARD_INT_SIZE];
-					if(term_if_true(input_buffer[available_input]->int_data == nullptr,(char*)"input_buffer->int_data allocation") == TERMINATE){
-						return_value = TERMINATE;
-						break;
-					}
 					input_buffer[available_input]->int_data[INPUT_TYPE_KEYBOARD_KEY] = (int)event.key.keysym.sym;
 					input_buffer[available_input]->int_data[INPUT_TYPE_KEYBOARD_CHAR] = (int)SDL_GetKeyName(event.key.keysym.sym)[0];
 				}

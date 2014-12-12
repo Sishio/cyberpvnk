@@ -3,26 +3,30 @@ MACROS=
 CFLAGS=-std=c++11 -Wall -Werror -Wextra -Wno-error=unused-parameter $(MACROS)
 LINKER=-lSDL2 -lm -lGL -lSDL2_net -pthread
 
-fastest:
-	make -B server CFLAGS="-Ofast -march=native -std=c++11 $(MACROS)"
-	make -B client CFLAGS="-Ofast -march=native -std=c++11 $(MACROS)"
+normal:
+	make -B server
+	make -B client
 
 debug:
-	make -B server CFLAGS="-std=c++11 -g $(MACROS)"
-	make -B client CFLAGS="-std=c++11 -g $(MACROS)"
+	make -B normal CFLAGS="-std=c++11 -g $(MACROS)" MACROS=$(MACROS)
+
+fastest:
+	make -B server CFLAGS="-Ofast -march=native -std=c++11 $(MACROS)"
+	make -B client CFLAGS="-Ofast -march=native -std=c++11 $(MACROS)" MACROS=$(MACROS)
 
 server:
 	make -B class
 	make -B net
 	make -B util
 	make -B math
+	make -B input
 	make -B thread
 	$(CC) -c $(CFLAGS) server/server_main.cpp -o server/obj/server_main.o
 	$(CC) -c $(CFLAGS) server/server_physics.cpp -o server/obj/server_physics.o
 	$(CC) -c $(CFLAGS) server/server_net.cpp -o server/obj/server_net.o
 	$(CC) -c $(CFLAGS) server/server_console.cpp -o server/obj/server_console.o
 	ld -r server/obj/server_main.o  server/obj/server_physics.o server/obj/server_net.o server/obj/server_console.o -o server/obj/server.o
-	$(CC) $(CFLAGS) math/obj/math.o class/obj/class.o net/obj/net.o thread/obj/thread.o util/obj/util.o server/obj/server.o -o bin/server.$(shell uname -m) $(LINKER)
+	$(CC) $(CFLAGS) math/obj/math.o input/obj/input.o class/obj/class.o net/obj/net.o thread/obj/thread.o util/obj/util.o server/obj/server.o -o bin/server.$(shell uname -m) $(LINKER)
 
 client:
 	make -B class

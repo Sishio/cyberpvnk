@@ -22,26 +22,41 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "cstdio"
 	#include "cstdlib"
 	#include "vector"
-	#define ARRAY_ITEM_SEPARATOR_START	'\02'
-	#define ARRAY_ITEM_SEPARATOR_END	'\03'
-	#define ARRAY_TYPE_SEPARATOR_START	'\01'
-	#define ARRAY_TYPE_SEPARATOR_END	'\04'
-	#define ARRAY_HEADER_COORD_T	1 // 0 cannot be used since if no data is received, data[0] == NULL == 0
-	#define ARRAY_HEADER_MODEL_T	2
-	#define ARRAY_HEADER_CLIENT_T	3
-	#define ID_COUNT 4
+	#define ARRAY_ITEM_SEPERATOR_START	(char*)"\x02"
+	#define ARRAY_ITEM_SEPERATOR_END	(char*)"\x03"
+	#define ARRAY_TYPE_SEPERATOR_START	(char*)"\x01"
+	#define ARRAY_TYPE_SEPERATOR_END	(char*)"\x04"
+	#define ARRAY_INT_SEPERATOR_START	(char*)"\x02\x04"		// item start and type end
+	#define ARRAY_INT_SEPERATOR_END		(char*)"\x04\x02"		// type end and item start
+	#define ARRAY_LONG_DOUBLE_SEPERATOR_START 	(char*)"\x03\x03"	// item end and item end
+	#define ARRAY_LONG_DOUBLE_SEPERATOR_END		(char*)"\x02\x02"	// item start and item start
+	#define ARRAY_STRING_SEPERATOR_START		(char*)"\x04\x04"	// type end and type end
+	#define ARRAY_STRING_SERERATOR_END		(char*)"\x01\x01"	// type start and type start
+	#define ARRAY_ID_START			(char*)"\x05"
+	#define ARRAY_ID_END			(char*)"\x05\x05"
+	#define ARRAY_STARTING_START	(char*)"\x04\x05"
+	#define ARRAY_STARTING_END	(char*)"\x05\x04"
 	class array_t{
+	private:
+		std::vector<std::string> gen_int_array_vector();
+		std::vector<std::string> gen_long_double_array_vector();
+		std::vector<std::string> gen_string_array_vector();
+		void parse_int_from_string(std::string);
+		void parse_long_double_from_string(std::string);
+		void parse_string_from_string(std::string);
 	public:
-		int header;
 		int id;
 		std::vector<int*> int_array;
 		std::vector<long double*> long_double_array;
 		std::vector<std::string*> string_array;
-		array_t(int);
+		array_t();
 		bool id_match(int);
-		void set_header(int);
-		std::string gen_string(); // generates the string without any seperators
-		void parse_string(std::string);
+		std::vector<std::vector<std::string>> gen_string_vector(); // generates the string without any seperators
+		void parse_string_entry(std::string);
+		void parse_string_vector(std::vector<std::vector<std::string>>);
 		void close();
 	};
+	extern void update_data(std::string);
+	extern array_t* new_array();
+	extern void delete_array(array_t*);
 #endif

@@ -22,7 +22,7 @@ coord_t::coord_t(){
 	old_time = get_time();
 	model_id = -1;
 	mobile = true;
-	array = new array_t(ARRAY_HEADER_COORD_T);
+	array = new_array();
 	array->long_double_array.push_back(&x);
 	array->long_double_array.push_back(&y);
 	array->long_double_array.push_back(&z);
@@ -58,12 +58,12 @@ void coord_t::set_y_angle(bool add, long double a){
 
 void coord_t::close(){
 	array->close();
-	delete array;
+	delete_array(array);
 	array = nullptr;
 }
 
 model_t::model_t(){
-	array = new array_t(ARRAY_HEADER_MODEL_T);
+	array = new_array();
 }
 
 void model_t::get_size(long double *x, long double *y, long double *z){
@@ -122,7 +122,7 @@ void model_t::load(std::string a){
 
 void model_t::close(){
 	array->close();
-	delete array;
+	delete_array(array);
 	array = nullptr;
 }
 
@@ -132,7 +132,7 @@ client_t::client_t(){
 	printf("\tAllocating & initializing model\n");
 	model = new model_t;
 	printf("\tAllocating & initializing array\n");
-	array = new array_t(ARRAY_HEADER_CLIENT_T);
+	array = new_array();
 	printf("\tLoading data into the array\n");
 	for(unsigned long int i = 0;i < coord->array->int_array.size();i++) array->int_array.push_back(coord->array->int_array[i]);
 	for(unsigned long int i = 0;i < coord->array->long_double_array.size();i++) array->long_double_array.push_back(coord->array->long_double_array[i]);
@@ -149,4 +149,6 @@ void client_t::close(){
 	delete model;
 	coord = nullptr;
 	model = nullptr;
+	delete_array(array);
+	array = nullptr;
 }

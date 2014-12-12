@@ -24,27 +24,33 @@ extern std::vector<coord_t*> coord;
 extern std::vector<coord_extra_t> coord_extra;
 extern std::vector<model_t*> model;
 extern std::vector<model_extra_t> model_extra;
+extern int argc_;
+extern char** argv_;
 
 static coord_t *old_coord = nullptr;
 static net_ip_connection_info_t server_connection_info;
 
 static void net_engine_parse(std::string a){
-	switch(a[0]){
-	case ARRAY_HEADER_COORD_T:
-		if(true){
-			coord_t b;
-			b.array->parse_string(a);
-			store_coord_t(b, &coord, &coord_extra);
+	update_data(a);
+}
+
+static void net_write_array_vector(std::vector<std::vector<std::string>> a, net_ip_connection_info_t b){
+	const unsigned int a_size = a.size();
+	for(unsigned int i = 0;i < a_size;i++){
+		const unsigned int a_i_size = a[i].size();
+		for(unsigned int n = 0;n < a_i_size;n++){
+			net->write(a[i][n],b);
 		}
-		break;
-	case ARRAY_HEADER_MODEL_T:
-		if(true){
-			model_t b;
-			b.array->parse_string(a);
-			store_model_t(b, &model, &model_extra);
+	}
+}
+
+void net_init(){
+	for(int i = 0;i < argc_;i++){
+		if(strcmp(argv_[i], (char*)"--net-ip-server-ip") == 0){
+			server_connection_info.ip = (std::string)argv_[i+1];
+		}else if(strcmp(argv_[i], (char*)"--net-ip-server-port") == 0){
+			server_connection_info.port = atoi((char *)argv_[i+1]);
 		}
-	default:
-		break;
 	}
 }
 
@@ -59,27 +65,20 @@ void net_engine(){
 		old_coord = new coord_t;
 	}
 	if(likely(memcmp(&old_coord,self->coord,sizeof(coord_t)) != 0)){
-		net->write(self->array->gen_string(), server_connection_info);
-		printf("Wrote new coord data into the buffer\n");
+		std::vector<std::vector<std::string>> a = self->array->gen_string_vector();
+		net_write_array_vector(a, server_connection_info);
 	}
 	memcpy(&old_coord,self->coord,sizeof(coord_t)); //padding
+}
+
+void input_init(){
 }
 
 void input_engine(){
 	input_buffer_t** input_buffer = input->input_buffer;
 	for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
 		if(input_buffer[i] != nullptr){
-			if(input_buffer[i]->type == INPUT_TYPE_MOUSE_MOTION){ // In order to have a mouse_motion, the screen has to be initialized and thus the renderer has to be initia$
-				float x_angle_add = (float)(input_buffer[i]->int_data[INPUT_TYPE_MOUSE_MOTION_X]-(int)((render->rules.x_res/2)));
-				float y_angle_add = (float)(input_buffer[i]->int_data[INPUT_TYPE_MOUSE_MOTION_Y]-(int)((render->rules.y_res/2)));
-				if(self->coord != nullptr){
-					self->coord->set_x_angle(true,y_angle_add);
-					self->coord->set_y_angle(true,x_angle_add);
-				}
-				delete[] input_buffer[i]->int_data;
-				input_buffer[i]->int_data = nullptr;
-				delete input_buffer[i];
-				input_buffer[i] = nullptr;
+			if(input_buffer[i]->type == INPUT_TYPE_MOUSE_MOTION){
 				SDL_WarpMouseInWindow(render->render_screen,(render->rules.x_res/2),(render->rules.y_res/2));
 			}else if(input_buffer[i]->type == INPUT_TYPE_KEYBOARD){
 				if(input_buffer[i]->int_data[INPUT_TYPE_KEYBOARD_KEY] == SDLK_f){
@@ -87,8 +86,14 @@ void input_engine(){
 				}
 			}
 		}
+		if(likely(input_buffer[i] != nullptr)){
+			std::vector<std::vector<std::string>> a = input_buffer[i]->array->gen_string_vector();
+			net_write_array_vector(a, server_connection_info);
+		}
 	}
-	//input_buffer = nullptr;
+}
+
+void render_init(){
 }
 
 void render_engine(){

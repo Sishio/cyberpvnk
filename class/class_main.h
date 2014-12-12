@@ -64,4 +64,11 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		client_t();
 		void close();
 	};
+	class input_buffer_t;
+	#include "../input/input_main.h"
+	class client_extra_t{
+	public:
+		std::vector<input_buffer_t> input_buffer;
+		client_extra_t();
+	};
 #endif

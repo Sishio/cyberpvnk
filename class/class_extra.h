@@ -26,9 +26,4 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		model_extra_t();
 		bool updated;
 	};
-	class client_extra_t{
-	public:
-		client_extra_t();
-		bool updated;
-	};
 #endif

@@ -29,8 +29,12 @@ render_t *render = nullptr;
 input_t *input = nullptr;
 net_t *net = nullptr;
 
-static int argc_;
-static char **argv_;
+extern void net_init();
+extern void input_init();
+extern void render_init();
+
+int argc_;
+char **argv_;
 
 unsigned long int tick = 0;
 bool terminate = false;
@@ -40,10 +44,16 @@ static void init(){
 	self = new client_t();
 	printf("Allocating & initializing render\n");
 	render = new render_t(argc_,argv_);
+	printf("Initializing the render engine\n");
+	render_init();
 	printf("Allocating & initializing input\n");
 	input = new input_t(argc_,argv_);
+	printf("Initializing the input engine\n");
+	net_init();
 	printf("Allocating & initializing net\n");
 	net = new net_t(argc_,argv_);
+	printf("Initializing the net engine\n");
+	net_init();
 }
 
 static void close(){
@@ -98,7 +108,11 @@ int main(int argc, char **argv){
 	#endif
 	while(terminate == false){
 		loop();
-		printf("Ended one iteration\n");
+		coord_t a;
+		a.x = 3;
+		coord_t b;
+		b.array->parse_string_vector(a.array->gen_string_vector());
+		b.print();
 		tick++;
 	}
 	close();
