@@ -3,6 +3,13 @@ MACROS=
 CFLAGS=-std=c++11 -g -Wall -Werror -Wextra -Wno-error=unused-parameter $(MACROS)
 LINKER=-lSDL2 -lm -lGL -lSDL2_net -pthread
 
+default:
+	make -B client
+
+all:
+	make -B client
+	make -B server
+
 server:
 	make -B class
 	make -B net

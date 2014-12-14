@@ -30,7 +30,7 @@ extern void delete_array(array_t*);
 
 input_buffer_t input_buffer_blank;
 
-void input_t::input_find_key(unsigned int *a, const input_buffer_t *b){
+void input_t::input_find_key(unsigned long int *a, const input_buffer_t *b){
 	if(b == nullptr || b == NULL){
 		for(*a = 0;*a < INPUT_BUFFER_SIZE;(*a)+=1){
 			if(input_buffer[*a] == b){
@@ -39,9 +39,11 @@ void input_t::input_find_key(unsigned int *a, const input_buffer_t *b){
 		}
 	}else{
 		for(*a = 0;*a < INPUT_BUFFER_SIZE;(*a)+=1){
-			if(input_buffer[*a]->type == b->type){
-				if(memcmp(&input_buffer[*a]->int_data, &b->int_data, sizeof(int)*8) == 0){
-					return;
+			if(input_buffer[*a] != nullptr){
+				if(input_buffer[*a]->type == b->type){
+					if(memcmp(&input_buffer[*a]->int_data, &b->int_data, sizeof(int)*8) == 0){
+						return;
+					}
 				}
 			}
 		}
@@ -50,16 +52,13 @@ void input_t::input_find_key(unsigned int *a, const input_buffer_t *b){
 }
 
 void input_t::input_update_key(input_buffer_t *b){
-	unsigned int a = 0;
+	unsigned long int a = 0;
 	input_find_key(&a,b);
 	if(a >= INPUT_BUFFER_SIZE){ // there is no match
 		input_find_key(&a,nullptr);
-		if(a < INPUT_BUFFER_SIZE){ // there is a match
-			*input_buffer[a] = *b;
-		}else{
-			printf("The input array is full\n");
-		}
+		input_buffer[a] = new input_buffer_t;
 	}
+	*input_buffer[a] = *b;
 }
 
 void input_t::input_parse_key_up(SDL_Event a){
@@ -67,7 +66,7 @@ void input_t::input_parse_key_up(SDL_Event a){
 	tmp.type = INPUT_TYPE_KEYBOARD;
 	tmp.int_data[INPUT_TYPE_KEYBOARD_KEY] = (int)a.key.keysym.sym;
 	//tmp.int_data[INPUT_TYPE_KEYBOARD_CHAR] = (int)SDL_GetKeyName(a.key.keysym.sym[0]);
-	unsigned int c;
+	unsigned long int c;
 	input_find_key(&c,&tmp);
 	if(c <= INPUT_BUFFER_SIZE){
 		delete input_buffer[c];
@@ -166,44 +165,16 @@ int input_t::loop(){
 
 bool input_t::query_key(input_buffer_t *buffer,int sdl_key,char key){ // This is used for debugging more than anything (all of the other code would be put into the main function here and not stranded in the classes in the code at random spots).
 	bool return_value = false;
-	if(sdl_key == -1 && key == '\0' && buffer != nullptr){
-		for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
-			if(input_buffer[i] != nullptr){
-				if(input_buffer[i]->int_data == buffer->int_data){
-					return_value = true;
-					break;
-				}
-			}
-		}
-	}else if(sdl_key != -1){
-		if(sdl_key < INPUT_BUFFER_SIZE && input_buffer[sdl_key] != nullptr){
-			if(input_buffer[sdl_key]->type == INPUT_TYPE_KEYBOARD){
-				if(input_buffer[sdl_key]->int_data[INPUT_TYPE_KEYBOARD_KEY] == sdl_key) return_value = sdl_key;
-			}
-		}else{
-			for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
-				if(input_buffer[i] != nullptr){
-					if(input_buffer[i]->type == INPUT_TYPE_KEYBOARD){
-						if(input_buffer[i]->int_data[INPUT_TYPE_KEYBOARD_KEY] == sdl_key){
-							return_value = true;
-							break;
-						}
-					}
-				}
-			}
-		}
-	}else if(key != '\0'){
-		for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
-			if(input_buffer[i] != nullptr){
-				if(input_buffer[i]->type == INPUT_TYPE_KEYBOARD){
-					if(input_buffer[i]->int_data[INPUT_TYPE_KEYBOARD_CHAR] == (int)key){
-						return_value = true;
-						break;
-					}
-				}
-			}
-		}
-	} // clean this up a bit
+	if(sdl_key != -1){
+		buffer = new input_buffer_t;
+		buffer->type = INPUT_TYPE_KEYBOARD;
+		buffer->int_data[INPUT_TYPE_KEYBOARD_KEY] = sdl_key;
+	}
+	if(buffer != nullptr){
+		unsigned long int a;
+		input_find_key(&a,buffer);
+		return !(a == INPUT_BUFFER_SIZE);
+	}
 	return return_value;
 }
 

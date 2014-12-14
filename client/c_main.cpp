@@ -46,19 +46,23 @@ static bool check_for_parameter(const std::string a){
 static void init(){
 	printf("Allocating & initializing self\n");
 	self = new client_t();
-	if(check_for_parameter("--render-disable")){
+	bool a[4] = {true};
+	a[0] = !check_for_parameter("--render-disable");
+	a[1] = !check_for_parameter("--input-disable");
+	a[2] = !check_for_parameter("--net-disable");
+	if(a[0]){
 		printf("Allocating & initializing render\n");
 		render = new render_t(argc_,argv_);
 		printf("Initializing the render engine\n");
 		render_init();
 	}
-	if(check_for_parameter("--input-disable")){
+	if(a[1]){
 		printf("Allocating & initializing input\n");
 		input = new input_t(argc_,argv_);
 		printf("Initializing the input engine\n");
 		input_init();
 	}
-	if(check_for_parameter("--net-disable")){
+	if(a[2]){
 		printf("Allocating & initializing net\n");
 		net = new net_t(argc_,argv_);
 		printf("Initializing the net engine\n");
@@ -85,9 +89,11 @@ static void close(){
 		delete net;
 		net = nullptr;
 	}
-	self->close();
-	delete self;
-	self = nullptr;
+	if(self != nullptr){
+		self->close();
+		delete self;
+		self = nullptr;
+	}
 }
 
 static void engine_loop(){
@@ -131,11 +137,6 @@ int main(int argc, char **argv){
 		a.x = 3;
 		coord_t b;
 		std::vector<std::vector<std::string>> c = a.array->gen_string_vector();
-		for(unsigned long int i = 0;i < c.size();i++){
-			for(unsigned long int n = 0;n < c[i].size();n++){
-				printf("\tc[%lu][%lu]:%s\n",i,n,c[i][n].c_str());
-			}
-		}
 		b.array->parse_string_vector(c);
 		b.print();
 		tick++;
