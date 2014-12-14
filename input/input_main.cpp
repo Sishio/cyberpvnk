@@ -30,6 +30,59 @@ extern void delete_array(array_t*);
 
 input_buffer_t input_buffer_blank;
 
+void input_t::input_find_key(unsigned int *a, const input_buffer_t *b){
+	if(b == nullptr || b == NULL){
+		for(*a = 0;*a < INPUT_BUFFER_SIZE;(*a)+=1){
+			if(input_buffer[*a] == b){
+				return;
+			}
+		}
+	}else{
+		for(*a = 0;*a < INPUT_BUFFER_SIZE;(*a)+=1){
+			if(input_buffer[*a]->type == b->type){
+				if(memcmp(&input_buffer[*a]->int_data, &b->int_data, sizeof(int)*8) == 0){
+					return;
+				}
+			}
+		}
+	}
+	*a = INPUT_BUFFER_SIZE;
+}
+
+void input_t::input_update_key(input_buffer_t *b){
+	unsigned int a = 0;
+	input_find_key(&a,b);
+	if(a >= INPUT_BUFFER_SIZE){ // there is no match
+		input_find_key(&a,nullptr);
+		if(a < INPUT_BUFFER_SIZE){ // there is a match
+			*input_buffer[a] = *b;
+		}else{
+			printf("The input array is full\n");
+		}
+	}
+}
+
+void input_t::input_parse_key_up(SDL_Event a){
+	input_buffer_t tmp;
+	tmp.type = INPUT_TYPE_KEYBOARD;
+	tmp.int_data[INPUT_TYPE_KEYBOARD_KEY] = (int)a.key.keysym.sym;
+	//tmp.int_data[INPUT_TYPE_KEYBOARD_CHAR] = (int)SDL_GetKeyName(a.key.keysym.sym[0]);
+	unsigned int c;
+	input_find_key(&c,&tmp);
+	if(c <= INPUT_BUFFER_SIZE){
+		delete input_buffer[c];
+		input_buffer[c] = nullptr;
+	}
+}
+
+void input_t::input_parse_key_down(SDL_Event a){
+	input_buffer_t tmp;
+	tmp.type = INPUT_TYPE_KEYBOARD;
+	tmp.int_data[INPUT_TYPE_KEYBOARD_KEY] = (int)a.key.keysym.sym;
+	//tmp.int_data[INPUT_TYPE_KEYBOARD_CHAR] = (int)SDL_GetKeyName(a.key.keysym.sym[0]);
+	input_update_key(&tmp);
+}
+
 input_buffer_t::input_buffer_t(){
 	array = new_array();
 	array->int_array.push_back(&type);
@@ -72,21 +125,13 @@ int input_t::loop(){
 	int available_input = 0;
 	for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
 		if(input_buffer[i] != nullptr){
-			if(input_buffer[i]->type != INPUT_TYPE_KEYBOARD){ // keyboard events are uninitialized when the key is let up.
-				printf("%d\n",input_buffer[i]->type);
+			if(input_buffer[i]->type != INPUT_TYPE_KEYBOARD){
 				delete input_buffer[i];
 				input_buffer[i] = nullptr;
 			}
 		}
 	}
 	while(SDL_PollEvent(&event)){ // the only input that works without a screen would be SDL_QUIT (Ctrl-C).
-		while(input_buffer[available_input] != nullptr){
-			available_input++;
-			if(available_input+1 > INPUT_BUFFER_SIZE){
-				printf("Warning: reseting the input variable back to zero, this could lead to a lockup\n");
-				available_input = 0;
-			}
-		}
 		switch(event.type){
 		case SDL_MOUSEMOTION:
 			input_buffer[available_input] = new input_buffer_t;
@@ -99,61 +144,11 @@ int input_t::loop(){
 			input_buffer[available_input]->int_data[INPUT_TYPE_MOUSE_MOTION_Y] = event.motion.y;
 			break;
 		case SDL_KEYUP:
-			if(true){
-				int key_entry = -1;
-				if(event.key.keysym.sym < INPUT_BUFFER_SIZE && input_buffer[event.key.keysym.sym] != nullptr){
-					if(input_buffer[event.key.keysym.sym]->type == INPUT_TYPE_KEYBOARD){
-						if(input_buffer[event.key.keysym.sym]->int_data[INPUT_TYPE_KEYBOARD_KEY] == event.key.keysym.sym){
-							key_entry = event.key.keysym.sym;
-						}
-					}
-				}
-				if(key_entry == -1) key_entry++;
-				for(unsigned int i = (unsigned int)key_entry;i < INPUT_BUFFER_SIZE;i++){
-					if(input_buffer[i] != nullptr){
-						if(input_buffer[i]->type == INPUT_TYPE_KEYBOARD){
-							if(input_buffer[i]->int_data[INPUT_TYPE_KEYBOARD_KEY] == event.key.keysym.sym){
-								delete input_buffer[i];
-								input_buffer[i] = nullptr;
-								break;
-							}
-						}
-					}
-				}
-			}
+			input_parse_key_up(event);
 			break;
 		case SDL_KEYDOWN:
-			if(true){
-				bool found_key = false;
-				if(event.key.keysym.sym < INPUT_BUFFER_SIZE && input_buffer[event.key.keysym.sym] != nullptr){
-					if(input_buffer[event.key.keysym.sym]->int_data[INPUT_TYPE_KEYBOARD_KEY] == event.key.keysym.sym){
-						found_key = true;
-					}
-				}
-				if(found_key == false){
-					for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
-						if(input_buffer[i] != nullptr){
-							if(input_buffer[i]->type == INPUT_TYPE_KEYBOARD){
-								if(input_buffer[i]->int_data[INPUT_TYPE_KEYBOARD_KEY] == event.key.keysym.sym){
-									found_key = true;
-									break;
-								}
-							}
-						}
-					}
-				} // I think most of that code is redundant since there should be no matching key to begin with unless I push events to SDL manually
-				if(found_key == false){
-					input_buffer[available_input] = new input_buffer_t;
-					if(term_if_true(input_buffer[available_input] == nullptr,(char*)"input_buffer allocation") == TERMINATE){
-						return_value = TERMINATE;
-						break;
-					}
-					input_buffer[available_input]->type = INPUT_TYPE_KEYBOARD;
-					input_buffer[available_input]->int_data[INPUT_TYPE_KEYBOARD_KEY] = (int)event.key.keysym.sym;
-					input_buffer[available_input]->int_data[INPUT_TYPE_KEYBOARD_CHAR] = (int)SDL_GetKeyName(event.key.keysym.sym)[0];
-				}
-				if(event.key.keysym.sym != SDLK_ESCAPE) break;
-			}
+			input_parse_key_down(event);
+			break;
 		case SDL_QUIT:
 			printf("Terminating per request via input layer\n");
 			return_value = TERMINATE;

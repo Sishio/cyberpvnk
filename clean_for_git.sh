@@ -1,3 +1,5 @@
+rm -r client/obj
+mkdir client/obj
 rm -r class/obj
 mkdir class/obj
 rm -r thread/obj

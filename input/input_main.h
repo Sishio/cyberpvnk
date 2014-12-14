@@ -73,6 +73,11 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void close();
 	};
 	class input_t{
+		private:
+			void input_find_key(unsigned int*, const input_buffer_t*);
+			void input_update_key(input_buffer_t*);
+			void input_parse_key_up(SDL_Event);
+			void input_parse_key_down(SDL_Event);
 		public:
 			bool is_used;
 			input_buffer_t **input_buffer;

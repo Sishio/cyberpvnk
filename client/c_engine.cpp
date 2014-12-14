@@ -71,6 +71,8 @@ void net_engine(){
 	memcpy(&old_coord,self->coord,sizeof(coord_t)); //padding
 }
 
+void net_close(){}
+
 void input_init(){
 }
 
@@ -93,8 +95,11 @@ void input_engine(){
 	}
 }
 
+void input_close(){}
+
 void render_init(){
 }
 
 void render_engine(){
 }
+void render_close(){}

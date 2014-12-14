@@ -1,18 +1,7 @@
 CC=clang++
 MACROS=
-CFLAGS=-std=c++11 -Wall -Werror -Wextra -Wno-error=unused-parameter $(MACROS)
+CFLAGS=-std=c++11 -g -Wall -Werror -Wextra -Wno-error=unused-parameter $(MACROS)
 LINKER=-lSDL2 -lm -lGL -lSDL2_net -pthread
-
-normal:
-	make -B server
-	make -B client
-
-debug:
-	make -B normal CFLAGS="-std=c++11 -g $(MACROS)" MACROS=$(MACROS)
-
-fastest:
-	make -B server CFLAGS="-Ofast -march=native -std=c++11 $(MACROS)"
-	make -B client CFLAGS="-Ofast -march=native -std=c++11 $(MACROS)" MACROS=$(MACROS)
 
 server:
 	make -B class

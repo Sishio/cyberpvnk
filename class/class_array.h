@@ -31,7 +31,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define ARRAY_LONG_DOUBLE_SEPERATOR_START 	(char*)"\x03\x03"	// item end and item end
 	#define ARRAY_LONG_DOUBLE_SEPERATOR_END		(char*)"\x02\x02"	// item start and item start
 	#define ARRAY_STRING_SEPERATOR_START		(char*)"\x04\x04"	// type end and type end
-	#define ARRAY_STRING_SERERATOR_END		(char*)"\x01\x01"	// type start and type start
+	#define ARRAY_STRING_SEPERATOR_END		(char*)"\x01\x01"	// type start and type start
 	#define ARRAY_ID_START			(char*)"\x05"
 	#define ARRAY_ID_END			(char*)"\x05\x05"
 	#define ARRAY_STARTING_START	(char*)"\x04\x05"
@@ -44,6 +44,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void parse_int_from_string(std::string);
 		void parse_long_double_from_string(std::string);
 		void parse_string_from_string(std::string);
+		unsigned int pull_starting_number(std::string);
+		std::vector<std::string> pull_items(char*, std::string, char*);
 	public:
 		int id;
 		std::vector<int*> int_array;
@@ -51,7 +53,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<std::string*> string_array;
 		array_t();
 		bool id_match(int);
-		std::vector<std::vector<std::string>> gen_string_vector(); // generates the string without any seperators
+		std::vector<std::vector<std::string>> gen_string_vector();
 		void parse_string_entry(std::string);
 		void parse_string_vector(std::vector<std::vector<std::string>>);
 		void close();

@@ -17,7 +17,13 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef C_ENGINE_H
 	#define C_ENGINE_H
 	#include "c_main.h"
+	extern void net_init();
 	extern void net_engine();
+	extern void net_close();
+	extern void input_init();
 	extern void input_engine();
+	extern void input_close();
+	extern void render_init();
 	extern void render_engine();
+	extern void render_close();
 #endif
