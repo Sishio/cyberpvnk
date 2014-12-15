@@ -3,20 +3,11 @@ MACROS=
 CFLAGS=-std=c++11 -g -Wall -Werror -Wextra -Wno-error=unused-parameter $(MACROS)
 LINKER=-lSDL2 -lm -lGL -lSDL2_net -pthread
 
-default:
-	make -B client
+default: client
 
-all:
-	make -B client
-	make -B server
+all: client server
 
-server:
-	make -B class
-	make -B net
-	make -B util
-	make -B math
-	make -B input
-	make -B thread
+server: class net util input net thread math
 	$(CC) -c $(CFLAGS) server/server_main.cpp -o server/obj/server_main.o
 	$(CC) -c $(CFLAGS) server/server_physics.cpp -o server/obj/server_physics.o
 	$(CC) -c $(CFLAGS) server/server_net.cpp -o server/obj/server_net.o
@@ -24,14 +15,7 @@ server:
 	ld -r server/obj/server_main.o  server/obj/server_physics.o server/obj/server_net.o server/obj/server_console.o -o server/obj/server.o
 	$(CC) $(CFLAGS) math/obj/math.o input/obj/input.o class/obj/class.o net/obj/net.o thread/obj/thread.o util/obj/util.o server/obj/server.o -o bin/server.$(shell uname -m) $(LINKER)
 
-client:
-	make -B class
-	make -B net
-	make -B render
-	make -B input
-	make -B util
-	make -B math
-	make -B thread
+client: class net render input util math thread
 	$(CC) -c $(CFLAGS) client/c_main.cpp -o client/obj/c_main.o
 	$(CC) -c $(CFLAGS) client/c_engine.cpp -o client/obj/c_engine.o
 	ld -r client/obj/c_main.o client/obj/c_engine.o -o client/obj/c.o
@@ -40,9 +24,7 @@ client:
 thread:
 	$(CC) -c $(CFLAGS) thread/thread_main.cpp -o thread/obj/thread.o 
 
-console:
-	make -B net
-	make -B util
+console: util net
 	$(CC) $(CFLAGS) net/obj/net.o console/console_main.cpp util/obj/util_main.o -o bin/console.$(shell uname -m) $(LINKER)
 
 class:

@@ -38,6 +38,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void load(std::string);
 		void get_size(long double*, long double*, long double*);
 		void close();
+		void update_array();
 	};
 	class coord_t{
 	public:
@@ -48,6 +49,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		long double old_time;
 		bool mobile;
 		coord_t();
+		void update_array();
 		void print();
 		void set_x_angle(bool,long double);
 		void set_y_angle(bool,long double);
@@ -58,10 +60,11 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	class client_t{
 	public:
 		array_t *array;
-		coord_t *coord;
-		model_t *model;
+		int coord_id;
+		int model_id;
 		net_ip_connection_info_t net_ip_connection_info;
 		client_t();
+		void update_array();
 		void close();
 	};
 	class input_buffer_t;
@@ -71,4 +74,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<input_buffer_t> input_buffer;
 		client_extra_t();
 	};
+	extern void add_coord(coord_t*);
+	extern void add_model(model_t*);
+	extern coord_t *find_coord_pointer(int);
+	extern model_t *find_model_pointer(int);
 #endif

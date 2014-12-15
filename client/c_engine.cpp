@@ -35,10 +35,10 @@ static void net_engine_parse(std::string a){
 }
 
 static void net_write_array_vector(std::vector<std::vector<std::string>> a, net_ip_connection_info_t b){
-	const unsigned int a_size = a.size();
-	for(unsigned int i = 0;i < a_size;i++){
-		const unsigned int a_i_size = a[i].size();
-		for(unsigned int n = 0;n < a_i_size;n++){
+	const unsigned long int a_size = a.size();
+	for(unsigned long int i = 0;i < a_size;i++){
+		const unsigned long int a_i_size = a[i].size();
+		for(unsigned long int n = 0;n < a_i_size;n++){
 			net->write(a[i][n],b);
 		}
 	}
@@ -64,11 +64,14 @@ void net_engine(){
 	if(unlikely(old_coord == nullptr)){
 		old_coord = new coord_t;
 	}
-	if(likely(memcmp(&old_coord,self->coord,sizeof(coord_t)) != 0)){
-		std::vector<std::vector<std::string>> a = self->array->gen_string_vector();
-		net_write_array_vector(a, server_connection_info);
+	coord_t *coord = find_coord_pointer(self->coord_id);
+	if(coord != nullptr){
+		if(likely(memcmp(&old_coord,coord,sizeof(coord_t)) != 0)){
+			std::vector<std::vector<std::string>> a = self->array->gen_string_vector();
+			net_write_array_vector(a, server_connection_info);
+		}
+		memcpy(&old_coord,coord,sizeof(coord_t)); //padding
 	}
-	memcpy(&old_coord,self->coord,sizeof(coord_t)); //padding
 }
 
 void net_close(){}

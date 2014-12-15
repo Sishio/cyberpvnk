@@ -96,7 +96,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		render_rules_t rules;
 		void blank();
 		render_t(int,char**);
-		int loop();
+		int loop(coord_t*);
 		int write_to_buffer(render_buffer_t*);
 		void close();
 	};

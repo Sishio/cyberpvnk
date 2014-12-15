@@ -40,13 +40,13 @@ static bool check_for_parameter(const std::string a){
 	for(int i = 0;i < argc_;i++){
 		argv__ += argv_[i];
 	}
-	return argv__.find_first_of(a) != std::string::npos;
+	return argv__.find_first_of(a) == std::string::npos;
 }
 
 static void init(){
 	printf("Allocating & initializing self\n");
 	self = new client_t();
-	bool a[3] = {true};
+	bool a[4] = {true};
 	a[0] = !check_for_parameter("--render-disable");
 	a[1] = !check_for_parameter("--input-disable");
 	a[2] = !check_for_parameter("--net-disable");

@@ -36,7 +36,7 @@ static void init_load_map(std::string map_name = "test.map"){
 	std::ifstream in(map_name);
 	char data_[512];
 	if(!in.is_open()){
-		goto init_load_map_end;
+		return;
 	}
 	while(in.getline(data_,511)){
 		data_[511] = '\0';
@@ -47,7 +47,7 @@ static void init_load_map(std::string map_name = "test.map"){
 		ss >> parse[0] >> parse[1] >> parse[2] >> parse[3] >> parse[4] >> parse[5] >> parse[6] >> parse[7];
 		init_load_map_parse_line(parse);
 	}
-	init_load_map_end:;
+	return;
 }
 
 static void init_load_model_parse_line(std::string *a){
@@ -63,7 +63,7 @@ static void init_load_model_parse_line(std::string *a){
 static void init_load_models(std::string model_list_name = "model.list"){
 	std::ifstream in(model_list_name);
 	if(!in.is_open()){
-		goto init_load_models_end;
+		return;
 	}
 	char data_[512];
 	while(in.getline(data_,511)){
@@ -75,7 +75,6 @@ static void init_load_models(std::string model_list_name = "model.list"){
 		ss >> parse[0] >> parse[1] >> parse[2] >> parse[3] >> parse[4] >> parse[5] >> parse[6] >> parse[7];
 		init_load_model_parse_line(parse);
 	}
-	init_load_models_end:;
 }
 
 static void init(){

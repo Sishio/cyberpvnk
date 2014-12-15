@@ -16,6 +16,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "class_main.h"
 
+std::vector<coord_t*> coord_vector;
+std::vector<model_t*> model_vector;
+
 coord_t::coord_t(){
 	x = y = z = x_angle = y_angle = x_vel = y_vel = z_vel = 0;
 	physics_time = 0;
@@ -23,15 +26,7 @@ coord_t::coord_t(){
 	model_id = -1;
 	mobile = true;
 	array = new_array();
-	array->long_double_array.push_back(&x);
-	array->long_double_array.push_back(&y);
-	array->long_double_array.push_back(&z);
-	array->long_double_array.push_back(&x_angle);
-	array->long_double_array.push_back(&y_angle);
-	array->long_double_array.push_back(&x_vel);
-	array->long_double_array.push_back(&y_vel);
-	array->long_double_array.push_back(&z_vel);
-	array->int_array.push_back(&model_id);
+	update_array();
 }
 
 void coord_t::print(){
@@ -56,6 +51,18 @@ void coord_t::set_y_angle(bool add, long double a){
 	}else y_angle = a;
 }
 
+void coord_t::update_array(){
+	array->long_double_array.push_back(&x);
+	array->long_double_array.push_back(&y);
+	array->long_double_array.push_back(&z);
+	array->long_double_array.push_back(&x_angle);
+	array->long_double_array.push_back(&y_angle);
+	array->long_double_array.push_back(&x_vel);
+	array->long_double_array.push_back(&y_vel);
+	array->long_double_array.push_back(&z_vel);
+	array->int_array.push_back(&model_id);
+}
+
 void coord_t::close(){
 	array->close();
 	delete_array(array);
@@ -64,6 +71,14 @@ void coord_t::close(){
 
 model_t::model_t(){
 	array = new_array();
+}
+
+void model_t::update_array(){
+	// std::vector needs to be a type for the array
+	// since there is really no better way to take
+	// care of the variables of extra sizes and also
+	// the fact that typing this is kind of fun. I think
+	// it is because this is all wasted space. Cool!
 }
 
 void model_t::get_size(long double *x, long double *y, long double *z){
@@ -126,29 +141,76 @@ void model_t::close(){
 	array = nullptr;
 }
 
+void client_t::update_array(){
+	array->int_array.push_back(&model_id);
+	array->int_array.push_back(&coord_id);
+}
+
 client_t::client_t(){
+	model_id = -1;
+	coord_id = -1;
+	model_t *model = find_model_pointer(model_id);
+	coord_t *coord = find_coord_pointer(coord_id);
 	printf("\tAllocating & initializing coord\n");
 	coord = new coord_t;
 	printf("\tAllocating & initializing model\n");
 	model = new model_t;
 	printf("\tAllocating & initializing array\n");
 	array = new_array();
-	printf("\tLoading data into the array\n");
-	for(unsigned long int i = 0;i < coord->array->int_array.size();i++) array->int_array.push_back(coord->array->int_array[i]);
-	for(unsigned long int i = 0;i < coord->array->long_double_array.size();i++) array->long_double_array.push_back(coord->array->long_double_array[i]);
-	for(unsigned long int i = 0;i < coord->array->string_array.size();i++) array->string_array.push_back(coord->array->string_array[i]);
-        for(unsigned long int i = 0;i < model->array->int_array.size();i++) array->int_array.push_back(model->array->int_array[i]);
-        for(unsigned long int i = 0;i < model->array->long_double_array.size();i++) array->long_double_array.push_back(model->array->long_double_array[i]);
-        for(unsigned long int i = 0;i < model->array->string_array.size();i++) array->string_array.push_back(model->array->string_array[i]);
+	/*
+	This consequently updates the arrays of the
+	data types
+	*/
+	update_array();
 }
 
 void client_t::close(){
-	//coord->close();
-	//model->close();
-	delete coord;
-	delete model;
-	coord = nullptr;
-	model = nullptr;
 	delete_array(array);
 	array = nullptr;
+}
+
+void add_coord(coord_t *a){
+	const unsigned long int coord_size = coord_vector.size();
+	for(unsigned long int i = 0;i < coord_size;i++){
+		if(coord_vector[i] == nullptr){
+			coord_vector[i] = a;
+			return;
+		}
+	}
+	coord_vector.push_back(a);
+}
+
+void add_model(model_t *a){
+	const unsigned long int model_size = model_vector.size();
+	for(unsigned long int i = 0;i < model_size;i++){
+		if(model_vector[i] == nullptr){
+			model_vector[i] = a;
+			return;
+		}
+	}
+	model_vector.push_back(a);
+	
+}
+
+// change the id from int to long long int when I get around to making more data types in the array
+coord_t *find_coord_pointer(int id){
+	const unsigned long int coord_size = coord_vector.size();
+	for(unsigned long int i = 0;i < coord_size;i++){
+		if(coord_vector[i]->array->id == id){
+			return coord_vector[i];
+		}
+	}
+	return nullptr;
+	
+}
+
+model_t *find_model_pointer(int id){
+	const unsigned long int model_size = model_vector.size();
+	for(unsigned long int i = 0;i < model_size;i++){
+		if(model_vector[i]->array->id == id){
+			return model_vector[i];
+		}
+	}
+	return nullptr;
+	
 }

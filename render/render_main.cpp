@@ -58,7 +58,6 @@ void render_rules_t::close(){
 }
 
 void render_t::blank(){
-	coord = NULL;
 }
 
 void render_t::init_subsystems(){
@@ -193,14 +192,14 @@ void render_t::loop_init(){
 	GLfloat fW = fH*aspect_ratio;
 	glFrustum(-fW, fW, -fH, fH, rules.near_fov, rules.far_fov);
 	term_if_true(glGetError(),(char*)"glGetError()");
-	//printf("render_t::loop_init():%dx%d\n",render_rules.x_res,render_rules.y_res);
 }
 
 void render_t::loop_render_screen(){
 	SDL_GL_SwapWindow(render_screen);
 }
 
-int render_t::loop(){ // TODO: Divide this up into smaller chunks
+int render_t::loop(coord_t *a){ // TODO: Divide this up into smaller chunks
+	coord = a;
 	int return_value = 0;
 	const bool update_render_context = tick%100 == 0;
 	if(update_render_context) render_context = SDL_GL_CreateContext(render_screen);

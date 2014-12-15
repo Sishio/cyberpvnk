@@ -19,6 +19,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../math/math_main.h"
 	#include  "../main.h"
 	#include "cstdio"
+	#include "vector"
 	#include "climits"
 	#include "cstdlib"
 	#include "string"
@@ -57,4 +58,14 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern bool probably_equal(int,int);
 	extern long double get_time();
 	extern bool sign(long double*);
+	extern int encrypt(int);
+	extern int encrypt(int*,int); // I don't think this will ever be needed
+	extern int encrypt(std::vector<int>);
+	extern int encrypt(std::vector<int*>);
+	extern int encrypt(std::vector<double>);
+	extern int encrypt(std::vector<double*>);
+	extern int encrypt(std::vector<long double>);
+	extern int encrypt(std::vector<long double*>);
+	extern int encrypt(std::vector<std::string>);
+	extern int encrypt(std::vector<std::string*>);
 #endif

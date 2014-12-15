@@ -123,22 +123,21 @@ void array_t::parse_int_from_string(std::string a){
 
 void array_t::parse_long_double_from_string(std::string a){
 	const unsigned long int starting_point = pull_starting_number(a);
-	printf("The starting number from the string '%s' is %lu\n",a.c_str(), starting_point);
 	std::vector<std::string> long_double_data = pull_items(ARRAY_LONG_DOUBLE_SEPERATOR_START,a,ARRAY_LONG_DOUBLE_SEPERATOR_END);
 	const unsigned long int long_double_data_size = long_double_data.size();
 	for(unsigned long int i = 0;i < long_double_data_size;i++){
-		const long double z = atof(long_double_data[i].c_str());
-		#ifdef CLASS_DEBUG
-		printf("The version of the double that was received and will be used:%Lf\n",z);
-		#endif
-		*long_double_array[starting_point+i] = z;
-	}
-	for(unsigned long int i = 0;i < long_double_data_size;i++){
-		printf("long_double_array[%lu]:%Lf\n", i, *long_double_array[i]);
+		// long double version?
+		*long_double_array[starting_point+i] = atof(long_double_data[i].c_str());
 	}
 }
 
 void array_t::parse_string_from_string(std::string a){
+	const unsigned long int starting_point = pull_starting_number(a);
+	std::vector<std::string> string_data = pull_items(ARRAY_STRING_SEPERATOR_START, a, ARRAY_STRING_SEPERATOR_END);
+	const unsigned long int string_data_size = string_data.size();
+	for(unsigned long int i = 0;i < string_data_size;i++){
+		*string_array[starting_point+i] = string_data[i];
+	}
 }
 
 std::vector<std::string> array_t::gen_int_array_vector(){
@@ -183,6 +182,11 @@ void array_t::close(){
 	long_double_array.clear();
 }
 
+bool array_t::updated(){
+	int new_hash = encrypt(int_array) + encrypt(long_double_array) + encrypt(string_array);
+	return hash != new_hash;
+}
+
 array_t *new_array(){
 	array_t *a = new array_t;
 	array_vector.push_back(a);
@@ -214,4 +218,10 @@ void update_data(std::string a){
 			break;
 		}
 	}
+}
+
+void add_two_arrays(array_t *a, array_t *b){
+	a->int_array.insert(a->int_array.end(), b->int_array.begin(), b->int_array.end());
+	a->long_double_array.insert(a->long_double_array.end(), b->long_double_array.begin(), b->long_double_array.end());
+	a->string_array.insert(a->string_array.end(), b->string_array.begin(), b->string_array.end());
 }

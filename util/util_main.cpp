@@ -88,3 +88,89 @@ bool sign(long double *a){
 	}
 	return false;
 }
+
+int encrypt(int *a, int size){
+	int average = 0;
+	for(int i = 0;i < size;i++){
+		average = (average+a[i])/2;
+	}
+	return average;
+}
+
+int encrypt(std::vector<int> a){
+	const unsigned int a_size = a.size();
+	int average = 0;
+	for(unsigned int i = 0;i < a_size;i++){
+		average = (average+a[i])/2;
+	}
+	return average;
+}
+
+int encrypt(std::vector<int*> a){
+	const unsigned int a_size = a.size();
+	int average = 0;
+	for(unsigned int i = 0;i < a_size;i++){
+		average = (average+*(a[i]))/2;
+	}
+	return average;
+}
+
+int encrypt(std::vector<double> a){
+	const unsigned int a_size = a.size();
+	int average = 0;
+	for(unsigned int i = 0;i < a_size;i++){
+		average = (average+a[i])/2;
+	}
+	return average;
+}
+
+int encrypt(std::vector<double*> a){
+	const unsigned int a_size = a.size();
+	long double average = 0;
+	for(unsigned int i = 0;i < a_size;i++){
+		average = (average+*(a[i]))/2;
+	}
+	return average;
+}
+
+int encrypt(std::vector<long double> a){
+	const unsigned int a_size = a.size();
+	int average = 0;
+	for(unsigned int i = 0;i < a_size;i++){
+		average = (average+a[i])/2;
+	}
+	return average;
+}
+
+int encrypt(std::vector<long double*> a){
+	const unsigned int a_size = a.size();
+	int average = 0;
+	for(unsigned int i = 0;i < a_size;i++){
+		average = (average+*(a[i]))/2;
+	}
+	return average;
+}
+
+int encrypt(std::vector<std::string> a){
+	const unsigned int a_size = a.size();
+	int average = 0;
+	for(unsigned int i = 0;i < a_size;i++){
+		const unsigned int a_i_size = a[i].size();
+		for(unsigned int n = 0;n < a_i_size;n++){
+			average = (average+a[i][n])/2;
+		}
+	}
+	return average;
+}
+
+int encrypt(std::vector<std::string*> a){
+	const unsigned int a_size = a.size();
+	int average = 0;
+	for(unsigned int i = 0;i < a_size;i++){
+		const unsigned int a_i_size = a[i]->size();
+		for(unsigned int n = 0;n < a_i_size;n++){
+			average = (average+(*a[i])[n])/2;
+		}
+	}
+	return average;
+}
