@@ -14,16 +14,40 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "class_main.h"
 #include "class_array.h"
 
+long int array_scan_for_id(int); // IDs cannot be sent over the internet if they are any type other than long double, string, or int
+
 static std::vector<array_t*> array_vector;
+
+long int array_scan_for_id(int id){
+	const unsigned int array_vector_size = array_vector.size();
+	for(unsigned int i = 0;i < array_vector_size;i++){
+		if(unlikely(array_vector[i]->id == id)){
+			return i;
+		}
+	}
+	return -1;
+}
+
+long int array_highest_id(){
+	long int id = 0;
+	const unsigned int array_vector_size = array_vector.size();
+	for(unsigned int i = 0;i < array_vector_size;i++){
+		if(likely(array_vector[i]->id > id)){
+			id = array_vector[i]->id;
+		}
+	}
+	return id;
+}
 
 static std::string wrap(char *start, std::string data, char *end){
 	return (std::string)start + data + (std::string)end;
 }
 
 array_t::array_t(){
-	id = gen_rand();
+	hash = 0;
 }
 
 bool array_t::id_match(int a){
@@ -59,22 +83,13 @@ unsigned int array_t::pull_starting_number(std::string a){
 	return atoi(return_value.c_str());
 }
 
-std::vector<std::string> array_t::pull_items(char *x, std::string a, char *y){
+std::vector<std::string> array_t::pull_items_data(char *c, std::string a, char *d){
 	std::vector<std::string> b;
-	if(a.find_first_of(x) == std::string::npos){
-		#ifdef CLASS_DEBUG
-		printf("The string '%s' does not contain any instances of '%s'\n",a.c_str(),x);
-		#endif
-		return b;
-	}
-	#ifdef CLASS_DEBUG
-	printf("The string that is about to be processed has '%s' after the initial slice\n",a.c_str());
-	#endif
 	while(true){
-		const size_t start_start = a.find_first_of(ARRAY_ITEM_SEPERATOR_START);
-		const size_t end_start = a.find_first_of(ARRAY_ITEM_SEPERATOR_END);
-		const size_t start_end = start_start + strlen(ARRAY_ITEM_SEPERATOR_START);
-		const size_t end_end = end_start + strlen(ARRAY_ITEM_SEPERATOR_END);
+		const size_t start_start = a.find_first_of(c);
+		const size_t end_start = a.find_first_of(d);
+		const size_t start_end = start_start + strlen(c);
+		const size_t end_end = end_start + strlen(d);
 		bool conditional[8] = {false};
 		conditional[4] = start_start == std::string::npos;
 		conditional[5] = end_start == std::string::npos;
@@ -96,7 +111,7 @@ std::vector<std::string> array_t::pull_items(char *x, std::string a, char *y){
 			for(unsigned int i = 0;i < 4;i++){
 				printf("%d\n",conditional[i]);
 			}
-			printf("start_start:%lu\tend_start:%lu\tstart_end:%lu\tend_end:%lu\n",start_start, end_start, start_end, end_end);
+			printf("start_start:%zu\tend_start:%zu\tstart_end:%zu\tend_end:%zu\n",start_start, end_start, start_end, end_end);
 			assert(false);
 		}
 		#ifdef CLASS_DEBUG
@@ -109,6 +124,18 @@ std::vector<std::string> array_t::pull_items(char *x, std::string a, char *y){
 		b.push_back(z);
 		a = a.substr(end_end+1,a.size());
 	}
+	return b;
+}
+
+std::vector<std::string> array_t::pull_items(char *x, std::string a, char *y){
+	std::vector<std::string> b;
+	if(a.find_first_of(x) == std::string::npos){
+		#ifdef CLASS_DEBUG
+		printf("The string '%s' does not contain any instances of '%s'\n",a.c_str(),x);
+		#endif
+		return b;
+	}
+	b = pull_items_data(ARRAY_ITEM_SEPERATOR_START, a, ARRAY_ITEM_SEPERATOR_END);
 	return b;
 }
 
@@ -126,8 +153,7 @@ void array_t::parse_long_double_from_string(std::string a){
 	std::vector<std::string> long_double_data = pull_items(ARRAY_LONG_DOUBLE_SEPERATOR_START,a,ARRAY_LONG_DOUBLE_SEPERATOR_END);
 	const unsigned long int long_double_data_size = long_double_data.size();
 	for(unsigned long int i = 0;i < long_double_data_size;i++){
-		// long double version?
-		*long_double_array[starting_point+i] = atof(long_double_data[i].c_str());
+		*long_double_array[starting_point+i] = atof(long_double_data[i].c_str()); // long double version?
 	}
 }
 
@@ -168,11 +194,18 @@ std::vector<std::string> array_t::gen_string_array_vector(){
 	return return_value;
 }
 
-std::vector<std::vector<std::string>> array_t::gen_string_vector(){
+std::vector<std::vector<std::string>> array_t::gen_string_vector(bool force){
+	int tmp_hash = gen_hash();
+	if(force == false){
+		force = tmp_hash == hash;
+	};
 	std::vector<std::vector<std::string>> return_value;
-	return_value.push_back(gen_int_array_vector());
-	return_value.push_back(gen_long_double_array_vector());
-	return_value.push_back(gen_string_array_vector());
+	if(force){
+		hash = tmp_hash;
+		return_value.push_back(gen_int_array_vector());
+		return_value.push_back(gen_long_double_array_vector());
+		return_value.push_back(gen_string_array_vector());
+	}
 	return return_value;
 }
 
@@ -182,9 +215,9 @@ void array_t::close(){
 	long_double_array.clear();
 }
 
-bool array_t::updated(){
+int array_t::gen_hash(){
 	int new_hash = encrypt(int_array) + encrypt(long_double_array) + encrypt(string_array);
-	return hash != new_hash;
+	return new_hash;
 }
 
 array_t *new_array(){

@@ -4,19 +4,25 @@
 #include "server_console.h"
 #include "signal.h"
 
-std::vector<coord_t*> coord;
-std::vector<coord_extra_t> coord_extra;
-std::vector<model_t*> model;
-std::vector<model_extra_t> model_extra;
-std::vector<client_t*> client;
-std::vector<client_extra_t> client_extra;
-
 thread_t *thread;
 
 bool terminate = false;
 
 int argc_;
 char **argv_;
+
+static void write_vector_to_net(std::vector<std::vector<std::string>> *a){
+	const unsigned long int a_size = a->size();
+	for(unsigned long int i = 0;i < a_size;i++){
+		const unsigned long int a_i_size = (*a)[i].size();
+		for(unsigned long int n = 0;n < a_i_size;n++){
+			const unsigned long int client_size = client.size();
+			for(unsigned long int c = 0;c < client_size;c++){
+				net->write((*a)[i][n], client[i]->net_ip_connection_info);
+			}
+		}
+	}
+}
 
 static void init_load_map_parse_line(std::string *a){
 	if(a[0] == "coord"){
@@ -139,6 +145,43 @@ void signal_handler(int signal){
 	}
 }
 
+static void class_engine_coord_update(){
+	const unsigned long int coord_vector_size = coord_vector.size();
+	for(unsigned long int i = 0;i < coord_vector_size;i++){
+		if(coord_vector[i]->array->updated()){
+			std::vector<std::vector<std::string>> a = coord_vector[i]->array->gen_string_vector();
+			write_vector_to_net(&a);
+		}
+	}
+
+}
+
+static void class_engine_model_update(){
+	const unsigned long int model_vector_size = model_vector.size();
+	for(unsigned long int i = 0;i < model_vector_size;i++){
+		if(model_vector[i]->array->updated()){
+			std::vector<std::vector<std::string>> a = model_vector[i]->array->gen_string_vector();
+			write_vector_to_net(&a);
+		}
+	}
+}
+
+static void class_engine_client_update(){
+	const unsigned long int client_vector_size = client_vector.size();
+	for(unsigned long int i = 0;i < client_vector_size;i++){
+		if(client_vector[i]->array->updated()){
+			std::vector<std::vector<std::string>> a = client_vector[i]->array->gen_string_vector();
+			write_vector_to_net(&a);
+		}
+	}
+}
+
+static void class_engine(){
+	class_engine_client_update();
+	class_engine_model_update();
+	class_engine_coord_update();
+}
+
 int main(int argc, char **argv){
 	argc_ = argc;
 	argv_ = argv;
@@ -156,6 +199,7 @@ int main(int argc, char **argv){
 		physics_engine();
 		net_engine();
 		console_engine();
+		class_engine();
 	}
 	close();
 	ms_sleep(1000); // wait for threads without references to stop

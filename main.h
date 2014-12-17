@@ -16,5 +16,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef MAIN_H
 	#define MAIN_H
+	#include "cstdio"
 	#define TERMINATE -127
 #endif

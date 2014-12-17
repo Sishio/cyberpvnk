@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define TEST_LOGIC 1
 #include "c_main.h"
 #include "signal.h"
 
@@ -36,11 +37,12 @@ unsigned long int tick = 0;
 bool terminate = false;
 
 static bool check_for_parameter(const std::string a){
-	std::string argv__;
 	for(int i = 0;i < argc_;i++){
-		argv__ += argv_[i];
+		if(std::string(argv_[i]) == a){
+			return true;
+		}
 	}
-	return argv__.find_first_of(a) != std::string::npos;
+	return false;
 }
 
 static void init(){
@@ -122,6 +124,28 @@ void signal_handler(int signal){
 }
 #endif
 
+void test_logic_function(){
+	coord_t a,b;
+	a.x = gen_rand();
+	a.y = gen_rand();
+	a.z = gen_rand();
+	a.set_x_angle(false, gen_rand());
+	a.set_y_angle(false, gen_rand());
+	b.array->parse_string_vector(a.array->gen_string_vector());
+	a.print();
+	printf("--------------------------------------------------------------------\n");
+	b.print();
+	printf("\n\n\n");
+	//ms_sleep(1000);
+}
+
+void test_logic(){
+	long double time_start = get_time();
+	test_logic_function();
+	long double time_end = get_time();
+	printf("Elapsed test_logic time: %Lf\n",time_end-time_start);
+}
+
 int main(int argc, char **argv){
 	argc_ = argc;
 	argv_ = argv;
@@ -130,9 +154,13 @@ int main(int argc, char **argv){
 	#ifdef __linux
 	printf("Setting up the signal handler\n");
 	signal(SIGINT,signal_handler);
+	// insert this into the input engine
 	#endif
 	while(terminate == false){
 		loop();
+		#ifdef TEST_LOGIC
+		test_logic();
+		#endif
 		tick++;
 	}
 	close();

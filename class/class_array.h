@@ -36,6 +36,15 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define ARRAY_ID_END				(char*)"\x12"
 	#define ARRAY_STARTING_START			(char*)"\x13"
 	#define ARRAY_STARTING_END			(char*)"\x14"
+	#define ARRAY_STD_VECTOR_LONG_DOUBLE_START	(char*)"\x15"
+	#define ARRAY_STD_VECTOR_LONG_DOUBLE_END	(char*)"\x16"
+	#define ARRAY_STD_VECTOR_ID_START		(char*)"\x17"
+	#define ARRAY_STD_VECTOR_ID_END			(char*)"\x18"
+	#define ARRAY_STD_VECTOR_SIZE_START		(char*)"\x19"
+	#define ARRAY_STD_VECTOR_SIZE_END		(char*)"\x20"
+	#define ARRAY_STD_VECTOR_STARTING_START		(char*)"\x21"
+	#define ARRAY_STD_VECTOR_STARTING_END		(char*)"\x22"
+	// the networking code reserves 30-32 (packet seperators for serial connections)
 	class array_t{
 	private:
 		std::vector<std::string> gen_int_array_vector();
@@ -47,6 +56,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		unsigned int pull_starting_number(std::string);
 		std::vector<std::string> pull_items(char*, std::string, char*);
 		int hash;
+		std::vector<std::string> pull_items_data(char*, std::string, char*);
 	public:
 		int id;
 		std::vector<int*> int_array;
@@ -54,10 +64,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<std::string*> string_array;
 		array_t();
 		bool id_match(int);
-		std::vector<std::vector<std::string>> gen_string_vector();
+		std::vector<std::vector<std::string>> gen_string_vector(bool force = false);
 		void parse_string_entry(std::string);
 		void parse_string_vector(std::vector<std::vector<std::string>>);
-		bool updated();
+		int gen_hash();
 		void close();
 	};
 	extern void add_two_arrays(array_t*, array_t*);

@@ -1,0 +1,3 @@
+#ifndef C_NET_ENGINE
+	#define C_NET_H
+#endif

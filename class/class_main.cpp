@@ -16,8 +16,30 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "class_main.h"
 
+extern void coord_reconstruct_vector(void*);
+extern void model_reconstruct_vector(void*);
+
 std::vector<coord_t*> coord_vector;
 std::vector<model_t*> model_vector;
+std::vector<client_t*> client_vector;
+
+coord_t *new_coord();
+model_t *new_model();
+
+void coord_t::update_array_pointers(){
+	array->long_double_array.clear();
+	array->long_double_array.push_back(&x);
+	array->long_double_array.push_back(&y);
+	array->long_double_array.push_back(&z);
+	array->long_double_array.push_back(&x_angle);
+	array->long_double_array.push_back(&y_angle);
+	array->long_double_array.push_back(&x_vel);
+	array->long_double_array.push_back(&y_vel);
+	array->long_double_array.push_back(&z_vel);
+	array->int_array.clear();
+	array->int_array.push_back(&model_id);
+
+}
 
 coord_t::coord_t(){
 	x = y = z = x_angle = y_angle = x_vel = y_vel = z_vel = 0;
@@ -26,7 +48,7 @@ coord_t::coord_t(){
 	model_id = -1;
 	mobile = true;
 	array = new_array();
-	update_array();
+	update_array_pointers();
 }
 
 void coord_t::print(){
@@ -51,34 +73,19 @@ void coord_t::set_y_angle(bool add, long double a){
 	}else y_angle = a;
 }
 
-void coord_t::update_array(){
-	array->long_double_array.push_back(&x);
-	array->long_double_array.push_back(&y);
-	array->long_double_array.push_back(&z);
-	array->long_double_array.push_back(&x_angle);
-	array->long_double_array.push_back(&y_angle);
-	array->long_double_array.push_back(&x_vel);
-	array->long_double_array.push_back(&y_vel);
-	array->long_double_array.push_back(&z_vel);
-	array->int_array.push_back(&model_id);
-}
-
 void coord_t::close(){
 	array->close();
 	delete_array(array);
 	array = nullptr;
 }
 
-model_t::model_t(){
-	array = new_array();
+void model_t::update_array_pointers(){
+
 }
 
-void model_t::update_array(){
-	// std::vector needs to be a type for the array
-	// since there is really no better way to take
-	// care of the variables of extra sizes and also
-	// the fact that typing this is kind of fun. I think
-	// it is because this is all wasted space. Cool!
+model_t::model_t(){
+	array = new_array();
+	update_array_pointers();
 }
 
 void model_t::get_size(long double *x, long double *y, long double *z){
@@ -103,15 +110,15 @@ void model_t::get_size(long double *x, long double *y, long double *z){
 }
 
 void model_t::load_parse_vector(std::string a){
-	std::string data[4];
-	std::stringstream ss;
-	ss << a;
-	ss >> data[0] >> data[1] >> data[2] >> data[3];
-	std::vector<double> b;
-	b.push_back(atof(data[1].c_str()));
-	b.push_back(atof(data[2].c_str()));
-	b.push_back(atof(data[3].c_str()));
-	v.push_back(b);
+	//std::string data[4];
+	//std::stringstream ss;
+	//ss << a;
+	//ss >> data[0] >> data[1] >> data[2] >> data[3];
+	//std::vector<double> b;
+	//b.push_back(atof(data[1].c_str()));
+	//b.push_back(atof(data[2].c_str()));
+	//b.push_back(atof(data[3].c_str()));
+	//b.push_back(b);
 }
 
 void model_t::load(std::string a){
@@ -142,6 +149,7 @@ void model_t::close(){
 }
 
 void client_t::update_array(){
+	array->int_array.clear();
 	array->int_array.push_back(&model_id);
 	array->int_array.push_back(&coord_id);
 }
@@ -152,21 +160,27 @@ client_t::client_t(){
 	model_t *model = find_model_pointer(model_id);
 	coord_t *coord = find_coord_pointer(coord_id);
 	printf("\tAllocating & initializing coord\n");
-	coord = new coord_t;
+	coord = new_coord();
 	printf("\tAllocating & initializing model\n");
-	model = new model_t;
+	model = new_model();
 	printf("\tAllocating & initializing array\n");
 	array = new_array();
-	/*
-	This consequently updates the arrays of the
-	data types
-	*/
 	update_array();
 }
 
 void client_t::close(){
 	delete_array(array);
 	array = nullptr;
+}
+
+coord_t *new_coord(){
+	coord_t *return_value = new coord_t;
+	return return_value;
+}
+
+model_t *new_model(){
+	model_t *return_value = new model_t;
+	return return_value;
 }
 
 void add_coord(coord_t *a){

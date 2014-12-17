@@ -29,27 +29,30 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void load_parse_vector(std::string);
 	public:
 		array_t *array;
-		std::vector<std::vector<double> > v;     // vector
-		std::vector<std::vector<double> > vt;    // vector texture
-		std::vector<std::vector<double> > vn;    // vector normal
-		std::vector<std::vector<double> > vp;
+		model_t *pointer_to_self;
+		std::vector<std::vector<long double> > v;     // vector
+		std::vector<std::vector<long double> > vt;    // vector texture
+		std::vector<std::vector<long double> > vn;    // vector normal
+		std::vector<std::vector<long double> > vp;
 		std::vector<std::vector<std::vector<int> > > f;  // faces
 		model_t();
 		void load(std::string);
 		void get_size(long double*, long double*, long double*);
 		void close();
-		void update_array();
+		unsigned long long int collective_size;
+		void update_array_pointers();
 	};
 	class coord_t{
 	public:
 		array_t *array;
+		coord_t *pointer_to_self; // this is needed for the reconstructors
 		long double x,y,z,x_angle,y_angle;
 		long double x_vel,y_vel,z_vel;
 		long double physics_time;
 		long double old_time;
 		bool mobile;
 		coord_t();
-		void update_array();
+		void update_array_pointers();
 		void print();
 		void set_x_angle(bool,long double);
 		void set_y_angle(bool,long double);
@@ -60,6 +63,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	class client_t{
 	public:
 		array_t *array;
+		client_t *pointer_to_self;
 		int coord_id;
 		int model_id;
 		net_ip_connection_info_t net_ip_connection_info;
@@ -74,6 +78,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<input_buffer_t> input_buffer;
 		client_extra_t();
 	};
+	extern std::vector<client_t*> client_vector;
+	extern std::vector<coord_t*> coord_vector;
+	extern std::vector<model_t*> model_vector;
 	extern void add_coord(coord_t*);
 	extern void add_model(model_t*);
 	extern coord_t *find_coord_pointer(int);

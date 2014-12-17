@@ -171,8 +171,8 @@ static void once_per_second_update(){
 }
 
 static void update_vector_sizes(){
-	coord_size = coord.size();
-	model_size = model.size();
+	coord_size = coord_vector.size();
+	model_size = model_vector.size();
 }
 
 void physics_engine(){
@@ -212,47 +212,6 @@ void physics_engine(){
 		}
 	}else{
 		physics_engine_loop_section(0,coord_size);
-	}
-}
-
-void new_init_coord_t(){
-	coord.push_back(new coord_t);
-	coord_extra_t b;
-	coord_extra.push_back(b);
-	update_vector_sizes();
-	term_if_true(coord_extra.size() != coord.size(),const_cast<char*>("coord_extra.size() != coord.size()"));
-}
-
-void delete_close_coord_t(coord_t *a){
-	for(unsigned long int i = 0;i < coord_size;i++){
-		if(a == coord[i]){
-			coord.erase(coord.begin()+i);
-			update_vector_sizes();
-			delete a;
-			a = nullptr;
-			break;
-		}
-	}
-}
-
-void new_init_model_t(){
-	model.push_back(new model_t);
-	model_extra_t b;
-	model_extra.push_back(b);
-	update_vector_sizes();
-	term_if_true(model_extra.size() != model.size(),(char*)"model sizes do not match\n");
-}
-
-void delete_close_model_t(model_t *a){
-	const int model_size = model.size();
-	for(int i = 0;i < model_size;i++){
-		if(a == model[i]){
-			model.erase(model.begin()+i);
-			update_vector_sizes();
-			delete a;
-			a = nullptr;
-			break;
-		}
 	}
 }
 

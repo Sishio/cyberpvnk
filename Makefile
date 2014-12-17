@@ -18,6 +18,12 @@ server: class net util input net thread math
 client: class net render input util math thread
 	$(CC) -c $(CFLAGS) client/c_main.cpp -o client/obj/c_main.o
 	$(CC) -c $(CFLAGS) client/c_engine.cpp -o client/obj/c_engine.o
+	$(CC) -c $(CFLAGS) client/c_input_engine.cpp -o client/obj/c_input_engine.o
+	$(CC) -c $(CFLAGS) client/c_net_engine.cpp -o client/obj/c_net_engine.o
+	$(CC) -c $(CFLAGS) client/c_render_engine.cpp -o client/obj/c_render_engine.o
+
+	cp -r client/obj/c_engine.o client/obj/c_engine.o.o
+	ld -r client/obj/c_net_engine.o client/obj/c_render_engine.o client/obj/c_input_engine.o client/obj/c_engine.o.o -o client/obj/c_engine.o
 	ld -r client/obj/c_main.o client/obj/c_engine.o -o client/obj/c.o
 	$(CC) $(CFLAGS) math/obj/math.o class/obj/class.o net/obj/net.o render/obj/render.o input/obj/input.o thread/obj/thread.o util/obj/util.o client/obj/c.o -o bin/client.$(shell uname -m) $(LINKER)
 

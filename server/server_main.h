@@ -19,6 +19,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../main.h"
 	#include "../net/net_main.h"
 	#include "../class/class_main.h"
+	#include "../class/class_array.h"
 	#include "sstream"
 	#include "fstream"
 	#include "string"
