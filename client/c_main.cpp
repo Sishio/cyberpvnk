@@ -35,6 +35,7 @@ char **argv_;
 
 unsigned long int tick = 0;
 bool terminate = false;
+bool once_per_second = false;
 
 static bool check_for_parameter(const std::string a){
 	for(int i = 0;i < argc_;i++){
@@ -48,6 +49,7 @@ static bool check_for_parameter(const std::string a){
 static void init(){
 	printf("Allocating & initializing self\n");
 	self = new client_t();
+	model_load(find_model_pointer(self->model_id), "../cube.obj");
 	bool a[3] = {true};
 	a[0] = !check_for_parameter("--render-disable");
 	a[1] = !check_for_parameter("--input-disable");
@@ -111,8 +113,8 @@ static void module_loop(){
 }
 
 static void loop(){
-	engine_loop();
-	module_loop();
+	engine_loop(); // logic code that uses the engine stuff
+	module_loop(); // core engine code that the logic uses
 }
 
 #ifdef __linux
@@ -124,26 +126,51 @@ void signal_handler(int signal){
 }
 #endif
 
+static render_buffer_t *test_logic_render = nullptr;
+
 void test_logic_function(){
-	coord_t a,b;
+	/*coord_t a,b;
 	a.x = gen_rand();
 	a.y = gen_rand();
 	a.z = gen_rand();
 	a.set_x_angle(false, gen_rand());
 	a.set_y_angle(false, gen_rand());
-	b.array->parse_string_vector(a.array->gen_string_vector());
+	b.array->parse_string_vector(a.array->gen_string_vector(true));
 	a.print();
 	printf("--------------------------------------------------------------------\n");
 	b.print();
-	printf("\n\n\n");
+	printf("\n\n\n");*/
+	if(test_logic_render == nullptr){
+		test_logic_render = new_render_buffer();
+	}
+	assert(test_logic_render != nullptr);
+	test_logic_render->model_id = self->model_id;
+	test_logic_render->coord_id = self->coord_id;
+	find_coord_pointer(self->coord_id)->x = -100;
+	find_coord_pointer(self->coord_id)->y = -100;
 	//ms_sleep(1000);
 }
 
 void test_logic(){
-	long double time_start = get_time();
+	//long double time_start = get_time();
 	test_logic_function();
-	long double time_end = get_time();
-	printf("Elapsed test_logic time: %Lf\n",time_end-time_start);
+	//long double time_end = get_time();
+	//printf("Elapsed test_logic time: %Lf\n",time_end-time_start);
+}
+
+static long double old_time = 0;
+static long double once_per_second_time = 0;
+
+static void once_per_second_check(){
+	long double curr_time = get_time();
+	once_per_second_time += curr_time-old_time;
+	old_time = curr_time;
+	if(once_per_second_time >= 1){
+		once_per_second_time -= 1;
+		once_per_second = true;
+	}else{
+		once_per_second = false;
+	}
 }
 
 int main(int argc, char **argv){
@@ -161,6 +188,7 @@ int main(int argc, char **argv){
 		#ifdef TEST_LOGIC
 		test_logic();
 		#endif
+		once_per_second_check();
 		tick++;
 	}
 	close();

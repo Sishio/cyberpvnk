@@ -5,8 +5,7 @@
 //this file is the objloader.cpp
 #include "render_obj_loader.h"
 //nothing to explain here
-coordinate::coordinate(float a,float b,float c)
-{
+coordinate::coordinate(float a,float b,float c){
 	x=a;
 	y=b;
 	z=c;
@@ -38,8 +37,7 @@ face::face(int facen,int f1,int f2,int f3,int f4,int t1,int t2,int t3,int t4,int
 	four=true;
 }
 //nothing to explain here
-material::material(const char*  na,float al,float n,float ni2,float* d,float* a,float* s,int i,int t)
-{
+material::material(const char*  na,float al,float n,float ni2,float* d,float* a,float* s,int i,int t){
 	name=na;
 	alpha=al;
 	ni=ni2;
@@ -57,13 +55,11 @@ material::material(const char*  na,float al,float n,float ni2,float* d,float* a,
 	texture=t;
 }
 //nothing to explain here
-texcoord::texcoord(float a,float b)
-{
+texcoord::texcoord(float a,float b){
 	u=a;
 	v=b;
 }
-int objloader_t::load(const char*  filename)
-{
+int objloader_t::load(const char *filename, model_t *model){
 	std::ifstream in(filename);	//open the model file
 	if(!in.is_open()){
 		printf("Could not open the object file %s\n",filename);
@@ -76,9 +72,9 @@ int objloader_t::load(const char*  filename)
 		coord.push_back(new std::string(buf));
 	}
 	for(unsigned long int i=0;i<(unsigned long int)coord.size();i++){	//and then go through all line and decide what kind of line it is
-		if((*coord[i])[0]=='#')	//if it's a comment
+		if((*coord[i])[0]=='#'){	//if it's a comment
 			continue;	//we don't have to do anything with it
-		else if((*coord[i])[0]=='v' && (*coord[i])[1]==' '){	//if a vertex
+		}else if((*coord[i])[0]=='v' && (*coord[i])[1]==' '){	//if a vertex
 			float tmpx,tmpy,tmpz;
 			sscanf(coord[i]->c_str(),"v %f %f %f",&tmpx,&tmpy,&tmpz);	//read the 3 floats, which makes up the vertex
 			vertex.push_back(new coordinate(tmpx,tmpy,tmpz));	//and put it in the vertex vector
@@ -129,9 +125,9 @@ int objloader_t::load(const char*  filename)
 		}else if((*coord[i])[0]=='m' && (*coord[i])[1]=='t' && (*coord[i])[2]=='l' && (*coord[i])[3]=='l'){
 			char filen[200];
 			sscanf(coord[i]->c_str(),"mtllib %s",filen);	//read the filename
-			std::ifstream mtlin(filen);	//open the file
+			std::string filen_string = "../" + (std::string)filen;
+			std::ifstream mtlin(filen_string);	//open the file
 			if(!mtlin.is_open()){
-				std::cout << "connot open the material file" << std::endl;
 				clean();
 				return -1;
 			}
@@ -205,131 +201,64 @@ int objloader_t::load(const char*  filename)
 			istexture=true;
 		}
 	}
-	if(materials.size()==0)	//if some reason the material file doesn't contain any material, we don't have material
+	if(materials.size() == 0){	//if some reason the material file doesn't contain any material, we don't have material
 		ismaterial=false;
-	else	//else we have
+	}else{
 		ismaterial=true;
+	}
 	std::cout << vertex.size() << " " << normals.size() << " " << faces.size() << " " << materials.size() << std::endl; 	//test purposes
-	//draw
-	GLuint num=glGenLists(1);	//I generate a unique identifier for the list
-	glNewList(num,GL_COMPILE);
-	int last=-1;	//the last material (default -1, which doesn't exist, so we use the first material)
-	for(unsigned long int i=0;i<(unsigned long int)faces.size();i++){
-		if(last!=faces[i]->mat && ismaterial){
-			//set all of the material property
-			float diffuse[]={materials[(size_t)faces[i]->mat]->dif[0],materials[(size_t)faces[i]->mat]->dif[1],materials[(size_t)faces[i]->mat]->dif[2],1.0};
-			float ambient[]={materials[(size_t)faces[i]->mat]->amb[0],materials[(size_t)faces[i]->mat]->amb[1],materials[(size_t)faces[i]->mat]->amb[2],1.0};
-			float specular[]={materials[(size_t)faces[i]->mat]->spec[0],materials[(size_t)faces[i]->mat]->spec[1],materials[(size_t)faces[i]->mat]->spec[2],1.0};
-			glMaterialfv(GL_FRONT,GL_DIFFUSE,diffuse);
-			glMaterialfv(GL_FRONT,GL_AMBIENT,ambient);
-			glMaterialfv(GL_FRONT,GL_SPECULAR,specular);
-			glMaterialf(GL_FRONT,GL_SHININESS,materials[(size_t)faces[i]->mat]->ns);
-			last=faces[i]->mat;	//set the current to last
-			if(materials[(size_t)faces[i]->mat]->texture==-1)	//if we don't have texture, disable it, else enable it
-				glDisable(GL_TEXTURE_2D);
-			else{
-				glEnable(GL_TEXTURE_2D);
-				glBindTexture(GL_TEXTURE_2D,(GLuint)materials[(size_t)faces[i]->mat]->texture);	//and use it
-			}
-		}
-		if(faces[i]->four){
-			glBegin(GL_QUADS);
-				if(isnormals)	//if there are normals
-					glNormal3f(normals[(size_t)faces[i]->facenum-1]->x,normals[(size_t)faces[i]->facenum-1]->y,normals[(size_t)faces[i]->facenum-1]->z);	//use them
-				if(istexture && materials[(size_t)faces[i]->mat]->texture!=-1)	//if there are textures
-					glTexCoord2f(texturecoordinate[(size_t)faces[i]->texcoord[0]-1]->u,texturecoordinate[(size_t)faces[i]->texcoord[0]-1]->v);	//set the texture coorinate
-				glVertex3f(vertex[(size_t)faces[i]->faces[0]-1]->x,vertex[(size_t)faces[i]->faces[0]-1]->y,vertex[(size_t)faces[i]->faces[0]-1]->z);
-				if(istexture && materials[(size_t)faces[i]->mat]->texture!=-1)
-					glTexCoord2f(texturecoordinate[(size_t)faces[i]->texcoord[1]-1]->u,texturecoordinate[(size_t)faces[i]->texcoord[1]-1]->v);
-				glVertex3f(vertex[(size_t)faces[i]->faces[1]-1]->x,vertex[(size_t)faces[i]->faces[1]-1]->y,vertex[(size_t)faces[i]->faces[1]-1]->z);
-				if(istexture && materials[(size_t)faces[i]->mat]->texture!=-1)
-					glTexCoord2f(texturecoordinate[(size_t)faces[i]->texcoord[2]-1]->u,texturecoordinate[(size_t)faces[i]->texcoord[2]-1]->v);
-				glVertex3f(vertex[(size_t)faces[i]->faces[2]-1]->x,vertex[(size_t)faces[i]->faces[2]-1]->y,vertex[(size_t)faces[i]->faces[2]-1]->z);
-				if(istexture && materials[(size_t)faces[i]->mat]->texture!=-1)
-					glTexCoord2f(texturecoordinate[(size_t)faces[i]->texcoord[3]-1]->u,texturecoordinate[(size_t)faces[i]->texcoord[3]-1]->v);
-				glVertex3f(vertex[(size_t)faces[i]->faces[3]-1]->x,vertex[(size_t)faces[i]->faces[3]-1]->y,vertex[(size_t)faces[i]->faces[3]-1]->z);
-			glEnd();
-		}else{
-			glBegin(GL_TRIANGLES);
-				if(isnormals)	//if there are normals
-					glNormal3f(normals[(size_t)faces[i]->facenum-1]->x,normals[(size_t)faces[i]->facenum-1]->y,normals[(size_t)faces[i]->facenum-1]->z);
-
-				if(istexture && materials[(size_t)faces[i]->mat]->texture!=-1)
-					glTexCoord2f(texturecoordinate[(size_t)faces[i]->texcoord[0]-1]->u,texturecoordinate[(size_t)faces[i]->texcoord[0]-1]->v);
-
-
-				glVertex3f(vertex[(size_t)faces[i]->faces[0]-1]->x,vertex[(size_t)faces[i]->faces[0]-1]->y,vertex[(size_t)faces[i]->faces[0]-1]->z);
-				if(istexture && materials[(size_t)faces[i]->mat]->texture!=-1)
-					glTexCoord2f(texturecoordinate[(size_t)faces[i]->texcoord[1]-1]->u,texturecoordinate[(size_t)faces[i]->texcoord[1]-1]->v);
-				glVertex3f(vertex[(size_t)faces[i]->faces[1]-1]->x,vertex[(size_t)faces[i]->faces[1]-1]->y,vertex[(size_t)faces[i]->faces[1]-1]->z);
-				if(istexture && materials[(size_t)faces[i]->mat]->texture!=-1)
-					glTexCoord2f(texturecoordinate[(size_t)faces[i]->texcoord[2]-1]->u,texturecoordinate[(size_t)faces[i]->texcoord[2]-1]->v);
-				glVertex3f(vertex[(size_t)faces[i]->faces[2]-1]->x,vertex[(size_t)faces[i]->faces[2]-1]->y,vertex[(size_t)faces[i]->faces[2]-1]->z);
-			glEnd();
-		}
-	}
-	glEndList();
+	model->coord = coord;
+	model->vertex = vertex;
+	model->faces = faces;
+	model->normals = normals;
+	model->texture = texture;
+	model->lists = lists;
+	model->materials = materials;
+	model->texturecoordinate = texturecoordinate;
+	model->ismaterial = ismaterial;
+	model->isnormals = isnormals;
+	model->istexture = istexture;
 	clean();
-	lists.push_back(num);
-	return (int)num;
+	return 0;
 }
 
-void objloader_t::clean()
-{
-	//delete all the dynamically allocated memory
-	for(unsigned long int i=0;i<(unsigned long int)coord.size();i++)
-		delete coord[i];
-	for(unsigned long int i=0;i<(unsigned long int)faces.size();i++)
-		delete faces[i];
-	for(unsigned long int i=0;i<(unsigned long int)normals.size();i++)
-		delete normals[i];
-	for(unsigned long int i=0;i<(unsigned long int)vertex.size();i++)
-		delete vertex[i];
-	for(unsigned long int i=0;i<(unsigned long int)materials.size();i++)
-		delete materials[i];
-	for(unsigned long int i=0;i<(unsigned long int)texturecoordinate.size();i++)
-		delete texturecoordinate[i];
-	//and all elements from the vector
-	coord.clear();
-	faces.clear();
-	normals.clear();
-	vertex.clear();
-	materials.clear();
-	texturecoordinate.clear();
+void objloader_t::clean(){
 }
 
-objloader_t::~objloader_t()
-{
-	//delete lists and textures
-	for(std::vector<unsigned int>::const_iterator it=texture.begin();it!=texture.end();it++){
-		glDeleteTextures(1,&(*it));
-	}
-	for(std::vector<unsigned int>::const_iterator it=lists.begin();it!=lists.end();it++){
-		glDeleteLists(*it,1);
-	}
+objloader_t::~objloader_t(){
 }
 
 //load the filename textures (only BMP, R5G6B5 format)
-unsigned int objloader_t::loadTexture(const char*  filename)
-{
-	//nothing new in here
+unsigned int objloader_t::loadTexture(std::string image_path){
 	unsigned int num;
 	glGenTextures(1,&num);
-	SDL_Surface* img=SDL_LoadBMP(filename);
+	SDL_Surface *img = nullptr;
+	if(image_path.find_first_of(".bmp") != std::string::npos){
+		img = SDL_LoadBMP(image_path.c_str());
+	}else{
+		printf("Could not load the file '%s': the filetype is not supported\n", image_path.c_str());
+		assert(false);
+		return -1;
+	}
 	glBindTexture(GL_TEXTURE_2D,num);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,img->w,img->h,0,GL_RGB,GL_UNSIGNED_SHORT_5_6_5,img->pixels);
-	glTexEnvi(GL_TEXTURE_2D,GL_TEXTURE_ENV_MODE,GL_MODULATE);	//maybe just this
+	glTexEnvi(GL_TEXTURE_2D,GL_TEXTURE_ENV_MODE,GL_MODULATE);
 	SDL_FreeSurface(img);
 	texture.push_back(num);
 	return num;
 }
 
-objloader_t::objloader_t()
-{
+objloader_t::objloader_t(){
 	//at default we set all booleans to false, so we don't use anything
 	ismaterial=false;
 	isnormals=false;
 	istexture=false;
+}
+
+void model_load(model_t *a, std::string file){
+	assert(a != nullptr || a != NULL);
+	objloader_t obj_loader;
+	obj_loader.load(file.c_str(), a);
 }

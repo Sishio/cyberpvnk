@@ -16,7 +16,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef NET_H
 	#define NET_H
-	#include "net_serial.h"
 	#include "net_ip.h"
 	#include "net_store.h" // stores the data
 	#include "thread"
@@ -40,7 +39,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		int init_parse_parameters(int,char**);
 		int init_initialize_subsystems(int,char**);
 		std::string encode_data(unsigned char, void*);
-		net_serial_t *serial;
 		net_ip_t *ip;
 		void blank();
 		net_t(int,char**);
@@ -48,7 +46,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void close();
 		std::string read();
 		int write(std::string, net_ip_connection_info_t);
-		int write(std::string, net_serial_connection_info_t);
 	};
 	extern void net_loop(net_t*);
 #endif

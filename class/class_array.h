@@ -26,12 +26,12 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define ARRAY_ITEM_SEPERATOR_END		(char*)"\x02"
 	#define ARRAY_TYPE_SEPERATOR_START		(char*)"\x03"
 	#define ARRAY_TYPE_SEPERATOR_END		(char*)"\x04"
-	#define ARRAY_INT_SEPERATOR_START		(char*)"\x05"	// item start and type end
-	#define ARRAY_INT_SEPERATOR_END			(char*)"\x06"	// type end and item start
-	#define ARRAY_LONG_DOUBLE_SEPERATOR_START	(char*)"\x07"	// item end and item end
-	#define ARRAY_LONG_DOUBLE_SEPERATOR_END		(char*)"\x08"	// item start and item start
-	#define ARRAY_STRING_SEPERATOR_START		(char*)"\x09"	// type end and type end
-	#define ARRAY_STRING_SEPERATOR_END		(char*)"\x10"	// type start and type start
+	#define ARRAY_INT_SEPERATOR_START		(char*)"\x05"
+	#define ARRAY_INT_SEPERATOR_END			(char*)"\x06"
+	#define ARRAY_LONG_DOUBLE_SEPERATOR_START	(char*)"\x07"
+	#define ARRAY_LONG_DOUBLE_SEPERATOR_END		(char*)"\x08"
+	#define ARRAY_STRING_SEPERATOR_START		(char*)"\x09"
+	#define ARRAY_STRING_SEPERATOR_END		(char*)"\x10"
 	#define ARRAY_ID_START				(char*)"\x11"
 	#define ARRAY_ID_END				(char*)"\x12"
 	#define ARRAY_STARTING_START			(char*)"\x13"
@@ -59,6 +59,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<std::string> pull_items_data(char*, std::string, char*);
 	public:
 		int id;
+		std::string generate_string_from_variable(long double*);
+		std::string generate_string_from_variable(int*);
+		std::string generate_string_from_variable(std::string*);
 		std::vector<int*> int_array;
 		std::vector<long double*> long_double_array;
 		std::vector<std::string*> string_array;
@@ -71,7 +74,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void close();
 	};
 	extern void add_two_arrays(array_t*, array_t*);
-	extern void update_data(std::string);
+	extern void update_class_data(std::string);
 	extern array_t* new_array();
 	extern void delete_array(array_t*);
 #endif

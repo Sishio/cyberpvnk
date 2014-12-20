@@ -48,6 +48,10 @@ static std::string wrap(char *start, std::string data, char *end){
 
 array_t::array_t(){
 	hash = 0;
+	id = gen_rand();
+	if(id == -1){
+		id = gen_rand();
+	}
 }
 
 bool array_t::id_match(int a){
@@ -242,7 +246,7 @@ int pull_id(std::string a){
 	return return_value;
 }
 
-void update_data(std::string a){
+void update_class_data(std::string a){
 	int id = pull_id(a);
 	const int array_vector_size = array_vector.size();
 	for(int i = 0;i < array_vector_size;i++){
@@ -257,4 +261,40 @@ void add_two_arrays(array_t *a, array_t *b){
 	a->int_array.insert(a->int_array.end(), b->int_array.begin(), b->int_array.end());
 	a->long_double_array.insert(a->long_double_array.end(), b->long_double_array.begin(), b->long_double_array.end());
 	a->string_array.insert(a->string_array.end(), b->string_array.begin(), b->string_array.end());
+}
+
+std::string array_t::generate_string_from_variable(long double* a){
+	unsigned int vector_starting_point = 0;
+	const unsigned int long_double_size = long_double_array.size();
+	for(unsigned int i = 0;i < long_double_size;i++){
+		if(long_double_array[i] == a){
+			vector_starting_point = i;
+			break;
+		}
+	}
+	return (wrap(ARRAY_ID_START, std::to_string(id), ARRAY_ID_END) + wrap(ARRAY_STARTING_START, std::to_string(vector_starting_point), ARRAY_STARTING_END) + wrap(ARRAY_LONG_DOUBLE_SEPERATOR_START, wrap(ARRAY_ITEM_SEPERATOR_START,std::to_string(*a),ARRAY_ITEM_SEPERATOR_END), ARRAY_LONG_DOUBLE_SEPERATOR_END));
+}
+
+std::string array_t::generate_string_from_variable(std::string* a){
+	unsigned int vector_starting_point = 0;
+	const unsigned int std_string_size = long_double_array.size();
+	for(unsigned int i = 0;i < std_string_size;i++){
+		if(string_array[i] == a){
+			vector_starting_point = i;
+			break;
+		}
+	}
+	return (wrap(ARRAY_ID_START, std::to_string(id), ARRAY_ID_END) + wrap(ARRAY_STARTING_START, std::to_string(vector_starting_point), ARRAY_STARTING_END) + wrap(ARRAY_LONG_DOUBLE_SEPERATOR_START, wrap(ARRAY_ITEM_SEPERATOR_START,*a,ARRAY_ITEM_SEPERATOR_END), ARRAY_LONG_DOUBLE_SEPERATOR_END));
+}
+
+std::string array_t::generate_string_from_variable(int* a){
+	unsigned int vector_starting_point = 0;
+	const unsigned int int_size = long_double_array.size();
+	for(unsigned int i = 0;i < int_size;i++){
+		if(int_array[i] == a){
+			vector_starting_point = i;
+			break;
+		}
+	}
+	return (wrap(ARRAY_ID_START, std::to_string(id), ARRAY_ID_END) + wrap(ARRAY_STARTING_START, std::to_string(vector_starting_point), ARRAY_STARTING_END) + wrap(ARRAY_LONG_DOUBLE_SEPERATOR_START, wrap(ARRAY_ITEM_SEPERATOR_START,std::to_string(*a),ARRAY_ITEM_SEPERATOR_END), ARRAY_LONG_DOUBLE_SEPERATOR_END));
 }

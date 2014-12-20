@@ -16,11 +16,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "class_main.h"
 
-extern void coord_reconstruct_vector(void*);
-extern void model_reconstruct_vector(void*);
-
 std::vector<coord_t*> coord_vector;
 std::vector<model_t*> model_vector;
+std::vector<render_buffer_t*> render_buffer_vector;
 std::vector<client_t*> client_vector;
 
 coord_t *new_coord();
@@ -79,73 +77,48 @@ void coord_t::close(){
 	array = nullptr;
 }
 
-void model_t::update_array_pointers(){
-
+void model_t::update_array(){
+	/*
+	make a way to send over std::vectors and other types like that so this can be sent over instead of whatever little workaround I would have come up with (sending over the entire .obj file will work, but I would rather not for the sake of changing it on the fly and small patches).
+	*/
 }
 
 model_t::model_t(){
 	array = new_array();
-	update_array_pointers();
+	update_array();
 }
 
 void model_t::get_size(long double *x, long double *y, long double *z){
-	const int vertex_size = v.size();
-	for(int i = 0;i < vertex_size;i++){
-		if(x[0] > v[i][0]){
-			x[0] = v[i][0];
-		}else if(x[1] < v[i][0]){
-			x[1] = v[i][0];
-		}
-		if(y[0] > v[i][0]){
-			y[0] = v[i][0];
-		}else if(y[1] < v[i][0]){
-			y[1] = v[i][0];
-		}
-		if(z[0] > v[i][0]){
-			z[0] = v[i][0];
-		}else if(z[1] < v[i][0]){
-			z[1] = v[i][0];
-		}
-	}
-}
-
-void model_t::load_parse_vector(std::string a){
-	//std::string data[4];
-	//std::stringstream ss;
-	//ss << a;
-	//ss >> data[0] >> data[1] >> data[2] >> data[3];
-	//std::vector<double> b;
-	//b.push_back(atof(data[1].c_str()));
-	//b.push_back(atof(data[2].c_str()));
-	//b.push_back(atof(data[3].c_str()));
-	//b.push_back(b);
-}
-
-void model_t::load(std::string a){
-	std::ifstream in(a);
-	if(!in.is_open()){
-		return;
-	}
-	char data_[512];
-	while(in.getline(data_,511)){
-		data_[511] = '\0';
-		std::string data = data_;
-		switch(data[0] + data[1]){
-			case 'v'+' ':
-				load_parse_vector(data);
-				break;
-			case 'v'+'t':
-			case 'v'+'n':
-			default:
-				break;
-		}
-	}
+	x[0] = x[1] = 0;
+	y[0] = y[1] = 0;
+	z[0] = z[1] = 0;
 }
 
 void model_t::close(){
 	array->close();
 	delete_array(array);
 	array = nullptr;
+	//delete all the dynamically allocated memory
+	for(unsigned long int i=0;i<(unsigned long int)coord.size();i++)
+		delete coord[i];
+	for(unsigned long int i=0;i<(unsigned long int)faces.size();i++)
+		delete faces[i];
+	for(unsigned long int i=0;i<(unsigned long int)normals.size();i++)
+		delete normals[i];
+	for(unsigned long int i=0;i<(unsigned long int)vertex.size();i++)
+		delete vertex[i];
+	for(unsigned long int i=0;i<(unsigned long int)materials.size();i++)
+		delete materials[i];
+	for(unsigned long int i=0;i<(unsigned long int)texturecoordinate.size();i++)
+		delete texturecoordinate[i];
+	//and all elements from the vector
+	coord.clear();
+	faces.clear();
+	normals.clear();
+	vertex.clear();
+	materials.clear();
+	texturecoordinate.clear();
+
 }
 
 void client_t::update_array(){
@@ -155,16 +128,12 @@ void client_t::update_array(){
 }
 
 client_t::client_t(){
-	model_id = -1;
-	coord_id = -1;
-	model_t *model = find_model_pointer(model_id);
-	coord_t *coord = find_coord_pointer(coord_id);
-	printf("\tAllocating & initializing coord\n");
-	coord = new_coord();
-	printf("\tAllocating & initializing model\n");
-	model = new_model();
-	printf("\tAllocating & initializing array\n");
+	coord_t *coord = new_coord();
+	model_t *model = new_model();
 	array = new_array();
+	model_id = model->array->id;
+	coord_id = coord->array->id;
+	find_coord_pointer(coord_id)->model_id = model_id;
 	update_array();
 }
 
@@ -173,13 +142,21 @@ void client_t::close(){
 	array = nullptr;
 }
 
+render_buffer_t::render_buffer_t(){
+	array = new array_t();
+	array->int_array.push_back(&coord_id);
+	array->int_array.push_back(&model_id);
+}
+
 coord_t *new_coord(){
 	coord_t *return_value = new coord_t;
+	add_coord(return_value);
 	return return_value;
 }
 
 model_t *new_model(){
 	model_t *return_value = new model_t;
+	add_model(return_value);
 	return return_value;
 }
 
@@ -215,7 +192,6 @@ coord_t *find_coord_pointer(int id){
 		}
 	}
 	return nullptr;
-	
 }
 
 model_t *find_model_pointer(int id){
@@ -226,5 +202,31 @@ model_t *find_model_pointer(int id){
 		}
 	}
 	return nullptr;
-	
+}
+
+render_buffer_t *new_render_buffer(){
+	render_buffer_t *a = new render_buffer_t();
+	render_buffer_vector.push_back(a);
+	return a;
+}
+
+render_buffer_t *find_render_buffer_pointer(int id){
+	const unsigned long int render_buffer_vector_size = render_buffer_vector.size();
+	for(unsigned long int i = 0;i < render_buffer_vector_size;i++){
+		if(render_buffer_vector[i]->array->id == id){
+			return render_buffer_vector[i];
+		}
+	}
+	return nullptr;
+}
+
+void add_render_buffer(render_buffer_t *a){
+	const unsigned long int render_buffer_vector_size = render_buffer_vector.size();
+	for(unsigned long int i = 0;i < render_buffer_vector_size;i++){
+		if(render_buffer_vector[i] == nullptr){
+			render_buffer_vector[i] = a;
+			return;
+		}
+	}
+	render_buffer_vector.push_back(a);
 }

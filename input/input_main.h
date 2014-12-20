@@ -16,6 +16,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef C_INPUT_H
 	#define C_INPUT_H
+	#define USE_SDL 1
 	#include "../main.h"
 	#include "cstdio"
 	#include "string"
@@ -45,6 +46,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		#define INPUT_TYPE_MOUSE_SCROLL_UP 0
 		#define INPUT_TYPE_MOUSE_SCROLL_DOWN 1
 	// add support for joysticks and cool things later on
+	namespace cursor{
+		void set_location(unsigned int, unsigned int);
+		void get_location(unsigned int*, unsigned int*);
+	}
 	class input_buffer_t{
 	public:
 		input_buffer_t();
@@ -78,6 +83,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 			void input_update_key(input_buffer_t*);
 			void input_parse_key_up(SDL_Event);
 			void input_parse_key_down(SDL_Event);
+			void input_parse_mouse_motion(SDL_Event);
+			unsigned int input_find_first_free_buffer();
 		public:
 			bool is_used;
 			input_buffer_t **input_buffer;
@@ -89,5 +96,4 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 			void close();
 	};
 	#include "../class/class_main.h"
-	extern input_buffer_t input_buffer_blank;
 #endif

@@ -2,12 +2,15 @@
 #include "../input/input_main.h"
 
 extern unsigned long int tick;
+extern bool once_per_second;
+extern std::vector<render_buffer_t*> render_buffer_vector;
+
+void model_render(model_t*);
 
 static int render_gen_vbo[32] = {-1};
 
 int render_generate_shape(int shape){
 	int return_value = 0;
-	//GLfloat grid_vertices[] = {1.0, 0.0, -1.0, 1.0, 0.0, 1.0, -1.0, 0.0, 1.0 -1.0, 0.0, -1.0};
 	switch(shape){
 	case RENDER_GENERATE_SHAPE_PLANE: // TODO: just use a call list (is there a way to assign a number to it so I can use macros?)
 		break;
@@ -42,15 +45,10 @@ void render_rules_t::blank(){
 	fullscreen = false;
 	window_title = (char*)"Czech_mate Technical Demonstration";
 	vsync = false;
-	opengl_powers.vertex_buffer_objects = RENDER_OPENGL_POWER_USED;
-	opengl_powers.gl_begin_end = RENDER_OPENGL_POWER_DEPRECATED;
 }
 
 void render_rules_t::init(){
 	blank();
-	opengl_powers.vertex_buffer_objects = RENDER_OPENGL_POWER_USED;
-	printf("OpenGL VBO support: %d\n",opengl_powers.vertex_buffer_objects);
-	// streamline this
 }
 
 void render_rules_t::close(){
@@ -66,14 +64,6 @@ void render_t::init_subsystems(){
 }
 
 void render_t::init_configure_buffer(){
-	render_buffer = new render_buffer_t*[RENDER_BUFFER_SIZE];
-	term_if_true(render_buffer == NULL,(char*)"render_buffer");
-	for(unsigned int i = 0;i < RENDER_BUFFER_SIZE;i++){
-		render_buffer[i] = NULL;
-	}
-	for(int i = 0;i < 32;i++){
-		render_gen_vbo[i] = -1;
-	}
 }
 
 void render_t::init_parse_parameters(int argc, char** argv){
@@ -97,67 +87,68 @@ void render_t::init_generate_window(){
 	}else{
 		parameters_sdl = SDL_WINDOW_SHOWN;
 	}
-	parameters_sdl |= SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+	parameters_sdl |= SDL_WINDOW_OPENGL;
 	render_screen = SDL_CreateWindow((char*)rules.window_title,SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,(int)rules.x_res,(int)rules.y_res,parameters_sdl);
-	term_if_true(render_screen == NULL,(char*)"render_screen");
-	SDL_GL_SetSwapInterval(rules.vsync); // VSync
+	if(render_screen == NULL){
+		printf("Could not open the window, must be running this as a dev test over SSH or in a terminal without X11 access. Terminating render module\n");
+		printf("Re-run with --render-disable\n");
+	}
+	SDL_ShowCursor(SDL_DISABLE);
+
+	glMatrixMode(GL_MODELVIEW);
+	glClearColor(1,1,1,1);
+	glEnable(GL_POINT_SMOOTH);
+	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_POLYGON_SMOOTH);
+	glHint(GL_POINT_SMOOTH_HINT,GL_NICEST);
+	glHint(GL_LINE_SMOOTH_HINT,GL_NICEST);
+	glHint(GL_POLYGON_SMOOTH_HINT,GL_NICEST);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+
+	glEnable(GL_DEPTH_TEST);
+	glShadeModel(GL_SMOOTH);
+	glDepthFunc(GL_LEQUAL);
+	glShadeModel (GL_SMOOTH);
+	glEnable(GL_NORMALIZE);
 }
 
 void render_t::init_load_models(){
-/*	#ifdef _WIN32
-		assert(false);
-	#endif
-	system("find models | grep obj > model_data");
-	std::ifstream in("model_data");
-	if(in.is_open() == false){
-		printf("Could not open the renderer\n");
-	}
-	char data[512];
-	while(in.getline(data,512)){
-		printf("%s\n",data);
-		model_t **a = (model_t**)allocate_model();
-		int c = 0;
-		for(int i = 0;i < MODEL_POINTER_SIZE;i++){
-			model_t **b = &model_pointer[i];
-			if(a == b) c = i;
-		}
-		model_pointer[c]->init();
-		model_pointer[c]->load(data);
-	}*/
 }
 
 render_t::render_t(int argc, char** argv){
 	init_configure_buffer();
 	init_subsystems();
 	blank();
+	init_generate_window();
 	init_parse_parameters(argc,argv);
-	init_generate_window(); // also takes care of gl* defaults
+	printf("x_res:%u\ty_res:%u\n",rules.x_res, rules.y_res);
 	// OpenGL powers go under the rules
 }
 
 void render_t::loop_render_buffer(){
-	if(coord != NULL){
-		glRotatef(coord->x_angle, 1.0f, 0.0f, 0.0f);
-		glRotatef(coord->y_angle, 0.0f, 1.0f, 0.0f);
-		glTranslatef(-coord->x,-coord->y,-coord->z);
-		for(unsigned int i = 0;i < RENDER_BUFFER_SIZE;i++){
-			if(render_buffer[i] != NULL){
-				coord_t *coord = render_buffer[i]->coord;
+	glRotatef(coord->x_angle, 1.0f, 0.0f, 0.0f);
+	glRotatef(coord->y_angle, 0.0f, 1.0f, 0.0f);
+	glTranslatef(-coord->x,-coord->y,-coord->z);
+	const unsigned int render_buffer_vector_size = render_buffer_vector.size();
+	for(unsigned int i = 0;i < render_buffer_vector_size;i++){
+		if(render_buffer_vector[i] != nullptr){
+			coord_t *local_coord = find_coord_pointer(render_buffer_vector[i]->coord_id);
+			glPushMatrix();
+			glTranslatef(local_coord->x, local_coord->y, local_coord->z);
+			glRotatef(local_coord->x_angle,1.0f,0.0f,0.0f);
+			glRotatef(local_coord->y_angle,0.0f,1.0f,0.0f);
+			if(render_buffer_vector[i]->model_id != -1){
 				glPushMatrix();
-				glTranslatef(coord->x,coord->y,coord->z);
-				glRotatef(coord->x_angle,1.0f,0.0f,0.0f);
-				glRotatef(coord->y_angle,0.0f,1.0f,0.0f);
-				//render_buffer[i]->model->render();
-				if(render_buffer[i]->delete_on_render){
-					delete render_buffer[i]->coord;
-					delete render_buffer[i]->model;
-				}
-				render_buffer[i]->coord = coord = NULL;
-				render_buffer[i]->model = NULL;
-				delete render_buffer[i];
-				render_buffer[i] = NULL;
+				glTranslatef(100,100,100);
 				glPopMatrix();
-			}else break;
+				model_render(find_model_pointer(render_buffer_vector[i]->model_id));
+			}else if(local_coord->model_id != -1){
+				model_render(find_model_pointer(local_coord->model_id));
+			}
+			glPopMatrix();
 		}
 	}
 }
@@ -166,32 +157,23 @@ void render_t::loop_update(){
 	int data[2] = {0};
 	rules.x_offset = rules.y_offset = 0;
 	SDL_GetWindowSize(render_screen,&data[0],&data[1]);
-	rules.x_res = (unsigned int)data[0];
-	rules.y_res = (unsigned int)data[1];
-	//printf("Res:%dx%d\n",render_rules.x_res,render_rules.y_res);
-	//printf("Offset:%d&%d\n",render_rules.x_offset,render_rules.y_offset);
+	if(data[0] > 0 && data[1] > 0){
+		rules.x_res = (unsigned int)data[0];
+		rules.y_res = (unsigned int)data[1];
+	}
 }
 
 void render_t::loop_init(){
-	glClearColor(0,0,0,1);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
-	for(int i = 0;i < 2;i++){
-		if(i == 0) glMatrixMode(GL_MODELVIEW);
-		else glMatrixMode(GL_PROJECTION);
-		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-		glLoadIdentity();
-	}
-	GLfloat aspect_ratio;
-	if(rules.x_res > rules.y_res){
-		aspect_ratio = rules.x_res/rules.y_res;
-	}else{
-		aspect_ratio = rules.y_res/rules.x_res;
-	}
-	GLfloat fH = tanf((float)((float)rules.fov/PI_360)*(float)rules.near_fov);
-	GLfloat fW = fH*aspect_ratio;
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	assert(rules.x_res > rules.y_res);
+	GLfloat aspectRatio = rules.x_res/rules.y_res;;
+	GLfloat fH = tan(float(rules.far_fov/PI_360))*rules.near_fov;
+	GLfloat fW = fH * aspectRatio;
 	glFrustum(-fW, fW, -fH, fH, rules.near_fov, rules.far_fov);
-	term_if_true(glGetError(),(char*)"glGetError()");
+	glMatrixMode(GL_MODELVIEW);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glLoadIdentity();
 }
 
 void render_t::loop_render_screen(){
@@ -200,49 +182,111 @@ void render_t::loop_render_screen(){
 
 int render_t::loop(coord_t *a){ // TODO: Divide this up into smaller chunks
 	coord = a;
+	assert(a != nullptr || a != NULL);
 	int return_value = 0;
-	const bool update_render_context = tick%100 == 0;
-	if(update_render_context) render_context = SDL_GL_CreateContext(render_screen);
+	render_context = SDL_GL_CreateContext(render_screen);
+	SDL_GL_MakeCurrent(render_screen, render_context);
 	loop_init();
 	loop_update();
 	loop_render_buffer();
 	loop_render_screen();
-	if(update_render_context) SDL_GL_DeleteContext(render_context);
-	return return_value;
-}
-
-int render_t::write_to_buffer(render_buffer_t *a){
-	int return_value = -1;
-	for(unsigned int i = 0;i < RENDER_BUFFER_SIZE;i++){
-		if(render_buffer[i] == NULL){
-			render_buffer[i] = new render_buffer_t;
-			render_buffer[i]->coord = a->coord;
-			render_buffer[i]->model = a->model;
-			render_buffer[i]->delete_on_render = a->delete_on_render;
-			return_value = (int)i;
-			break;
-		}
-	}
+	SDL_GL_DeleteContext(render_context);
 	return return_value;
 }
 
 void render_t::close(){
 	blank();
-	for(int i = 0;i < RENDER_BUFFER_SIZE;i++){
-		if(render_buffer[i] != NULL){
-			if(render_buffer[i]->delete_on_render){
-				delete render_buffer[i]->coord;
-				render_buffer[i]->coord = NULL;
-				delete render_buffer[i]->model;
-				render_buffer[i]->model = NULL;
-			}
-			delete render_buffer[i];
-			render_buffer[i] = NULL;
-		}
-	}
-	delete[] render_buffer;
-	render_buffer = NULL;
 	SDL_DestroyWindow(render_screen);
 	render_screen = NULL;
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
+}
+
+static inline void model_render_normal(coordinate *normal){
+	glNormal3f(normal->x,normal->y,normal->z);
+}
+
+static inline void model_render_vertex(material *material, texcoord *texcoord, coordinate *vertex){
+	assert(vertex != nullptr);
+	if(material != nullptr && material->texture != -1 && texcoord != nullptr){
+		glTexCoord2f(texcoord->u,texcoord->v);
+	}
+	glVertex3f(vertex->x, vertex->y, vertex->z);
+}
+
+void model_render(model_t *model){
+	assert(model != nullptr || model != NULL);	
+	const unsigned long int model_faces_size = model->faces.size();
+	if(unlikely(model_faces_size == 0)){
+		printf("Attempted to render an empty model\n");
+		return;
+	}
+	std::vector<std::string*> coord	= model->coord;
+	std::vector<coordinate*> vertex	= model->vertex;
+	//std::vector<face*> faces = model->faces;
+	std::vector<coordinate*> normals = model->normals;
+	std::vector<unsigned int> texture = model->texture;
+	std::vector<unsigned int> lists	= model->lists;
+	std::vector<material*> materials = model->materials;
+	std::vector<texcoord*> texturecoordinate = model->texturecoordinate;
+	bool ismaterial = model->ismaterial;
+	bool isnormals = model->isnormals;
+	bool istexture = model->istexture;
+	int last = -1;
+	glPushMatrix();
+	for(unsigned long int i = 0;i < model_faces_size;i++){
+		int mat = model->faces[i]->mat;
+		//const int *faces_ = model->faces[i]->faces;
+		int facenum = model->faces[i]->facenum;
+		int *texcoord_ = model->faces[i]->texcoord;
+		if(last != mat && ismaterial){
+			float diffuse[] = {materials[mat]->dif[0], materials[mat]->dif[1], materials[mat]->dif[2], 1.0};
+			float ambient[] = {materials[mat]->amb[0], materials[mat]->amb[1], materials[mat]->amb[2], 1.0};
+			float specular[] = {materials[mat]->spec[0], materials[mat]->spec[1], materials[mat]->spec[2], 1.0};
+			glMaterialfv(GL_FRONT,GL_DIFFUSE,diffuse);
+			glMaterialfv(GL_FRONT,GL_AMBIENT,ambient);
+			glMaterialfv(GL_FRONT,GL_SPECULAR,specular);
+			glMaterialf(GL_FRONT,GL_SHININESS,materials[mat]->ns);
+			last = mat;
+			if(materials[mat]->texture==-1){
+				glDisable(GL_TEXTURE_2D);
+			}else{
+				glEnable(GL_TEXTURE_2D);
+				glBindTexture(GL_TEXTURE_2D,(GLuint)materials[mat]->texture);	//and use it
+			}
+		}
+		if(model->faces[i]->four){
+			printf("Rendering a GL_QUAD\n");
+			glBegin(GL_QUADS);
+				if(isnormals) model_render_normal(normals[facenum-1]);
+				for(unsigned int n = 0;n < 4;n++){
+					material *local_mat = nullptr;
+					if(ismaterial && mat < (int)materials.size()){
+						local_mat = materials[mat];
+					}
+					texcoord *local_texcoord = nullptr;
+					if(istexture && texcoord_[n]-1 < (int)texturecoordinate.size()){
+						local_texcoord = texturecoordinate[texcoord_[n]-1];
+					}
+					model_render_vertex(local_mat, local_texcoord, vertex[model->faces[i]->faces[n]-1]);
+				}
+			glEnd();
+		}else{
+			printf("Rendering a GL_TRIANGLE\n");
+			glBegin(GL_TRIANGLES);
+				if(isnormals) model_render_normal(normals[facenum-1]);
+				for(unsigned int n = 0;n < 3;n++){
+					material *local_mat = nullptr;
+					if(ismaterial && mat < (int)materials.size()){
+						local_mat = materials[mat];
+					}
+					texcoord *local_texcoord = nullptr;
+					if(istexture && texcoord_[n]-1 < (int)texturecoordinate.size()){
+						local_texcoord = texturecoordinate[texcoord_[n]-1];
+					}
+					model_render_vertex(local_mat, local_texcoord, vertex[model->faces[i]->faces[n]-1]);
+				}
+			glEnd();
+		}
+	}
+	glPopMatrix();
 }

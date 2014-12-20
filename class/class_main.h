@@ -19,28 +19,55 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "class_array.h"
 	#include "class_extra.h"
 	#include "../net/net_ip.h"
-	#include "../net/net_serial.h"
 	#include "sstream"
 	#include "vector"
 	#define COORD_POINTER_SIZE 1024
 	#define MODEL_POINTER_SIZE 1024
+	struct face{
+		int facenum;
+		bool four;
+		int faces[4];
+		int texcoord[4];
+		int mat;
+		face(int facen, int f1, int f2, int f3, int f4, int t2, int t3, int m);
+		face(int facen, int f1, int f2, int f3, int f4, int t1, int t2, int t3, int t4, int m);
+	}; 
+	struct coordinate{
+		float x,y,z;
+		coordinate(float a,float b,float c);
+	};
+	struct material{
+		std::string name;
+		float alpha,ns,ni;
+		float dif[3],amb[3],spec[3];
+		int illum;
+		int texture;
+		material(const char*  na,float al,float n,float ni2,float* d,float* a,float* s,int i,int t);
+	};
+	struct texcoord{
+		float u,v;
+		texcoord(float a,float b);
+	};
 	class model_t{
 	private:
 		void load_parse_vector(std::string);
 	public:
 		array_t *array;
+		std::vector<std::string*> coord;
+		std::vector<coordinate*> vertex;
+		std::vector<face*> faces;
+		std::vector<coordinate*> normals;
+		std::vector<unsigned int> texture;
+		std::vector<unsigned int> lists;
+		std::vector<material*> materials;
+		std::vector<texcoord*> texturecoordinate;
+		bool ismaterial,isnormals,istexture;
 		model_t *pointer_to_self;
-		std::vector<std::vector<long double> > v;     // vector
-		std::vector<std::vector<long double> > vt;    // vector texture
-		std::vector<std::vector<long double> > vn;    // vector normal
-		std::vector<std::vector<long double> > vp;
-		std::vector<std::vector<std::vector<int> > > f;  // faces
 		model_t();
-		void load(std::string);
 		void get_size(long double*, long double*, long double*);
 		void close();
 		unsigned long long int collective_size;
-		void update_array_pointers();
+		void update_array();
 	};
 	class coord_t{
 	public:
@@ -71,6 +98,13 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void update_array();
 		void close();
 	};
+	class render_buffer_t{
+	public:
+		render_buffer_t();
+		array_t *array;
+		int model_id;
+		int coord_id;
+	};
 	class input_buffer_t;
 	#include "../input/input_main.h"
 	class client_extra_t{
@@ -81,8 +115,14 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern std::vector<client_t*> client_vector;
 	extern std::vector<coord_t*> coord_vector;
 	extern std::vector<model_t*> model_vector;
+	extern std::vector<render_buffer_t*> render_buffer_vector;
+	extern render_buffer_t* new_render_buffer();
+	extern coord_t* new_coord();
+	extern model_t* new_model();
 	extern void add_coord(coord_t*);
 	extern void add_model(model_t*);
+	extern void add_render_buffer(render_buffer_t*);
 	extern coord_t *find_coord_pointer(int);
 	extern model_t *find_model_pointer(int);
+	extern render_buffer_t *find_render_buffer(int);
 #endif

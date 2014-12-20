@@ -34,7 +34,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "GL/gl.h"
 	#include "GL/glu.h"
 	#include "../util/util_main.h"
-	#define RENDER_BUFFER_SIZE 2048 // +1 is there since optimizations levels tend to slow down the code if it is a power of 2
 	#define MODEL_BUFFER_SIZE RENDER_BUFFER_SIZE
 	#define RENDER_DIMENSION_3D 0
 	#define RENDER_DIMENSION_2D 1
@@ -45,13 +44,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define RENDER_TYPE_MACRO MODEL_TYPE_MACRO
 	#define RENDER_GENERATE_SHAPE_PLANE 1
 	#define RENDER_GENERATE_SHAPE_GRID 0
-	#define RENDER_OPENGL_POWER_UNSUPPORTED 0
-	#define RENDER_OPENGL_POWER_DEPRECATED 1
-	#define RENDER_OPENGL_POWER_USED 2
-	struct render_opengl_powers_t{
-		char gl_begin_end; // deprecated with OpenGL 2
-		char vertex_buffer_objects;
-	};
 	class render_rules_t{
 	public:
 		void blank();
@@ -70,17 +62,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		bool enable_hud;
 		bool enable_view;
 		bool enable_grid;
-		render_opengl_powers_t opengl_powers;
-	};
-	struct render_buffer_t{
-		coord_t *coord;
-		model_t *model;
-		bool delete_on_render;
 	};
 	class render_t{
 	private:
 		SDL_GLContext render_context;
-		render_buffer_t **render_buffer;
 		void init_generate_window();
 		void init_subsystems();
 		void init_parse_parameters(int,char**);

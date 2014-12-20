@@ -19,9 +19,7 @@ void net_t::blank(){}
 
 int net_t::init_parse_parameters(int argc, char** argv){
 	for(int i = 0;i < argc;i++){
-		if(strcmp(argv[i],(char*)"--net-serial") == 0){
-			serial = new net_serial_t;
-		}else if(strcmp(argv[i],(char*)"--net-ip") == 0){
+		if(strcmp(argv[i],(char*)"--net-ip") == 0){
 			ip = new net_ip_t;
 		}
 	}
@@ -32,15 +30,11 @@ int net_t::init_initialize_subsystems(int argc, char** argv){
 	if(ip != nullptr){
 		ip->init(argc,argv);
 	}
-	if(serial != nullptr){
-		serial->init(argc,argv);
-	}
 	return 0;
 }
 
 net_t::net_t(int argc, char** argv){
 	ip = nullptr;
-	serial = nullptr;
 	blank();
 	init_parse_parameters(argc,argv);
 	init_initialize_subsystems(argc,argv);
@@ -49,9 +43,7 @@ net_t::net_t(int argc, char** argv){
 int net_t::loop(){
 	if(ip != nullptr){
 		ip->loop();
-	}else if(serial != nullptr){
-		serial->loop();
-	}else printf("No networking protocol has been selected. Your 2 options (as parameters) are --net-ip and --net-serial.\n");
+	}else printf("No networking protocol has been selected. Your only option is --net-ip.\n");
 	return 0;
 }
 int net_t::write(std::string data, net_ip_connection_info_t a){ // the data should be sent to the server regardless
@@ -60,17 +52,9 @@ int net_t::write(std::string data, net_ip_connection_info_t a){ // the data shou
 	return 0;
 }
 
-int net_t::write(std::string data, net_serial_connection_info_t a){
-	term_if_true(serial == nullptr,(char*)"serial write when serial == nullptr\n");
-	serial->write(data,a);
-	return 0;
-}
-
 std::string net_t::read(){
 	if(ip != nullptr){
 		return ip->read();
-	}else if(serial != nullptr){
-		return serial->read();
 	}
 	return "";
 }
@@ -80,10 +64,5 @@ void net_t::close(){
 		ip->close();
 		delete ip;
 		ip = nullptr;
-	}
-	if(serial != nullptr){
-		serial->close();
-		delete serial;
-		serial = nullptr;
 	}
 }

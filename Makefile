@@ -7,7 +7,7 @@ default: client
 
 all: client server
 
-server: class net util input net thread math
+server: class net input net thread math util
 	$(CC) -c $(CFLAGS) server/server_main.cpp -o server/obj/server_main.o
 	$(CC) -c $(CFLAGS) server/server_physics.cpp -o server/obj/server_physics.o
 	$(CC) -c $(CFLAGS) server/server_net.cpp -o server/obj/server_net.o
@@ -44,10 +44,9 @@ input:
 
 net:
 	$(CC) -c $(CFLAGS) net/net_main.cpp -o net/obj/net_main.o
-	$(CC) -c $(CFLAGS) net/net_serial.cpp -o net/obj/net_serial.o
 	$(CC) -c $(CFLAGS) net/net_ip.cpp -o net/obj/net_ip.o
 	$(CC) -c $(CFLAGS) net/net_store.cpp -o net/obj/net_store.o
-	ld -r net/obj/net_main.o net/obj/net_serial.o net/obj/net_ip.o net/obj/net_store.o -o net/obj/net.o
+	ld -r net/obj/net_main.o net/obj/net_ip.o net/obj/net_store.o -o net/obj/net.o
 
 render:
 	$(CC) -c $(CFLAGS) render/render_main.cpp -o render/obj/render_main.o

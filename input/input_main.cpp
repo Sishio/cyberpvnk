@@ -28,8 +28,6 @@ extern client_t *self;
 
 extern void delete_array(array_t*);
 
-input_buffer_t input_buffer_blank;
-
 void input_t::input_find_key(unsigned long int *a, const input_buffer_t *b){
 	if(b == nullptr || b == NULL){
 		for(*a = 0;*a < INPUT_BUFFER_SIZE;(*a)+=1){
@@ -59,6 +57,24 @@ void input_t::input_update_key(input_buffer_t *b){
 		input_buffer[a] = new input_buffer_t;
 	}
 	*input_buffer[a] = *b;
+}
+
+unsigned int input_t::input_find_first_free_buffer(){
+	for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
+		if(input_buffer[i] == nullptr){
+			return i;
+		}
+	}
+	assert(false);
+}
+
+void input_t::input_parse_mouse_motion(SDL_Event a){
+	int available_input = input_find_first_free_buffer();
+	input_buffer[available_input] = new input_buffer_t;
+	input_buffer[available_input]->type = INPUT_TYPE_MOUSE_MOTION;
+	input_buffer[available_input]->int_data[INPUT_TYPE_MOUSE_MOTION_X] = event.motion.x;
+	input_buffer[available_input]->int_data[INPUT_TYPE_MOUSE_MOTION_Y] = event.motion.y;
+
 }
 
 void input_t::input_parse_key_up(SDL_Event a){
@@ -121,26 +137,11 @@ input_t::input_t(int argc,char** argv){
 
 int input_t::loop(){
 	int return_value = 0;
-	int available_input = 0;
-	for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
-		if(input_buffer[i] != nullptr){
-			if(input_buffer[i]->type != INPUT_TYPE_KEYBOARD){
-				delete input_buffer[i];
-				input_buffer[i] = nullptr;
-			}
-		}
-	}
+	SDL_PumpEvents();
 	while(SDL_PollEvent(&event)){ // the only input that works without a screen would be SDL_QUIT (Ctrl-C).
 		switch(event.type){
 		case SDL_MOUSEMOTION:
-			input_buffer[available_input] = new input_buffer_t;
-			if(term_if_true(input_buffer[available_input] == nullptr,(char*)"input_buffer allocation") == TERMINATE){
-				return_value = TERMINATE;
-				break;
-			}
-			input_buffer[available_input]->type = INPUT_TYPE_MOUSE_MOTION;
-			input_buffer[available_input]->int_data[INPUT_TYPE_MOUSE_MOTION_X] = event.motion.x;
-			input_buffer[available_input]->int_data[INPUT_TYPE_MOUSE_MOTION_Y] = event.motion.y;
+			input_parse_mouse_motion(event);
 			break;
 		case SDL_KEYUP:
 			input_parse_key_up(event);
@@ -157,9 +158,6 @@ int input_t::loop(){
 			break;
 		}
 	}
-	/*
-	TODO: Add joystick support and map the buttons to keyboard keys
-	*/
 	return return_value;
 }
 
@@ -212,4 +210,20 @@ int input_settings_mouse_t::init(){
 
 void input_settings_mouse_t::close(){
 	blank();
+}
+
+void cursor::set_location(unsigned int x, unsigned int y){
+	#ifdef USE_SDL
+	if(render != nullptr){
+		SDL_WarpMouseInWindow(render->render_screen, x, y);
+	}
+	#endif
+}
+
+void cursor::get_location(unsigned int *x, unsigned int *y){
+	#ifdef USE_SDL
+	int *x_ = (int*)x;
+	int *y_ = (int*)y;
+	SDL_GetRelativeMouseState(x_, y_);
+	#endif
 }

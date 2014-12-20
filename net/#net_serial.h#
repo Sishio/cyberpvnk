@@ -18,17 +18,29 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define NET_SERIAL_H
 	#include "cstdio"
 	#include "iostream"
+	#define NET_SERIAL_PACKET_START	(char*)"\x31"
 	class net_serial_connection_info_t{
+	public:
 		net_serial_connection_info_t();
-		char port;
+		int file_descriptor;
+	};
+	class net_serial_outbound_data_t{
+	public:
+		std::string data;
+		net_serial_connection_info_t connection_info;
 	};
 	class net_serial_t{
+	private:
+		std::string packet;
 	public:
+		std::vector<net_serial_outbound_data_t> outbound_data;
+		std::vector<std::string> inbound_data;
+		std::vector<net_serial_connection_info_t> inbound_socket;
 		void blank();
-		void init(int,char**);
+		net_serial_t(int, char**);
 		void loop();
 		void close();
-		std::string read();
+		void read(char*, int);
 		void write(std::string, net_serial_connection_info_t);
 	};
 #endif

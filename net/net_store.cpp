@@ -1,6 +1,6 @@
 #include "net_store.h"
 
-void store_coord_t(coord_t a, std::vector<coord_t*> *b, std::vector<coord_extra_t> *c){
+/*void store_coord_t(coord_t a, std::vector<coord_t*> *b, std::vector<coord_extra_t> *c){
 	const int coord_size = b->size();
 	for(int i = 0;i < coord_size;i++){
 		if((*b)[i] != nullptr){
@@ -52,3 +52,4 @@ void store_model_t(model_t a, std::vector<model_t*> *b, std::vector<model_extra_
 	c->push_back(d);
 }
 
+*/
