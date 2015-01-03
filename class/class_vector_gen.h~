@@ -1,0 +1,8 @@
+	extern std::vector<NAMESPACE_TYPE> NAMESPACE_TYPE_2_vector
+	namespace NAMEPSPACE_TYPE_2{
+		NAMESPACE_TYPE *new();
+		NAMESPACE_TYPE *find(int);
+		void delete_id(int);
+		void delete_entry(int);
+		void delete_pointer(NAMESPACE_TYPE *);
+	}

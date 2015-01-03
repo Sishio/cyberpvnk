@@ -20,6 +20,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../net/net_main.h"
 	#include "../class/class_main.h"
 	#include "../class/class_array.h"
+	#include "../util/util_main.h"
 	#include "sstream"
 	#include "fstream"
 	#include "string"

@@ -19,9 +19,11 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 
 long int array_scan_for_id(int); // IDs cannot be sent over the internet if they are any type other than long double, string, or int
 
-static std::vector<array_t*> array_vector;
+extern std::vector<std::string> pull_items_data(char*, std::string, char*);
 
-long int array_scan_for_id(int id){
+std::vector<array_t*> array_vector;
+
+long int array_scan_for_id(long int id){
 	const unsigned int array_vector_size = array_vector.size();
 	for(unsigned int i = 0;i < array_vector_size;i++){
 		if(unlikely(array_vector[i]->id == id)){
@@ -42,26 +44,29 @@ long int array_highest_id(){
 	return id;
 }
 
-static std::string wrap(char *start, std::string data, char *end){
-	return (std::string)start + data + (std::string)end;
-}
-
 array_t::array_t(){
-	hash = 0;
 	id = gen_rand();
 	if(id == -1){
 		id = gen_rand();
 	}
+	int_array.push_back(&id);
 }
 
 bool array_t::id_match(int a){
 	return id == a;
 }
 
-void array_t::parse_string_entry(std::string a){
-	parse_int_from_string(a);
-	parse_long_double_from_string(a);
-	parse_string_from_string(a);
+void array_t::parse_string_entry(std::string tmp_string){
+	last_update = get_time();
+	if(tmp_string.find_first_of(ARRAY_INT_SEPERATOR_START) != std::string::npos){
+		parse_int_from_string(tmp_string);
+	}
+	if(tmp_string.find_first_of(ARRAY_LONG_DOUBLE_SEPERATOR_START) != std::string::npos){
+		parse_long_double_from_string(tmp_string);
+	}
+	if(tmp_string.find_first_of(ARRAY_STRING_SEPERATOR_START) != std::string::npos){
+		parse_string_from_string(tmp_string);
+	}
 }
 
 void array_t::parse_string_vector(std::vector<std::vector<std::string>> a){
@@ -79,56 +84,12 @@ unsigned int array_t::pull_starting_number(std::string a){
 	start = a.find_first_of(ARRAY_STARTING_START);
 	end = a.find_first_of(ARRAY_STARTING_END);
 	if(start == end || start == std::string::npos){
-		printf("An impossible error has taken place. TAKE COVER\n");
+		printf("An impossible error has taken place. There is no starting number for anything here! TAKE COVER\n");
 		assert(false);
 	}
 	std::string return_value;
 	return_value = a.substr(start+1, end-start-1);
 	return atoi(return_value.c_str());
-}
-
-std::vector<std::string> array_t::pull_items_data(char *c, std::string a, char *d){
-	std::vector<std::string> b;
-	while(true){
-		const size_t start_start = a.find_first_of(c);
-		const size_t end_start = a.find_first_of(d);
-		const size_t start_end = start_start + strlen(c);
-		const size_t end_end = end_start + strlen(d);
-		bool conditional[8] = {false};
-		conditional[4] = start_start == std::string::npos;
-		conditional[5] = end_start == std::string::npos;
-		if(conditional[4] || conditional[5]){ // escape condition
-			#ifdef CLASS_DEBUG
-			printf("An expected condition has been met\n");
-			for(unsigned int i = 4;i < 6;i++){
-				printf("%d\n",conditional[i]);
-			}
-			#endif
-			break;
-		}
-		conditional[0] = start_start == end_start && start_start != std::string::npos;
-		conditional[1] = start_end == end_end && start_start != std::string::npos;
-		conditional[2] = start_start > end_start;
-		conditional[3] = start_end > end_end;
-		if(conditional[0] || conditional[1] || conditional[2] || conditional[3]){
-			printf("An impossible condition has been met\n");
-			for(unsigned int i = 0;i < 4;i++){
-				printf("%d\n",conditional[i]);
-			}
-			printf("start_start:%zu\tend_start:%zu\tstart_end:%zu\tend_end:%zu\n",start_start, end_start, start_end, end_end);
-			assert(false);
-		}
-		#ifdef CLASS_DEBUG
-		printf("%lu %lu %lu %lu\n",start_start, start_end, end_start, end_end);
-		#endif
-		std::string z = a.substr(start_end,(end_start-start_end)-1);
-		#ifdef CLASS_DEBUG
-		printf("Parsed data:%s\n",z.c_str());
-		#endif
-		b.push_back(z);
-		a = a.substr(end_end+1,a.size());
-	}
-	return b;
 }
 
 std::vector<std::string> array_t::pull_items(char *x, std::string a, char *y){
@@ -139,6 +100,15 @@ std::vector<std::string> array_t::pull_items(char *x, std::string a, char *y){
 		#endif
 		return b;
 	}
+	unsigned long int seperator_end = a.find_first_of(y);
+	unsigned long int seperator_start = a.find_first_of(x);
+	if(seperator_start == std::string::npos){
+		assert(false);
+	}
+	if(seperator_end == std::string::npos){
+		seperator_end = a.size();
+	}
+	a = a.substr(a.find_first_of(x), a.find_first_of(y)-a.find_first_of(x));
 	b = pull_items_data(ARRAY_ITEM_SEPERATOR_START, a, ARRAY_ITEM_SEPERATOR_END);
 	return b;
 }
@@ -174,7 +144,7 @@ std::vector<std::string> array_t::gen_int_array_vector(){
 	std::vector<std::string> return_value;
 	const unsigned int int_array_size = int_array.size();
 	for(unsigned int i = 0;i < int_array_size;i++){
-		return_value.push_back(wrap(ARRAY_ID_START, std::to_string(id), ARRAY_ID_END) + wrap(ARRAY_STARTING_START, std::to_string(i), ARRAY_STARTING_END) + wrap(ARRAY_INT_SEPERATOR_START, wrap(ARRAY_ITEM_SEPERATOR_START,std::to_string(*int_array[i]),ARRAY_ITEM_SEPERATOR_END), ARRAY_INT_SEPERATOR_END));
+		return_value.push_back(wrap(ARRAY_TYPE_SEPERATOR_START, data_type, ARRAY_TYPE_SEPERATOR_END) + wrap(ARRAY_ID_START, std::to_string(id), ARRAY_ID_END) + wrap(ARRAY_STARTING_START, std::to_string(i), ARRAY_STARTING_END) + wrap(ARRAY_INT_SEPERATOR_START, wrap(ARRAY_ITEM_SEPERATOR_START,std::to_string(*int_array[i]),ARRAY_ITEM_SEPERATOR_END), ARRAY_INT_SEPERATOR_END));
 	}
 	return return_value;
 }
@@ -183,7 +153,7 @@ std::vector<std::string> array_t::gen_long_double_array_vector(){
 	std::vector<std::string> return_value;
 	const unsigned int long_double_array_size = long_double_array.size();
 	for(unsigned int i = 0;i < long_double_array_size;i++){
-		return_value.push_back(wrap(ARRAY_ID_START, std::to_string(id), ARRAY_ID_END) + wrap(ARRAY_STARTING_START, std::to_string(i), ARRAY_STARTING_END) + wrap(ARRAY_LONG_DOUBLE_SEPERATOR_START, wrap(ARRAY_ITEM_SEPERATOR_START,std::to_string(*long_double_array[i]),ARRAY_ITEM_SEPERATOR_END), ARRAY_LONG_DOUBLE_SEPERATOR_END));
+		return_value.push_back(wrap(ARRAY_TYPE_SEPERATOR_START, data_type, ARRAY_TYPE_SEPERATOR_END) + wrap(ARRAY_ID_START, std::to_string(id), ARRAY_ID_END) + wrap(ARRAY_STARTING_START, std::to_string(i), ARRAY_STARTING_END) + wrap(ARRAY_LONG_DOUBLE_SEPERATOR_START, wrap(ARRAY_ITEM_SEPERATOR_START,std::to_string(*long_double_array[i]),ARRAY_ITEM_SEPERATOR_END), ARRAY_LONG_DOUBLE_SEPERATOR_END));
 	}
 	return return_value;
 }
@@ -192,24 +162,16 @@ std::vector<std::string> array_t::gen_string_array_vector(){
 	std::vector<std::string> return_value;
 	const unsigned int string_array_size = string_array.size();
 	for(unsigned int i = 0;i < string_array_size;i++){
-		// this string is broken
-		return_value.push_back(wrap(ARRAY_ID_START, std::to_string(id), ARRAY_ID_END) + wrap(ARRAY_STARTING_START, std::to_string(i), ARRAY_STARTING_END) + wrap(ARRAY_STRING_SEPERATOR_START, wrap(ARRAY_ITEM_SEPERATOR_START, *string_array[i], ARRAY_ITEM_SEPERATOR_END), ARRAY_STRING_SEPERATOR_END));
+		return_value.push_back(wrap(ARRAY_TYPE_SEPERATOR_START, data_type, ARRAY_TYPE_SEPERATOR_END) + wrap(ARRAY_ID_START, std::to_string(id), ARRAY_ID_END) + wrap(ARRAY_STARTING_START, std::to_string(i), ARRAY_STARTING_END) + wrap(ARRAY_STRING_SEPERATOR_START, wrap(ARRAY_ITEM_SEPERATOR_START, *string_array[i], ARRAY_ITEM_SEPERATOR_END), ARRAY_STRING_SEPERATOR_END));
 	}
 	return return_value;
 }
 
-std::vector<std::vector<std::string>> array_t::gen_string_vector(bool force){
-	int tmp_hash = gen_hash();
-	if(force == false){
-		force = tmp_hash == hash;
-	};
+std::vector<std::vector<std::string>> array_t::gen_string_vector(){
 	std::vector<std::vector<std::string>> return_value;
-	if(force){
-		hash = tmp_hash;
-		return_value.push_back(gen_int_array_vector());
-		return_value.push_back(gen_long_double_array_vector());
-		return_value.push_back(gen_string_array_vector());
-	}
+	return_value.push_back(gen_int_array_vector());
+	return_value.push_back(gen_long_double_array_vector());
+	return_value.push_back(gen_string_array_vector());
 	return return_value;
 }
 
@@ -219,18 +181,11 @@ void array_t::close(){
 	long_double_array.clear();
 }
 
-int array_t::gen_hash(){
-	int new_hash = encrypt(int_array) + encrypt(long_double_array) + encrypt(string_array);
-	return new_hash;
-}
-
-array_t *new_array(){
-	array_t *a = new array_t;
+void add_array_to_vector(array_t *a){
 	array_vector.push_back(a);
-	return a;
 }
 
-void delete_array(array_t *b){
+void delete_array_from_vector(array_t *b){
 	const unsigned int array_size = array_vector.size();
 	for(unsigned int i = 0;i < array_size;i++){
 		if(array_vector[i] == b){
@@ -246,14 +201,49 @@ int pull_id(std::string a){
 	return return_value;
 }
 
-void update_class_data(std::string a){
+void update_class_data(std::string a, int what_to_update){
+	array_t *tmp = nullptr;
 	int id = pull_id(a);
-	const int array_vector_size = array_vector.size();
-	for(int i = 0;i < array_vector_size;i++){
-		if(array_vector[i]->id == id){
-			array_vector[i]->parse_string_entry(a);
-			break;
+	const unsigned long int array_vector_size = array_vector.size();
+	for(unsigned long int i = 0;i < array_vector_size;i++){
+		if(unlikely(array_vector[i]->id == id)){
+			tmp = array_vector[i];
+			return;
 		}
+	}
+	if(tmp == nullptr){
+		std::string type = a.substr(a.find_first_of(ARRAY_TYPE_SEPERATOR_START), a.find_first_of(ARRAY_TYPE_SEPERATOR_END)-a.find_first_of(ARRAY_TYPE_SEPERATOR_START));
+		if(type == "coord_t"){
+			if((what_to_update&(1<<0)) == 1){
+				coord_vector.push_back(new coord_t);
+				tmp = &coord_vector[coord_vector.size()-1]->array;
+			}
+		}else if(type == "model_t"){
+			if((what_to_update&(1<<1)) == 1){
+				model_vector.push_back(new model_t);
+				tmp = &model_vector[model_vector.size()-1]->array;
+			}
+		}else if(type == "input_buffer_t"){
+			if((what_to_update&(1<<2)) == 1){
+				input_buffer_vector.push_back(new input_buffer_t);
+				tmp = &input_buffer_vector[input_buffer_vector.size()-1]->array;
+			}
+		}else if(type == "render_buffer_t"){
+			if((what_to_update&(1<<3)) == 1){
+				render_buffer_vector.push_back(new render_buffer_t);
+				tmp = &render_buffer_vector[render_buffer_vector.size()-1]->array;
+			}
+		}else if(type == "client_t"){
+			if((what_to_update&(1<<4)) == 1){
+				client_vector.push_back(new client_t);
+				tmp = &client_vector[client_vector.size()-1]->array;
+			}
+		}else{
+			assert(false);
+		}
+	}
+	if(tmp != nullptr){
+		tmp->parse_string_entry(a);
 	}
 }
 
@@ -297,4 +287,78 @@ std::string array_t::generate_string_from_variable(int* a){
 		}
 	}
 	return (wrap(ARRAY_ID_START, std::to_string(id), ARRAY_ID_END) + wrap(ARRAY_STARTING_START, std::to_string(vector_starting_point), ARRAY_STARTING_END) + wrap(ARRAY_LONG_DOUBLE_SEPERATOR_START, wrap(ARRAY_ITEM_SEPERATOR_START,std::to_string(*a),ARRAY_ITEM_SEPERATOR_END), ARRAY_LONG_DOUBLE_SEPERATOR_END));
+}
+
+void delete_array_id(int id){
+	const unsigned long int array_size = array_vector.size();
+	for(unsigned long int i = 0;i < array_size;i++){
+		if(array_vector[i]->id == id){
+			delete array_vector[i];
+			array_vector.erase(array_vector.begin()+i);
+			return;
+		}
+	}
+}
+
+bool array_t::updated(int *what_to_update){
+	assert(what_to_update != nullptr);
+	std::hash<std::string> hash_function;
+	long int tmp_string_hash = hash_function(gen_string_string());
+	long int tmp_long_double_hash = hash_function(gen_long_double_string());
+	long int tmp_int_hash = hash_function(gen_int_string());
+	bool update = false;
+	if(tmp_string_hash != string_hash){
+		update = true;
+		(*what_to_update) |= 1 << ARRAY_STRING_HASH_BIT;
+		string_hash = tmp_string_hash;
+	}
+	if(tmp_long_double_hash != long_double_hash){
+		update = true;
+		(*what_to_update) |= 1 << ARRAY_LONG_DOUBLE_HASH_BIT;
+		long_double_hash = tmp_long_double_hash;
+	}
+	if(tmp_int_hash != int_hash){
+		update = true;
+		(*what_to_update) |= 1 << ARRAY_INT_HASH_BIT;
+		int_hash = tmp_int_hash;
+	}
+	return update;
+}
+
+std::string array_t::gen_string(){
+	std::vector<std::vector<std::string>> tmp = gen_string_vector();
+	std::string return_value;
+	for(unsigned long int i = 0;i < tmp.size();i++){
+		for(unsigned long int n = 0;n < tmp[i].size();n++){
+			return_value += tmp[i][n];
+		}
+	}
+	return return_value;
+}
+
+std::string array_t::gen_string_string(){
+	std::vector<std::string> tmp = gen_string_array_vector();
+	std::string return_value;
+	for(unsigned long int i = 0;i < tmp.size();i++){
+		return_value += tmp[i];
+	}
+	return return_value;
+}
+
+std::string array_t::gen_int_string(){
+	std::vector<std::string> tmp = gen_int_array_vector();
+	std::string return_value;
+	for(unsigned long int i = 0;i < tmp.size();i++){
+		return_value += tmp[i];
+	}
+	return return_value;
+}
+
+std::string array_t::gen_long_double_string(){
+	std::vector<std::string> tmp = gen_long_double_array_vector();
+	std::string return_value;
+	for(unsigned long int i = 0;i < tmp.size();i++){
+		return_value += tmp[i];
+	}
+	return return_value;
 }

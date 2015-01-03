@@ -81,26 +81,23 @@ int objloader_t::load(const char *filename, model_t *model){
 		}else if((*coord[i])[0]=='v' && (*coord[i])[1]=='n'){	//if it's a normal vector
 			float tmpx,tmpy,tmpz;
 			sscanf(coord[i]->c_str(),"vn %f %f %f",&tmpx,&tmpy,&tmpz);
-			normals.push_back(new coordinate(tmpx,tmpy,tmpz));	//basically do the same
+			normals.push_back(new coordinate(tmpx,tmpy,tmpz));
 			isnormals=true;
-		}else if((*coord[i])[0]=='f'){	//if it's a face
+		}else if((*coord[i])[0]=='f'){
 			int a,b,c,d,e;
-			if(count(coord[i]->begin(),coord[i]->end(),' ')==4){	//if this is a quad
-				if(coord[i]->find("//")!=std::string::npos){	//if it's contain a normal vector, but not contain texture coorinate
-					sscanf(coord[i]->c_str(),"f %d//%d %d//%d %d//%d %d//%d",&a,&b,&c,&b,&d,&b,&e,&b);	//read in this form
-					faces.push_back(new face(b,a,c,d,e,0,0,0,0,curmat));	//and put to the faces, we don't care about the texture coorinate in this case
-																																//and if there is no material, it doesn't matter, what is curmat
-				}else if(coord[i]->find("/")!=std::string::npos){	//if we have texture coorinate and normal vectors
-					int t[4];	//texture coorinates
-					//read in this form, and put to the end of the vector
+			if(count(coord[i]->begin(),coord[i]->end(),' ')==4){
+				if(coord[i]->find("//")!=std::string::npos){
+					sscanf(coord[i]->c_str(),"f %d//%d %d//%d %d//%d %d//%d",&a,&b,&c,&b,&d,&b,&e,&b);
+					faces.push_back(new face(b,a,c,d,e,0,0,0,0,curmat));
+				}else if(coord[i]->find("/")!=std::string::npos){
+					int t[4];
 					sscanf(coord[i]->c_str(),"f %d/%d/%d %d/%d/%d %d/%d/%d %d/%d/%d",&a,&t[0],&b,&c,&t[1],&b,&d,&t[2],&b,&e,&t[3],&b);
 					faces.push_back(new face(b,a,c,d,e,t[0],t[1],t[2],t[3],curmat));
 				}else{
-					//else we don't have normal vectors nor texture coorinate
 					sscanf(coord[i]->c_str(),"f %d %d %d %d",&a,&b,&c,&d);
 					faces.push_back(new face(-1,a,b,c,d,0,0,0,0,curmat));
 				}
-			}else{	//if it's a triangle
+			}else{
 				if(coord[i]->find("//")!=std::string::npos){
 					sscanf(coord[i]->c_str(),"f %d//%d %d//%d %d//%d",&a,&b,&c,&b,&d,&b);
 					faces.push_back(new face(b,a,c,d,0,0,0,curmat));
@@ -128,6 +125,7 @@ int objloader_t::load(const char *filename, model_t *model){
 			std::string filen_string = "../" + (std::string)filen;
 			std::ifstream mtlin(filen_string);	//open the file
 			if(!mtlin.is_open()){
+				printf("Cannot opent the material file '%s' for object '%s'\n",filen_string.c_str(), filename);
 				clean();
 				return -1;
 			}
@@ -145,12 +143,13 @@ int objloader_t::load(const char *filename, model_t *model){
 			unsigned int texture_ = 0;
 			bool ismat=false;	//do we already have a material read in to these variables?
 			strcpy(filename_,"\0");	//set filename to nullbyte char*acter
-			for(unsigned long int n=0;n<(unsigned long int)tmp.size();n++){
+			const unsigned long int tmp_size = tmp.size();
+			for(unsigned long int n = 0;n < tmp_size;n++){
 				if(tmp[n][0]=='#')	//we don't care about comments
 					continue;
 				if(tmp[n][0]=='n' && tmp[n][1]=='e' && tmp[n][2]=='w'){
 					if(ismat){
-						if(strcmp(filename,"\0")!=0){
+						if(strcmp(filename_,"\0") != 0){
 							materials.push_back(new material(name,alpha,ns,ni,dif,amb,spec,illum,(int)texture_));	//push back
 							strcpy(filename_,"\0");
 						}else{
@@ -228,7 +227,6 @@ void objloader_t::clean(){
 objloader_t::~objloader_t(){
 }
 
-//load the filename textures (only BMP, R5G6B5 format)
 unsigned int objloader_t::loadTexture(std::string image_path){
 	unsigned int num;
 	glGenTextures(1,&num);

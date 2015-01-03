@@ -21,5 +21,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../class/class_array.h"
 	#include "../net/net_main.h"
 	extern net_t *net;
+	extern void net_init();
 	extern void net_engine();
+	extern void net_close();
 #endif

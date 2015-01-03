@@ -14,9 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*
-TODO: Unify all of the controls in a file and load that into the program.
-*/
+
 #include "input_main.h"
 #include "../render/render_main.h"
 #include "../util/util_main.h"
@@ -28,52 +26,70 @@ extern client_t *self;
 
 extern void delete_array(array_t*);
 
-void input_t::input_find_key(unsigned long int *a, const input_buffer_t *b){
+#ifdef __linux
+/*
+signal_handler: simple interrupt function
+TODO: Move this into the input or into a subset of input
+ */
+void signal_handler(int signal){
+	switch(signal){
+	case SIGINT:
+		printf("Received SIGINT\n");
+		if(terminate){
+			 exit(0);
+		}
+		terminate = true;
+		break;
+	case SIGKILL:
+		printf("Received SIGKILL\n");
+		exit(0);
+		break;
+	default:
+		break;
+	}
+}
+#endif
+
+
+void input_t::input_find_key(long int *a, const input_buffer_t *b){
 	if(b == nullptr || b == NULL){
-		for(*a = 0;*a < INPUT_BUFFER_SIZE;(*a)+=1){
-			if(input_buffer[*a] == b){
+		const long int input_buffer_vector_size = input_buffer_vector.size();
+		for(*a = 0;*a < input_buffer_vector_size;(*a)+=1){
+			if(input_buffer_vector[*a] == b){
 				return;
 			}
 		}
 	}else{
-		for(*a = 0;*a < INPUT_BUFFER_SIZE;(*a)+=1){
-			if(input_buffer[*a] != nullptr){
-				if(input_buffer[*a]->type == b->type){
-					if(memcmp(&input_buffer[*a]->int_data, &b->int_data, sizeof(int)*8) == 0){
+		const long int input_buffer_vector_size = input_buffer_vector.size();
+		for(*a = 0;*a < input_buffer_vector_size;(*a)+=1){
+			if(input_buffer_vector[*a] != nullptr){
+				if(input_buffer_vector[*a]->type == b->type){
+					if(memcmp(&input_buffer_vector[*a]->int_data, &b->int_data, sizeof(int)*8) == 0){
 						return;
 					}
 				}
 			}
 		}
 	}
-	*a = INPUT_BUFFER_SIZE;
+	*a = -1;
 }
 
 void input_t::input_update_key(input_buffer_t *b){
-	unsigned long int a = 0;
+	long int a = 0;
 	input_find_key(&a,b);
-	if(a >= INPUT_BUFFER_SIZE){ // there is no match
-		input_find_key(&a,nullptr);
-		input_buffer[a] = new input_buffer_t;
+	if(a < 0){
+		input_buffer_t *tmp = new_input_buffer();
+		*tmp = *b;
+	}else{
+		*input_buffer_vector[a] = *b;
 	}
-	*input_buffer[a] = *b;
-}
-
-unsigned int input_t::input_find_first_free_buffer(){
-	for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
-		if(input_buffer[i] == nullptr){
-			return i;
-		}
-	}
-	assert(false);
 }
 
 void input_t::input_parse_mouse_motion(SDL_Event a){
-	int available_input = input_find_first_free_buffer();
-	input_buffer[available_input] = new input_buffer_t;
-	input_buffer[available_input]->type = INPUT_TYPE_MOUSE_MOTION;
-	input_buffer[available_input]->int_data[INPUT_TYPE_MOUSE_MOTION_X] = event.motion.x;
-	input_buffer[available_input]->int_data[INPUT_TYPE_MOUSE_MOTION_Y] = event.motion.y;
+	input_buffer_t *tmp = new_input_buffer();
+	tmp->type = INPUT_TYPE_MOUSE_MOTION;
+	tmp->int_data[INPUT_TYPE_MOUSE_MOTION_X] = event.motion.x;
+	tmp->int_data[INPUT_TYPE_MOUSE_MOTION_Y] = event.motion.y;
 
 }
 
@@ -82,11 +98,10 @@ void input_t::input_parse_key_up(SDL_Event a){
 	tmp.type = INPUT_TYPE_KEYBOARD;
 	tmp.int_data[INPUT_TYPE_KEYBOARD_KEY] = (int)a.key.keysym.sym;
 	//tmp.int_data[INPUT_TYPE_KEYBOARD_CHAR] = (int)SDL_GetKeyName(a.key.keysym.sym[0]);
-	unsigned long int c;
+	long int c;
 	input_find_key(&c,&tmp);
-	if(c <= INPUT_BUFFER_SIZE){
-		delete input_buffer[c];
-		input_buffer[c] = nullptr;
+	if(c > -1){
+		delete_input_buffer(input_buffer_vector[c]);
 	}
 }
 
@@ -98,34 +113,12 @@ void input_t::input_parse_key_down(SDL_Event a){
 	input_update_key(&tmp);
 }
 
-input_buffer_t::input_buffer_t(){
-	array = new_array();
-	array->int_array.push_back(&type);
-	for(unsigned int i = 0;i < 8;i++){
-		array->int_array.push_back(&int_data[i]);
-	}
-	type = 0;
-	for(unsigned int i = 0;i < 8;i++){
-		int_data[i] = 0;
-	}
-}
-
-input_buffer_t::~input_buffer_t(){
-	delete_array(array);
-	array = nullptr;
-}
-
 void input_t::blank(){
 	is_used = false;
-	for(unsigned int i = 0;i < INPUT_BUFFER_SIZE;i++){
-		input_buffer[i] = nullptr;
-	}
 }
 
 input_t::input_t(int argc,char** argv){
 	SDL_Init(SDL_INIT_EVENTS);
-	input_buffer = nullptr;
-	input_buffer = new input_buffer_t*[INPUT_BUFFER_SIZE];
 	blank();
 	printf("%s\n",argv[0]);
 	for(int i = 0;i < argc;i++){
@@ -161,7 +154,7 @@ int input_t::loop(){
 	return return_value;
 }
 
-bool input_t::query_key(input_buffer_t *buffer,int sdl_key,char key){ // This is used for debugging more than anything (all of the other code would be put into the main function here and not stranded in the classes in the code at random spots).
+bool input_t::query_key(input_buffer_t *buffer,int sdl_key,char key){
 	bool return_value = false;
 	if(sdl_key != -1){
 		buffer = new input_buffer_t;
@@ -169,46 +162,19 @@ bool input_t::query_key(input_buffer_t *buffer,int sdl_key,char key){ // This is
 		buffer->int_data[INPUT_TYPE_KEYBOARD_KEY] = sdl_key;
 	}
 	if(buffer != nullptr){
-		unsigned long int a;
+		long int a;
 		input_find_key(&a,buffer);
-		return !(a == INPUT_BUFFER_SIZE);
+		return_value = !(a == -1);
+		return !(a == -1);
+	}
+	if(sdl_key != -1){
+		delete buffer;
+		buffer = nullptr;
 	}
 	return return_value;
 }
 
 void input_t::close(){
-	blank();
-	delete[] input_buffer;
-	input_buffer = nullptr;
-}
-
-void input_settings_t::blank(){
-	is_used = false;
-}
-
-int input_settings_t::init(){
-	int return_value = 0;
-	blank();
-	is_used = true;
-	return return_value;
-}
-void input_settings_t::close(){
-	blank();
-}
-
-void input_settings_mouse_t::blank(){
-	x_sens = 1;
-	y_sens = 1;
-	slow_key = 'q';
-	slow_multiplier = .5; // slow down the mouse movement by 1/2 when Q is pressed
-}
-int input_settings_mouse_t::init(){
-	int return_value = 0;
-	blank();
-	return return_value;
-}
-
-void input_settings_mouse_t::close(){
 	blank();
 }
 

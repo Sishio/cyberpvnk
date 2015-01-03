@@ -21,6 +21,10 @@ int util_shell(int function,char* parameter){ // Keeps most of the OS pre-proces
 	return return_value;
 }
 
+void s_sleep(long double s){
+	ms_sleep(1000*s);
+}
+
 void ms_sleep(long double ms){
 	#ifdef __linux
 		usleep((unsigned int)(1000*ms));
@@ -40,12 +44,16 @@ unsigned long int gen_rand(unsigned int a){ // range, from 0 to a
 	x = y;
 	y = z;
 	z = t ^ x ^ y;
-	return z%a;
+	unsigned long int z_a = z%a;
+	if(unlikely(z_a == 0)){
+		z_a++;
+	}
+	return z_a;
 }
 
 short int term_if_true(bool a, char* details = NULL){
 	if(__builtin_expect(a,true)){
-		if(details != NULL) printf("%s term_parameter failed\n",details);
+		if(details != NULL) printf("'%s' term parameter failed\n",details);
 		#ifndef NDEBUG
 			assert(false);
 		#else
@@ -57,8 +65,8 @@ short int term_if_true(bool a, char* details = NULL){
 }
 
 short int warn_if_true(bool a, char* details = NULL){
-	if(__builtin_expect(a,0)){
-		if(details != NULL) printf("%s warn parameter failed\n",details);
+	if(__builtin_expect(a,true)){
+		if(details != NULL) printf("'%s' warn parameter failed\n",details);
 	}
 	return 0;
 }
@@ -74,10 +82,10 @@ bool double_cmp(long double a,long double b,long double degree_of_error){
 
 long double get_time(){
 	#ifdef _WIN32
-		return SDL_GetTicks()/1000; // piece of crap timer, needs sleep
+		return SDL_GetTicks()/1000; // piece of crap timer
 	#elif __linux // possibly OS X?
 		timespec a;
-		clock_gettime(CLOCK_MONOTONIC, &a); // greatest timer in the world, does not need any sleep
+		clock_gettime(CLOCK_MONOTONIC, &a);
 		return a.tv_sec + ((long double)a.tv_nsec/(long double)1000000000.0);
 	#endif
 }
@@ -174,3 +182,64 @@ int encrypt(std::vector<std::string*> a){
 	}
 	return average;
 }
+
+std::vector<std::string> pull_items_data(char *c, std::string a, char *d){
+	std::vector<std::string> b;
+	while(true){
+		const size_t start_start = a.find_first_of(c);
+		const size_t end_start = a.find_first_of(d);
+		const size_t start_end = start_start + strlen(c);
+		const size_t end_end = end_start + strlen(d);
+		bool conditional[8] = {false};
+		conditional[4] = start_start == std::string::npos;
+		conditional[5] = end_start == std::string::npos;
+		if(conditional[4] || conditional[5]){ // escape condition
+			break;
+		}
+		conditional[0] = start_start == end_start && start_start != std::string::npos;
+		conditional[1] = start_end == end_end && start_start != std::string::npos;
+		conditional[2] = start_start > end_start;
+		conditional[3] = start_end > end_end;
+		if(conditional[0] || conditional[1] || conditional[2] || conditional[3]){
+			printf("An impossible condition has been met\n");
+			for(unsigned int i = 0;i < 4;i++){
+				printf("%d\n",conditional[i]);
+			}
+			printf("start_start:%zu\tend_start:%zu\tstart_end:%zu\tend_end:%zu\n",start_start, end_start, start_end, end_end);
+			assert(false);
+		}
+		std::string z = a.substr(start_end,(end_start-start_end));
+		b.push_back(z);
+		if(end_end == a.size()){
+			break;
+		}
+		a = a.substr(end_end+1,a.size());
+	}
+	return b;
+}
+
+std::string wrap(char *start, std::string data, char *end){
+	return (std::string)start + data + (std::string)end;
+}
+
+bool check_for_parameter(const std::string a, int argc_, char **argv_){
+	for(int i = 0;i < argc_;i++){
+		if(std::string(argv_[i]) == a){
+			return true;
+		}
+	}
+	return false;
+}
+
+void switcH_values(void *a, void *b){
+	void *c = a;
+	a = b;
+	b = c;
+}
+
+void switch_values(void **a, void **b){
+	void **c = a;
+	a = b;
+	b = c;
+}
+

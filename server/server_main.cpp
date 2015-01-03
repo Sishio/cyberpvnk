@@ -1,9 +1,8 @@
 #include "server_main.h"
 #include "server_physics.h"
 #include "server_net.h"
-#include "server_console.h"
-#include "signal.h"
 
+net_ip_connection_info_t *self_info;
 thread_t *thread;
 
 bool terminate = false;
@@ -16,9 +15,9 @@ static void write_vector_to_net(std::vector<std::vector<std::string>> *a){
 	for(unsigned long int i = 0;i < a_size;i++){
 		const unsigned long int a_i_size = (*a)[i].size();
 		for(unsigned long int n = 0;n < a_i_size;n++){
-			const unsigned long int client_size = client.size();
+			const unsigned long int client_size = client_vector.size();
 			for(unsigned long int c = 0;c < client_size;c++){
-				net->write((*a)[i][n], client[i]->net_ip_connection_info);
+				net->write((*a)[i][n], client_vector[c]->connection_info_id, gen_rand());
 			}
 		}
 	}
@@ -26,14 +25,14 @@ static void write_vector_to_net(std::vector<std::vector<std::string>> *a){
 
 static void init_load_map_parse_line(std::string *a){
 	if(a[0] == "coord"){
-		new_init_coord_t();
-		coord_t *b = coord[coord.size()-1];
+		new_coord();
+		coord_t *b = coord_vector[coord_vector.size()-1];
 		b->x = atof(a[1].c_str());
 		b->y = atof(a[2].c_str());
 		b->z = atof(a[3].c_str());
 		b->set_x_angle(false,atof(a[4].c_str()));
 		b->set_y_angle(false,atof(a[5].c_str()));
-		b->array->id = atoi(a[6].c_str());
+		b->array.id = atoi(a[6].c_str());
 		b->model_id = atoi(a[7].c_str());
 	}
 }
@@ -56,54 +55,20 @@ static void init_load_map(std::string map_name = "test.map"){
 	return;
 }
 
-static void init_load_model_parse_line(std::string *a){
-	if(a[0] == "model"){
-		new_init_model_t();
-		model_t *b = model[model.size()-1];
-		b->load(a[1]);
-		unsigned long int c = atoi(a[2].c_str());
-		b->array->id = c;
-	}
-}
-
-static void init_load_models(std::string model_list_name = "model.list"){
-	std::ifstream in(model_list_name);
-	if(!in.is_open()){
-		return;
-	}
-	char data_[512];
-	while(in.getline(data_,511)){
-		data_[511] = '\0';
-		std::string data = data_;
-		std::string parse[8];
-		std::stringstream ss;
-		ss << data;
-		ss >> parse[0] >> parse[1] >> parse[2] >> parse[3] >> parse[4] >> parse[5] >> parse[6] >> parse[7];
-		init_load_model_parse_line(parse);
-	}
-}
-
 static void init(){
-	net = new net_t(argc_,argv_);
-	if(net->ip->connection_info.port == 0){
-		net->ip->connection_info.port = NET_IP_SERVER_RECEIVE_PORT;
-	}
-	if(net->ip->connection_info.ip == ""){ // local or global?
-		net->ip->connection_info.ip = "127.0.0.1";
-	}
-	if(net->ip->connection_info.connection_type == NET_IP_CONNECTION_TYPE_UNDEFINED){
-		net->ip->connection_info.connection_type = NET_IP_CONNECTION_TYPE_UDP;
-	}
-	console_init();
+	self_info = new_net_ip_connection_info();
+	self_info->ip = "127.0.0.1";
+	self_info->port = NET_SERVER_PORT;
+	net = new net_t(argc_,argv_,self_info->array.id);
 	thread = new thread_t;
 	thread->init(argc_,argv_);
-	init_load_models();
+	net_init();
 	init_load_map();
 }
 
 int scan_model_for_id(int id){
-	for(unsigned int i = 0;i < model.size();i++){
-		if(model[i]->array->id_match(id)){
+	for(unsigned int i = 0;i < model_vector.size();i++){
+		if(model_vector[i]->array.id_match(id)){
 			return i;
 		}
 	}
@@ -111,47 +76,19 @@ int scan_model_for_id(int id){
 }
 
 static void close(){
-	net->close();
+	net_close();
 	delete net;
 	net = nullptr;
-	const int coord_size = coord.size();
-	for(int i = 0;i < coord_size;i++){
-		coord[i]->close();
-		delete coord[i];
-		coord[i] = nullptr;
-	}
-	const int model_size = model.size();
-	for(int i = 0;i < model_size;i++){
-		model[i]->close();
-		delete model[i];
-		model[i] = nullptr;
-	}
-	const int client_size = client.size();
-	for(int i = 0;i < client_size;i++){
-		client[i]->close();
-		delete client[i];
-		client[i] = nullptr;
-	}
-	console_close();
 	thread->close();
 	delete thread;
 	thread = nullptr;
 }
 
-void signal_handler(int signal){
-	if(signal == SIGINT){
-		printf("Received SIGINT\n");
-		terminate = true;
-	}
-}
-
 static void class_engine_coord_update(){
 	const unsigned long int coord_vector_size = coord_vector.size();
 	for(unsigned long int i = 0;i < coord_vector_size;i++){
-		if(coord_vector[i]->array->updated()){
-			std::vector<std::vector<std::string>> a = coord_vector[i]->array->gen_string_vector();
-			write_vector_to_net(&a);
-		}
+		std::vector<std::vector<std::string>> a = coord_vector[i]->array.gen_string_vector();
+		write_vector_to_net(&a);
 	}
 
 }
@@ -159,20 +96,16 @@ static void class_engine_coord_update(){
 static void class_engine_model_update(){
 	const unsigned long int model_vector_size = model_vector.size();
 	for(unsigned long int i = 0;i < model_vector_size;i++){
-		if(model_vector[i]->array->updated()){
-			std::vector<std::vector<std::string>> a = model_vector[i]->array->gen_string_vector();
-			write_vector_to_net(&a);
-		}
+		std::vector<std::vector<std::string>> a = model_vector[i]->array.gen_string_vector();
+		write_vector_to_net(&a);
 	}
 }
 
 static void class_engine_client_update(){
 	const unsigned long int client_vector_size = client_vector.size();
 	for(unsigned long int i = 0;i < client_vector_size;i++){
-		if(client_vector[i]->array->updated()){
-			std::vector<std::vector<std::string>> a = client_vector[i]->array->gen_string_vector();
-			write_vector_to_net(&a);
-		}
+		std::vector<std::vector<std::string>> a = client_vector[i]->array.gen_string_vector();
+		write_vector_to_net(&a);
 	}
 }
 
@@ -185,23 +118,16 @@ static void class_engine(){
 int main(int argc, char **argv){
 	argc_ = argc;
 	argv_ = argv;
+	#ifdef __linux
+	//signal(SIGINT, signal_handler);
+	#endif
 	init();
-	signal(SIGINT, signal_handler);
-	for(unsigned long int i = 0;i < 1024;i++){
-		new_init_coord_t();
-		unsigned long int a = coord.size()-1;
-		coord[a]->x = gen_rand();
-		coord[a]->y = gen_rand();
-		coord[a]->z = gen_rand();
-	}
 	printf("Starting the main loop\n");
 	while(terminate == false){
 		physics_engine();
 		net_engine();
-		console_engine();
 		class_engine();
 	}
 	close();
-	ms_sleep(1000); // wait for threads without references to stop
 	return 0;
 }

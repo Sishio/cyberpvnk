@@ -31,20 +31,17 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define ARRAY_LONG_DOUBLE_SEPERATOR_START	(char*)"\x07"
 	#define ARRAY_LONG_DOUBLE_SEPERATOR_END		(char*)"\x08"
 	#define ARRAY_STRING_SEPERATOR_START		(char*)"\x09"
-	#define ARRAY_STRING_SEPERATOR_END		(char*)"\x10"
-	#define ARRAY_ID_START				(char*)"\x11"
-	#define ARRAY_ID_END				(char*)"\x12"
-	#define ARRAY_STARTING_START			(char*)"\x13"
-	#define ARRAY_STARTING_END			(char*)"\x14"
-	#define ARRAY_STD_VECTOR_LONG_DOUBLE_START	(char*)"\x15"
-	#define ARRAY_STD_VECTOR_LONG_DOUBLE_END	(char*)"\x16"
-	#define ARRAY_STD_VECTOR_ID_START		(char*)"\x17"
-	#define ARRAY_STD_VECTOR_ID_END			(char*)"\x18"
-	#define ARRAY_STD_VECTOR_SIZE_START		(char*)"\x19"
-	#define ARRAY_STD_VECTOR_SIZE_END		(char*)"\x20"
-	#define ARRAY_STD_VECTOR_STARTING_START		(char*)"\x21"
-	#define ARRAY_STD_VECTOR_STARTING_END		(char*)"\x22"
-	// the networking code reserves 30-32 (packet seperators for serial connections)
+	#define ARRAY_STRING_SEPERATOR_END		(char*)"\x0a"
+	#define ARRAY_ID_START				(char*)"\x0b"
+	#define ARRAY_ID_END				(char*)"\x0c"
+	#define ARRAY_STARTING_START			(char*)"\x0d"
+	#define ARRAY_STARTING_END			(char*)"\x0e"
+
+	#define ARRAY_STRING_HASH_BIT		0
+	#define ARRAY_LONG_DOUBLE_HASH_BIT	1
+	#define ARRAY_INT_HASH_BIT		2
+	// used by the server to tell it what data it is allowed to modify because the clients can send fraud packets and allowing all of the packets would allow cheating
+	// the networking code reserves 24-32 (packet seperators for serial connections among other things)
 	class array_t{
 	private:
 		std::vector<std::string> gen_int_array_vector();
@@ -55,9 +52,15 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void parse_string_from_string(std::string);
 		unsigned int pull_starting_number(std::string);
 		std::vector<std::string> pull_items(char*, std::string, char*);
-		int hash;
-		std::vector<std::string> pull_items_data(char*, std::string, char*);
+		long int int_hash;
+		long int string_hash;
+		long int long_double_hash;
 	public:
+		std::string gen_long_double_string();
+		std::string gen_int_string();
+		std::string gen_string_string();
+		std::string data_type;
+		long double last_update;
 		int id;
 		std::string generate_string_from_variable(long double*);
 		std::string generate_string_from_variable(int*);
@@ -67,14 +70,18 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<std::string*> string_array;
 		array_t();
 		bool id_match(int);
-		std::vector<std::vector<std::string>> gen_string_vector(bool force = false);
+		std::vector<std::vector<std::string>> gen_string_vector();
+		std::string gen_string();
 		void parse_string_entry(std::string);
 		void parse_string_vector(std::vector<std::vector<std::string>>);
-		int gen_hash();
 		void close();
+		bool updated(int*);
 	};
+	extern std::vector<array_t*> array_vector;
+	extern long int array_scan_for_id(long int);
 	extern void add_two_arrays(array_t*, array_t*);
-	extern void update_class_data(std::string);
-	extern array_t* new_array();
-	extern void delete_array(array_t*);
+	extern void update_class_data(std::string, int);
+	extern void add_array_to_vector(array_t*);
+	extern void delete_array_from_vector(array_t*);
+	extern void delete_array_id(int);
 #endif

@@ -18,58 +18,87 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "c_engine.h"
 #include "c_net_engine.h"
 
-net_ip_connection_info_t server_connection_info;
-//static coord_t *old_coord = nullptr;
 extern bool once_per_second;
+extern bool terminate;
 
-/*static void net_engine_parse(std::string a){
-	if(a.find_first_of(ARRAY_ITEM_SEPERATOR_START) == std::string::npos){
-		update_class_data(a); // universal fucntion for everything data related
+extern int host_info_id;
+extern int self_id;
+
+static void net_engine_parse(std::string a){
+	if(a.find_first_of(ARRAY_ITEM_SEPERATOR_START) != std::string::npos){
+		update_class_data(a, CLASS_DATA_UPDATE_EVERYTHING);
 	}else{
-		printf("Unknown data was received\n");
+		printf("Unknown data was received:%s\n", a.c_str());
 	}
 }
 
-static void net_write_array_vector(std::vector<std::vector<std::string>> a, net_ip_connection_info_t b){
-	const unsigned long int a_size = a.size();
-	for(unsigned long int i = 0;i < a_size;i++){
-		const unsigned long int a_i_size = a[i].size();
-		for(unsigned long int n = 0;n < a_i_size;n++){
-			net->write(a[i][n],b);
+//static net_ip_connection_info_t net_generate_self_info(){
+//	net_ip_connection_info_t tmp;
+//	tmp.ip = "127.0.0.1";
+//	tmp.port = net_client_port;
+//	return tmp;
+//}
+
+static void net_connect(int host_info_id){
+	assert(find_client_pointer(self_id) != nullptr);
+	client_t *tmp_client = find_client_pointer(self_id);
+	assert(tmp_client != nullptr);
+	net_ip_connection_info_t *self_info = find_net_ip_connection_info_pointer(tmp_client->connection_info_id);
+	assert(self_info != nullptr);
+	self_info->ip = "127.0.0.1";
+	self_info->port = NET_CLIENT_PORT;
+	std::string packet = self_info->array.gen_string();
+	packet += NET_JOIN;
+	printf("Sending packet '%s'\n",packet.c_str());
+	net->write(packet, host_info_id, gen_rand());
+	std::string connecting_packet;
+	bool connection_established = false;
+	while(connection_established == false){
+		net->loop();
+		if((connecting_packet = net->read(NET_JOIN)) != ""){
+			printf("Received '%s' from the server\n", connecting_packet.c_str());
+			connecting_packet.erase(connecting_packet.begin()+connecting_packet.find_first_of(NET_JOIN));
+			self_id = atoi(connecting_packet.c_str());
+			connection_established = true;
 		}
 	}
-}*/
+	self_info = nullptr;
+}
 
 void net_init(){
-	server_connection_info.ip = "127.0.0.1";
-	server_connection_info.port = 50000;
+	host_info_id = new_net_ip_connection_info()->array.id;
+	find_net_ip_connection_info_pointer(host_info_id)->ip = "127.0.0.1";
+	find_net_ip_connection_info_pointer(host_info_id)->port = NET_SERVER_PORT;
 	for(int i = 0;i < argc_;i++){
 		if(strcmp(argv_[i], (char*)"--net-ip-server-ip") == 0){
-			server_connection_info.ip = (std::string)argv_[i+1];
+			find_net_ip_connection_info_pointer(host_info_id)->ip = (std::string)argv_[i+1];
 		}else if(strcmp(argv_[i], (char*)"--net-ip-server-port") == 0){
-			server_connection_info.port = atoi((char *)argv_[i+1]);
+			find_net_ip_connection_info_pointer(host_info_id)->port = atoi((char*)argv_[i+1]);
 		}
 	}
+	net_connect(host_info_id);
+}
+
+static void net_receive_engine(){
+	std::string a;
+	for(unsigned long int i = 0;i < 512;i++){
+		if((a = net->read()) != ""){
+			net_engine_parse(a);
+		}else{
+			break;
+		}
+	}
+}
+
+static void net_send_engine(){
 }
 
 void net_engine(){
-  /*	std::string a;
-	while((a = net->read()) != ""){
-		net_engine_parse(a);
-	}
-	if(unlikely(old_coord == nullptr)){
-		old_coord = new coord_t; // don't add this to the main array
-	}
-	coord_t *coord = find_coord_pointer(self->coord_id);
-	if(coord != nullptr){
-		if(likely(memcmp(&old_coord,coord,sizeof(coord_t)) != 0)){
-			std::vector<std::vector<std::string>> a = self->array->gen_string_vector(once_per_second);
-			// true means it forces itself to rewrite everything, false means only rewrite it if the data has changed
-			net_write_array_vector(a, server_connection_info);
-		}
-		memcpy(&old_coord,coord,sizeof(coord_t)); //includes padding
-	}*/
+	net->loop();
+	net_receive_engine();
+	net_send_engine();
 }
 
 void net_close(){
+	assert(terminate == true);
 }

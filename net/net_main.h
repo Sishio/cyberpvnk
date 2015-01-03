@@ -14,38 +14,36 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "../class/class_main.h"
+#include "net_ip.h"
+#include "net_const.h"
+#include "net_store.h" // stores the data
+#include "iostream"
+#include "utility"
+#include "chrono"
+#include "functional"
+#include "atomic"
+#include "thread"
+#include "../util/util_main.h"
 #ifndef NET_H
 	#define NET_H
-	#include "net_ip.h"
-	#include "net_store.h" // stores the data
-	#include "thread"
-	#include "../util/util_main.h"
-	#define NET_PACKET_COORD_T_ID 0 // any single char*acter would work fine.
-	#define NET_PACKET_MODEL_T_ID 1
-	#define NET_MAJOR_SEPERATOR '\027' // end of trans. block
-	#define NET_MINOR_SEPERATOR '\037' // unit seperator
-	#define NET_SCANF_COORD_T "%d %d %f %f %f %f %f" // type, id, x,y,z,x_angle,y_angle
-	#define NET_SCANF_MODEL_T "%d %d %s %d" // type, id, alias, type (the data is sent seperately)
-	#define NET_MTU 512 // chunk the data (used in the encoding and decoding code).
-	// major seperaters seperate packets from each other and minor seperators seperate items from inside of a packet
-	#define NET_COORD 0
-	#define NET_MODEL 1
-	#define NET_MAJOR_START '\01'
-	#define NET_MINOR_START '\02'
-	#define NET_MAJOR_END '\04'
-	#define NET_MINOR_END '\03'
 	class net_t{
+	private:
+		std::thread send_thread;
+		std::thread read_thread;
 	public:
 		int init_parse_parameters(int,char**);
-		int init_initialize_subsystems(int,char**);
+		int init_initialize_subsystems(int, char**, int);
 		std::string encode_data(unsigned char, void*);
 		net_ip_t *ip;
 		void blank();
-		net_t(int,char**);
+		net_t(int, char**, int);
 		int loop();
-		void close();
-		std::string read();
-		int write(std::string, net_ip_connection_info_t);
+		~net_t();
+		std::string read(std::string search = "");
+		void write(std::string, int, unsigned long int);
 	};
+	extern std::string net_generate_ip_address(std::string prefix = "");
+	extern void net_write_array_vector(std::vector<std::vector<std::string>>, int);
 	extern void net_loop(net_t*);
 #endif

@@ -1,0 +1,5 @@
+#include "class_main.h"
+#include "class_array.h"
+#ifndef CLASS_VECTOR_H
+	#define CLASS_VECTOR_H
+#endif

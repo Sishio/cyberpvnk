@@ -18,7 +18,5 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define NET_STORE_H
 	#include "../class/class_main.h"
 	#include "vector"
-	extern void store_coord_t(coord_t, std::vector<coord_t*>*, std::vector<coord_extra_t>*);
-	extern void store_model_t(model_t, std::vector<model_t*>*, std::vector<model_extra_t>*);
 #endif
 

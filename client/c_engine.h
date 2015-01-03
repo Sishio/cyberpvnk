@@ -29,11 +29,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern net_t *net;
 	extern render_t *render;
 	extern input_t *input;
-	extern client_t *self;
-	extern std::vector<coord_t*> coord;
-	extern std::vector<coord_extra_t> coord_extra;
-	extern std::vector<model_t*> model;
-	extern std::vector<model_extra_t> model_extra;
 	extern int argc_;
 	extern char** argv_;
 #endif

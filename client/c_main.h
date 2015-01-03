@@ -25,4 +25,5 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../math/math_main.h"
 	#include "c_engine.h"
 	#include "cstdio"
+	extern int menu_loop();
 #endif

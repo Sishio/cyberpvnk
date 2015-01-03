@@ -19,6 +19,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../math/math_main.h"
 	#include  "../main.h"
 	#include "cstdio"
+	#include "mutex"
 	#include "vector"
 	#include "climits"
 	#include "cstdlib"
@@ -26,6 +27,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "cassert"
 	#include "fstream"
 	#include "SDL2/SDL.h"
+	#include "util_conversion.h"
 	#ifdef __linux
 		#include "fcntl.h"
 		#include "sys/types.h"
@@ -39,6 +41,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define UTIL_SHELL_DELETE 0
 	#define UTIL_TIME_MILLISECOND 0
 	#define UTIL_TIME_SECOND 1
+	#define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 	class timer_struct_t{
 	private:
 		long double start_time;
@@ -49,6 +52,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void end_timer();
 		long double get_time(int);
 	};
+	extern std::string wrap(char *start, std::string data, char *end);
+	extern std::vector<std::string> pull_items_data(char*, std::string, char*);
 	extern int util_shell(int,char*);
 	extern void ms_sleep(long double);
 	extern unsigned long int gen_rand(unsigned int a = UINT_MAX);
@@ -68,4 +73,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern int encrypt(std::vector<long double*>);
 	extern int encrypt(std::vector<std::string>);
 	extern int encrypt(std::vector<std::string*>);
+	extern bool check_for_parameter(const std::string, int, char**);
+	extern void switch_values(void*, void*);
+	extern void switch_values(void**, void**);
 #endif

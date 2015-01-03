@@ -222,7 +222,7 @@ void model_render(model_t *model){
 	}
 	std::vector<std::string*> coord	= model->coord;
 	std::vector<coordinate*> vertex	= model->vertex;
-	//std::vector<face*> faces = model->faces;
+	std::vector<face*> faces = model->faces;
 	std::vector<coordinate*> normals = model->normals;
 	std::vector<unsigned int> texture = model->texture;
 	std::vector<unsigned int> lists	= model->lists;
@@ -235,7 +235,7 @@ void model_render(model_t *model){
 	glPushMatrix();
 	for(unsigned long int i = 0;i < model_faces_size;i++){
 		int mat = model->faces[i]->mat;
-		//const int *faces_ = model->faces[i]->faces;
+		const int *faces_ = model->faces[i]->faces;
 		int facenum = model->faces[i]->facenum;
 		int *texcoord_ = model->faces[i]->texcoord;
 		if(last != mat && ismaterial){
@@ -247,15 +247,14 @@ void model_render(model_t *model){
 			glMaterialfv(GL_FRONT,GL_SPECULAR,specular);
 			glMaterialf(GL_FRONT,GL_SHININESS,materials[mat]->ns);
 			last = mat;
-			if(materials[mat]->texture==-1){
+			if(materials[mat]->texture == -1){
 				glDisable(GL_TEXTURE_2D);
 			}else{
 				glEnable(GL_TEXTURE_2D);
-				glBindTexture(GL_TEXTURE_2D,(GLuint)materials[mat]->texture);	//and use it
+				glBindTexture(GL_TEXTURE_2D, (GLuint)materials[mat]->texture);
 			}
 		}
-		if(model->faces[i]->four){
-			printf("Rendering a GL_QUAD\n");
+		if(faces[i]->four){
 			glBegin(GL_QUADS);
 				if(isnormals) model_render_normal(normals[facenum-1]);
 				for(unsigned int n = 0;n < 4;n++){
@@ -267,11 +266,10 @@ void model_render(model_t *model){
 					if(istexture && texcoord_[n]-1 < (int)texturecoordinate.size()){
 						local_texcoord = texturecoordinate[texcoord_[n]-1];
 					}
-					model_render_vertex(local_mat, local_texcoord, vertex[model->faces[i]->faces[n]-1]);
+					model_render_vertex(local_mat, local_texcoord, vertex[faces_[n]-1]);
 				}
 			glEnd();
 		}else{
-			printf("Rendering a GL_TRIANGLE\n");
 			glBegin(GL_TRIANGLES);
 				if(isnormals) model_render_normal(normals[facenum-1]);
 				for(unsigned int n = 0;n < 3;n++){
@@ -283,10 +281,11 @@ void model_render(model_t *model){
 					if(istexture && texcoord_[n]-1 < (int)texturecoordinate.size()){
 						local_texcoord = texturecoordinate[texcoord_[n]-1];
 					}
-					model_render_vertex(local_mat, local_texcoord, vertex[model->faces[i]->faces[n]-1]);
+					model_render_vertex(local_mat, local_texcoord, vertex[faces_[n]-1]);
 				}
 			glEnd();
 		}
 	}
+	// is it possible to unbind a texture?
 	glPopMatrix();
 }
