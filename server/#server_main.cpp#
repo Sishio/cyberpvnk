@@ -112,10 +112,6 @@ int main(int argc, char **argv){
 	init(menu());
 	printf("Starting the main loop\n");
 	while(terminate == false){
-/*		physics_engine();
-		net_engine();
-		render_engine();
-*/
 		const unsigned long int loop_code_size = loop_code.size();
 		for(unsigned long int i = 0;i < loop_code_size;i++){
 			(loop_code[i])();

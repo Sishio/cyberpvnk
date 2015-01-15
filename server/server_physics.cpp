@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "server_main.h"
 #include "server_physics.h"
 
 extern std::vector<coord_t*> coord;
@@ -84,6 +85,12 @@ static void apply_all_input(){
 		input_buffer_vector.erase(input_buffer_vector.begin()+i);
 	}
 }
+
+void physics_init(){
+	loop_code.push_back(physics_engine);
+}
+
+void physics_close(){}
 
 void physics_engine(){
 	update_vector_sizes();

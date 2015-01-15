@@ -14,15 +14,19 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-#include "c_engine.h"
 #include "c_net_engine.h"
 
 extern bool once_per_second;
 extern bool terminate;
 
-extern int host_info_id;
+int host_info_id = 0;
+int self_info_id = 0;
 extern int self_id;
+
+extern int argc_;
+extern char **argv_;
+
+net_t *net = nullptr;
 
 static void net_engine_parse(std::string a){
 	if(a.find_first_of(ARRAY_ITEM_SEPERATOR_START) != std::string::npos){
@@ -47,10 +51,10 @@ static void net_connect(int host_info_id){
 	assert(self_info != nullptr);
 	self_info->ip = "127.0.0.1";
 	self_info->port = NET_CLIENT_PORT;
-	std::string packet = self_info->array.gen_string();
+	std::string packet = self_info->array.gen_updated_string(INT_MAX);
 	packet += NET_JOIN;
 	printf("Sending packet '%s'\n",packet.c_str());
-	net->write(packet, host_info_id, gen_rand());
+	net->write(packet, host_info_id);
 	std::string connecting_packet;
 	bool connection_established = false;
 	while(connection_established == false){
@@ -66,14 +70,34 @@ static void net_connect(int host_info_id){
 }
 
 void net_init(){
-	host_info_id = new_net_ip_connection_info()->array.id;
-	find_net_ip_connection_info_pointer(host_info_id)->ip = "127.0.0.1";
-	find_net_ip_connection_info_pointer(host_info_id)->port = NET_SERVER_PORT;
+	net_ip_connection_info_t *self_info = new_net_ip_connection_info();
+	net_ip_connection_info_t *host_info = new_net_ip_connection_info();
+	host_info_id = host_info->array.id;
+	self_info_id = self_info->array.id;
+	host_info->ip = "127.0.0.1";
+	self_info->ip = "127.0.0.1";
+	host_info->port = NET_SERVER_PORT;
+	self_info->port = NET_CLIENT_PORT;
+	net = new net_t(argc_, argv_, self_info->array.id);
 	for(int i = 0;i < argc_;i++){
+		std::string next_item;
+		if(i+1 < argc_){
+			next_item = argv_[i+1];
+		}else{
+			next_item = "";
+		}
 		if(strcmp(argv_[i], (char*)"--net-ip-server-ip") == 0){
-			find_net_ip_connection_info_pointer(host_info_id)->ip = (std::string)argv_[i+1];
+			host_info->ip = (std::string)argv_[i+1];
 		}else if(strcmp(argv_[i], (char*)"--net-ip-server-port") == 0){
-			find_net_ip_connection_info_pointer(host_info_id)->port = atoi((char*)argv_[i+1]);
+			host_info->port = atoi((char*)argv_[i+1]);
+		}else if(strcmp(argv_[i], (char*)"--net-ip-client-ip") == 0){
+			if(next_item != ""){
+				self_info->ip = next_item.c_str();
+			}
+		}else if(strcmp(argv_[i], (char*)"--net-ip-client-port") == 0){
+			if(next_item != ""){
+				self_info->port = atoi(next_item.c_str());
+			}
 		}
 	}
 	net_connect(host_info_id);
@@ -91,6 +115,15 @@ static void net_receive_engine(){
 }
 
 static void net_send_engine(){
+	client_t *client_tmp = find_client_pointer(self_id);
+	if(client_tmp == nullptr){
+		return;
+	}
+	int what_to_update = INT_MIN;
+	if(client_tmp->array.updated(&what_to_update)){
+		std::string data = client_tmp->array.gen_updated_string(what_to_update);
+		net->write(data.c_str(), host_info_id);
+	}
 }
 
 void net_engine(){

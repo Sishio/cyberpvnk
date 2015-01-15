@@ -14,7 +14,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
-
 #ifndef CLASS_ARRAY_H
 	#define CLASS_ARRAY_H
 	#include "../util/util_main.h"
@@ -23,7 +22,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "cstdio"
 	#include "cstdlib"
 	#include "vector"
-	//#define DEBUG_SEPERATOR 1
+	#define DEBUG_SEPERATOR 1
 	#ifndef DEBUG_SEPERATOR
 		#define ARRAY_ITEM_SEPERATOR_START		(char*)"\x01"
 		#define ARRAY_ITEM_SEPERATOR_END		(char*)"\x02"
@@ -41,7 +40,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		#define ARRAY_STARTING_START			(char*)"\x0d"
 		#define ARRAY_STARTING_END			(char*)"\x0e"
 	#else
-		// don't use this unless you can debug without using strings
 		#define ARRAY_ITEM_SEPERATOR_START		(char*)"A"
 		#define ARRAY_ITEM_SEPERATOR_END		(char*)"B"
 		#define ARRAY_TYPE_SEPERATOR_START		(char*)"C"

@@ -41,7 +41,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define UTIL_SHELL_DELETE 0
 	#define UTIL_TIME_MILLISECOND 0
 	#define UTIL_TIME_SECOND 1
-	#define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
+	#define CHECK_BIT(var, pos, val) (var & (val << pos))
+	#define SET_BIT(var, pos, val) ((*var) |= ((val) << (pos)))
 	class timer_struct_t{
 	private:
 		long double start_time;

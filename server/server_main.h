@@ -27,6 +27,12 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "cstdio"
 	#include "vector"
 	#include "cmath"
+	class server_info_t{
+	public:
+		std::string map_name, map_path;
+		server_info_t();
+		~server_info_t();
+	};
 	extern int argc_;
 	extern char** argv_;
 	extern std::vector<client_extra_t> client_extra;
@@ -35,4 +41,5 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern std::vector<coord_t*> coord;
 	extern std::vector<model_extra_t> model_extra;
 	extern std::vector<model_t*> model;
+	extern std::vector<void(*)()> loop_code;
 #endif

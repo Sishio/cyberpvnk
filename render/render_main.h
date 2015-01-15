@@ -34,6 +34,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "GL/gl.h"
 	#include "GL/glu.h"
 	#include "../util/util_main.h"
+	#include "../class/class_main.h"
 	#define MODEL_BUFFER_SIZE RENDER_BUFFER_SIZE
 	#define RENDER_DIMENSION_3D 0
 	#define RENDER_DIMENSION_2D 1
@@ -85,7 +86,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		int write_to_buffer(render_buffer_t*);
 		void close();
 	};
-	#include "../class/class_main.h"
 	extern render_rules_t *render_rules_blank;
 	extern render_buffer_t *render_buffer_blank;
 	extern int render_generate_shape(int);

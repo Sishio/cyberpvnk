@@ -16,12 +16,13 @@ client_delete:
 	touch bin/client.$(shell uname -m)
 	rm -r bin/client.$(shell uname -m)
 
-server: server_delete class net thread math util
+server: server_delete class net thread math util render
 	$(CC) -c $(CFLAGS) server/server_main.cpp -o server/obj/server_main.o
 	$(CC) -c $(CFLAGS) server/server_physics.cpp -o server/obj/server_physics.o
 	$(CC) -c $(CFLAGS) server/server_net.cpp -o server/obj/server_net.o
-	ld -r server/obj/server_main.o  server/obj/server_physics.o server/obj/server_net.o -o server/obj/server.o
-	$(CC) $(CFLAGS) math/obj/math.o class/obj/class.o net/obj/net.o thread/obj/thread.o util/obj/util.o server/obj/server.o -o bin/server.$(shell uname -m) $(LINKER)
+	$(CC) -c $(CFLAGS) server/server_render.cpp -o server/obj/server_render.o
+	ld -r server/obj/server_main.o server/obj/server_render.o  server/obj/server_physics.o server/obj/server_net.o -o server/obj/server.o
+	$(CC) $(CFLAGS) render/obj/render.o math/obj/math.o class/obj/class.o net/obj/net.o thread/obj/thread.o util/obj/util.o server/obj/server.o -o bin/server.$(shell uname -m) $(LINKER)
 
 c_input_engine:
 	$(CC) -c $(CFLAGS) client/c_input_engine.cpp -o client/obj/c_input_engine.o
@@ -33,10 +34,8 @@ c_render_engine:
 	$(CC) -c $(CFLAGS) client/c_render_engine.cpp -o client/obj/c_render_engine.o
 
 c_engine: c_input_engine c_net_engine c_render_engine
-	$(CC) -c $(CFLAGS) client/c_engine.cpp -o client/obj/c_engine.o
 	$(CC) -c $(CFLAGS) client/c_menu_engine.cpp -o client/obj/c_menu_engine.o
-	cp -r client/obj/c_engine.o client/obj/c_engine.o.o
-	ld -r client/obj/c_net_engine.o client/obj/c_menu_engine.o client/obj/c_render_engine.o client/obj/c_input_engine.o client/obj/c_engine.o.o -o client/obj/c_engine.o
+	ld -r client/obj/c_net_engine.o client/obj/c_menu_engine.o client/obj/c_render_engine.o client/obj/c_input_engine.o -o client/obj/c_engine.o
 
 
 client: client_delete class net render input util math thread c_engine

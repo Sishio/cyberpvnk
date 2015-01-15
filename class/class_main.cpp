@@ -183,15 +183,15 @@ client_t *new_client(){
 }
 
 coord_t *new_coord(){
-	coord_t *return_value = new coord_t;
-	add_coord(return_value);
-	return return_value;
+	coord_t *a = new coord_t;
+	coord_vector.push_back(a);
+	return a;
 }
 
 model_t *new_model(){
-	model_t *return_value = new model_t;
-	add_model(return_value);
-	return return_value;
+	model_t *a = new model_t;
+	model_vector.push_back(a);
+	return a;
 }
 
 input_buffer_t *new_input_buffer(){
@@ -200,27 +200,14 @@ input_buffer_t *new_input_buffer(){
 	return return_value;
 }
 
-void add_coord(coord_t *a){
-	const unsigned long int coord_size = coord_vector.size();
-	for(unsigned long int i = 0;i < coord_size;i++){
-		if(coord_vector[i] == nullptr){
-			coord_vector[i] = a;
-			return;
+void delete_input_buffer_id(int id){
+	const unsigned long int input_buffer_size = input_buffer_vector.size();
+	for(unsigned long int i = 0;i < input_buffer_size;i++){
+		if(input_buffer_vector[i]->array.id == id){
+			delete input_buffer_vector[i];
+			input_buffer_vector[i] = nullptr;
 		}
 	}
-	coord_vector.push_back(a);
-}
-
-void add_model(model_t *a){
-	const unsigned long int model_size = model_vector.size();
-	for(unsigned long int i = 0;i < model_size;i++){
-		if(model_vector[i] == nullptr){
-			model_vector[i] = a;
-			return;
-		}
-	}
-	model_vector.push_back(a);
-	
 }
 
 input_buffer_t::input_buffer_t(){

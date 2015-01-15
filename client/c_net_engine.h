@@ -15,7 +15,12 @@ You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "../class/class_main.h"
+#include "../net/net_main.h"
 #ifndef C_NET_ENGINE_H
 	#define C_NET_ENGINE_H
 	#include "../net/net_const.h"
+	extern void net_init();
+	extern void net_engine();
+	extern void net_close();
 #endif

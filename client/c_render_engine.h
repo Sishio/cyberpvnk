@@ -14,7 +14,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+#include "../class/class_main.h"
+#include "../render/render_main.h"
 #ifndef C_RENDER_ENGINE
 	#define C_RENDER_ENGINE
+	extern void render_init();
+	extern void render_engine();
+	extern void render_close();
 #endif

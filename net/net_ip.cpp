@@ -10,7 +10,6 @@ int net_ip_t::init(int argc, char** argv, int tmp_conn_id){
 	}else{
 		printf("Opened the outbound socket\n");
 	}
-	outbound_packet = SDLNet_AllocPacket(512);
 	if(tmp_conn->port != 0){
 		if(!(inbound = SDLNet_UDP_Open(tmp_conn->port))){
 			printf("Could not open the inbound port\n");
@@ -20,6 +19,7 @@ int net_ip_t::init(int argc, char** argv, int tmp_conn_id){
 	}else{
 		printf("The tmp_conn port is zero, this should not happen\n");
 	}
+	outbound_packet = SDLNet_AllocPacket(512);
 	inbound_packet = SDLNet_AllocPacket(512);
 	return 0;
 }
@@ -51,7 +51,6 @@ std::string net_ip_t::receive_now(){
 
 int net_ip_t::send_now(net_ip_write_buffer_t *data){
 	int return_value = 0;
-	unsigned long int old_total_sent_bytes = total_sent_bytes;
 	net_ip_connection_info_t *tmp_conn = find_net_ip_connection_info_pointer(data->connection_info_id);
 	if(outbound == NULL){
 		printf("Cannot use outbound port. Check to see if you have proper permissions to use raw sockets\n");
@@ -84,24 +83,23 @@ int net_ip_t::send_now(net_ip_write_buffer_t *data){
 			raw_packets.push_back(tmp);
 		}
 		const unsigned long int raw_packets_size = raw_packets.size();
-		if(old_total_sent_bytes == 0){
-			raw_packets[0] = NET_PACKET_START + raw_packets[0];
-		}
-		if(total_sent_bytes < 8*KILOBYTE_TO_BYTE){
-			raw_packets[raw_packets_size-1] += NET_PACKET_END;
-		}
+		raw_packets[0] = NET_PACKET_START + raw_packets[0];
+		raw_packets[raw_packets_size-1] += NET_PACKET_END;
 		IPaddress IP;
 		SDLNet_ResolveHost(&IP, tmp_conn->ip.c_str(), tmp_conn->port);
 		outbound_packet->address.host = IP.host;
 		outbound_packet->address.port = IP.port;
 		unsigned long int total_byte_size = 0;
+		const unsigned long int max_total_sent_byte = 8*KILOBYTE_TO_BYTE;
 		for(unsigned long int i = 0;i < raw_packets_size;i++){
 			unsigned char* outbound_data = (unsigned char *)raw_packets[i].c_str();
 			outbound_packet->len = raw_packets[i].size()+1;
 			outbound_packet->data = outbound_data;
 			SDLNet_UDP_Send(outbound, -1, outbound_packet);
+			printf("Sending a packet of value '%s'\n", outbound_data);
 			total_byte_size += outbound_packet->len;
-			if(unlikely(total_byte_size > 8*KILOBYTE_TO_BYTE)){
+			if(unlikely(total_byte_size > max_total_sent_byte)){
+				// no packet loss if the client is sending data to itself
 				total_byte_size = 0;
 				loop_receive();
 			}

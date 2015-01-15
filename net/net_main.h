@@ -31,6 +31,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	private:
 		std::thread send_thread;
 		std::thread read_thread;
+		unsigned long int packet_id_count;
 	public:
 		int init_parse_parameters(int,char**);
 		int init_initialize_subsystems(int, char**, int);
@@ -41,7 +42,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		int loop();
 		~net_t();
 		std::string read(std::string search = "");
-		void write(std::string, int, unsigned long int);
+		void write(std::string data, int a, unsigned long int packet = 0);
 	};
 	extern std::string net_generate_ip_address(std::string prefix = "");
 	extern void net_write_array_vector(std::vector<std::vector<std::string>>, int);

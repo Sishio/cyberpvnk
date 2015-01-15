@@ -26,6 +26,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "thread"
 	#include "cstring"
 	extern std::vector<client_t*> client;
+	extern void physics_init();
+	extern void physics_close();
 	extern void physics_engine();
 	extern void new_init_coord_t();
 	extern void delete_close_coord_t(coord_t*);

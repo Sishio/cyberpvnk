@@ -46,30 +46,44 @@ static void net_client_join(std::string data){
 }
 
 void net_init(){
+	net_ip_connection_info_t *tmp_conn_info = new_net_ip_connection_info();
+	tmp_conn_info->ip = "127.0.0.1";
+	tmp_conn_info->port = NET_SERVER_PORT;
+	net = new net_t(argc_, argv_, tmp_conn_info->array.id);
 	if(net_init_bool == false){
-		net_ip_connection_info_t *tmp_conn_info = new_net_ip_connection_info();
-		tmp_conn_info->ip = "127.0.0.1";
-		tmp_conn_info->port = NET_SERVER_PORT;
-		net = new net_t(argc_, argv_, tmp_conn_info->array.id);
 		net_init_bool = true;
-		SET_BIT(&class_data_settings, CLASS_DATA_COORD_BIT, 1);
-		SET_BIT(&class_data_settings, CLASS_DATA_MODEL_BIT, 1);
-		SET_BIT(&class_data_settings, CLASS_DATA_CLIENT_BIT, 1);
-		loop_code.push_back(net_engine);
+		SET_BIT(&class_data_settings, 0, 0);
+		SET_BIT(&class_data_settings, 1, 0);
 	}else{
 		printf("net_init has already been initalized, not re-running the initializer\n");
 	}
+	loop_code.push_back(net_engine);
 }
 
-static void net_send_data(){
-	const unsigned long int client_size = client_vector.size();
-	const unsigned long int array_size = array_vector.size();
-	int blank_what_to_update;
-	SET_BIT(&blank_what_to_update, ARRAY_INT_HASH_BIT, 0);
-	SET_BIT(&blank_what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 0);
-	SET_BIT(&blank_what_to_update, ARRAY_STRING_HASH_BIT, 0);
+void net_engine(){
+	net->loop();
+	std::string data = "";
+	while((data = net->read()) != ""){
+		// switch over to a string based system
+		if(data.find_first_of(NET_JOIN) != std::string::npos){
+			net_client_join(data);
+		}else if(data.find_first_of(ARRAY_ITEM_SEPERATOR_START) != std::string::npos){
+			update_class_data(data, class_data_settings);
+		}else{
+			printf("Could not identify what this packet is, scraping it and moving forward\n");
+		}
+	}
+	unsigned long int client_size = client_vector.size();
+	for(unsigned long int i = 0;i < client_size;i++){
+		net_check_and_apply_pingout(i, &client_size);
+	}
+	unsigned long int array_size = array_vector.size();
 	int what_to_update;
 	for(unsigned long int c = 0;c < array_size;c++){
+		what_to_update = INT_MIN;
+		SET_BIT(&what_to_update, ARRAY_INT_HASH_BIT, 0);
+		SET_BIT(&what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 0);
+		SET_BIT(&what_to_update, ARRAY_STRING_HASH_BIT, 0);
 		if(array_vector[c]->updated(&what_to_update)){
 			std::string gen_string;
 			what_to_update = INT_MAX;
@@ -92,39 +106,6 @@ static void net_send_data(){
 			}
 		}
 	}
-
 }
 
-static void net_read_data(){
-	std::string data = "";
-	while((data = net->read()) != ""){
-		// switch over to a string based system
-		if(data.find_first_of(NET_JOIN) != std::string::npos){
-			net_client_join(data);
-		}else if(data.find_first_of(ARRAY_ITEM_SEPERATOR_START) != std::string::npos){
-			update_class_data(data, class_data_settings);
-		}else{
-			printf("Could not identify what this packet is, scraping it and moving forward\n");
-		}
-	}
-}
-
-void net_engine(){
-	net->loop();
-	net_read_data();
-	unsigned long int client_size = client_vector.size();
-	for(unsigned long int i = 0;i < client_size;i++){
-		net_check_and_apply_pingout(i, &client_size);
-	}
-	net_send_data();
-}
-
-void net_close(){
-	for(unsigned long int i = 0;i < loop_code.size();i++){
-		if(loop_code[i] == net_engine){
-			loop_code[i] = nullptr;
-			loop_code.erase(loop_code.begin()+i);
-			break;
-		}
-	}
-}
+void net_close(){}

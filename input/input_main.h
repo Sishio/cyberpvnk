@@ -40,7 +40,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 			void input_update_key(input_buffer_t*);
 			void input_parse_key_up(SDL_Event);
 			void input_parse_key_down(SDL_Event);
-			void input_parse_mouse_motion(SDL_Event);
 		public:
 			bool is_used;
 			SDL_Event event;

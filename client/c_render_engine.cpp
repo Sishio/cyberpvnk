@@ -14,17 +14,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-#include "c_engine.h"
 #include "c_render_engine.h"
 
-extern render_t *render;
+render_t *render = nullptr;
 extern int self_id;
 
 static int old_self_id = 0;
 static int old_coord_id = 0;
 static client_t *self = nullptr;
 static coord_t *coord = nullptr;
+
+extern int argc_;
+extern char **argv_;
 
 static void update_pointers(){
 	if(unlikely(self_id != old_self_id)){
@@ -39,9 +40,13 @@ static void update_pointers(){
 
 void render_init(){
 	update_pointers();
+	render = new render_t(argc_, argv_);
 }
 
 void render_engine(){
+	if(unlikely(render == nullptr)){
+		render_init();
+	}
 	update_pointers();
 	/*
 	The server will send over all of the render_buffer entries. We will not do anything to them.

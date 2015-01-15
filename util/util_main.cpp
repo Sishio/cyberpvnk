@@ -1,7 +1,5 @@
 #include "util_main.h"
 
-static unsigned long x=123456789, y=362436069, z=521288629;
-
 int util_shell(int function,char* parameter){ // Keeps most of the OS pre-processor code isolated from the rest of the program
 	int return_value = 0;
 	std::string command = "";
@@ -36,19 +34,16 @@ void ms_sleep(long double ms){
 	#endif
 }
 
+static unsigned long int old_rand = 2;
+
 unsigned long int gen_rand(unsigned int a){ // range, from 0 to a
-	x ^= x << 16;
-	x ^= x >> 5;
-	x ^= x << 1;
-	unsigned long t = x;
-	x = y;
-	y = z;
-	z = t ^ x ^ y;
-	unsigned long int z_a = z%a;
-	if(unlikely(z_a == 0)){
-		z_a++;
+	srand(time(NULL)*old_rand);
+	unsigned long int return_value = rand()%a;
+	if(return_value == 0){
+		return_value++;
 	}
-	return z_a;
+	old_rand = return_value;
+	return return_value;
 }
 
 short int term_if_true(bool a, char* details = NULL){
@@ -181,41 +176,6 @@ int encrypt(std::vector<std::string*> a){
 		}
 	}
 	return average;
-}
-
-std::vector<std::string> pull_items_data(char *c, std::string a, char *d){
-	std::vector<std::string> b;
-	while(true){
-		const size_t start_start = a.find_first_of(c);
-		const size_t end_start = a.find_first_of(d);
-		const size_t start_end = start_start + strlen(c);
-		const size_t end_end = end_start + strlen(d);
-		bool conditional[8] = {false};
-		conditional[4] = start_start == std::string::npos;
-		conditional[5] = end_start == std::string::npos;
-		if(conditional[4] || conditional[5]){ // escape condition
-			break;
-		}
-		conditional[0] = start_start == end_start && start_start != std::string::npos;
-		conditional[1] = start_end == end_end && start_start != std::string::npos;
-		conditional[2] = start_start > end_start;
-		conditional[3] = start_end > end_end;
-		if(conditional[0] || conditional[1] || conditional[2] || conditional[3]){
-			printf("An impossible condition has been met\n");
-			for(unsigned int i = 0;i < 4;i++){
-				printf("%d\n",conditional[i]);
-			}
-			printf("start_start:%zu\tend_start:%zu\tstart_end:%zu\tend_end:%zu\n",start_start, end_start, start_end, end_end);
-			assert(false);
-		}
-		std::string z = a.substr(start_end,(end_start-start_end));
-		b.push_back(z);
-		if(end_end == a.size()){
-			break;
-		}
-		a = a.substr(end_end+1,a.size());
-	}
-	return b;
 }
 
 std::string wrap(char *start, std::string data, char *end){

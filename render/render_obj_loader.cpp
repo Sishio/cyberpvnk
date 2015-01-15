@@ -119,7 +119,9 @@ int objloader_t::load(const char *filename, model_t *model){
 					break;
 				}
 			}
-		}else if((*coord[i])[0]=='m' && (*coord[i])[1]=='t' && (*coord[i])[2]=='l' && (*coord[i])[3]=='l'){
+		}
+		#ifndef SERVER
+		else if((*coord[i])[0]=='m' && (*coord[i])[1]=='t' && (*coord[i])[2]=='l' && (*coord[i])[3]=='l'){
 			char filen[200];
 			sscanf(coord[i]->c_str(),"mtllib %s",filen);	//read the filename
 			std::string filen_string = "../" + (std::string)filen;
@@ -199,6 +201,7 @@ int objloader_t::load(const char *filename, model_t *model){
 			//but OpenGL use bottom left corner as 0,0, so I convert it
 			istexture=true;
 		}
+		#endif // SERVER
 	}
 	if(materials.size() == 0){	//if some reason the material file doesn't contain any material, we don't have material
 		ismaterial=false;

@@ -14,25 +14,19 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-#include "c_engine.h"
 #include "c_input_engine.h"
 
 extern int host_info_id;
-extern int self_id;
-extern input_t *input;
 extern render_t *render;
+extern net_t *net;
+input_t *input = nullptr;
+extern int self_id;
 
-static std::string package_input_buffer(input_buffer_t *a){
-	std::string value;
-	std::vector<std::vector<std::string>> return_value = a->array.gen_string_vector();
-	for(unsigned long int i = 0;i < return_value.size();i++){
-		for(unsigned long int n = 0;n < return_value[i].size();n++){
-			value += return_value[i][n];
-		}
-	}
-	return value;
-}
+extern int argc_;
+extern char **argv_;
+
+extern net_t *net;
+extern input_t *input;
 
 void input_mouse_motion_engine(input_buffer_t *a){
 	assert(render != nullptr);
@@ -49,32 +43,13 @@ void input_mouse_motion_engine(input_buffer_t *a){
 		coord->set_y_angle(true, x-screen_x_size_half);
 		coord->set_x_angle(true, y-screen_y_size_half);
 		if(net != nullptr){
-			std::string data[2];
-			data[0] = coord->array.generate_string_from_variable(&coord->x_angle);
-			data[1] = coord->array.generate_string_from_variable(&coord->y_angle);
-			net->write(data[0], host_info_id, gen_rand());
-			net->write(data[1], host_info_id, gen_rand());
+			int what_to_update = INT_MIN;
+			coord->array.updated(&what_to_update); // TODO: Force the server to only use the x and y angles and NOT the rest of the coordinate
+			net->write(coord->array.gen_updated_string(what_to_update), host_info_id);
 		}
 		coord->print();
 	}
 	cursor::set_location(screen_x_size_half, screen_y_size_half);
-	// don't send this input_buffer to them, just patch the current coord and send it to them
-}
-
-void input_mouse_press_engine(input_buffer_t *a){
-	net->write(package_input_buffer(a), host_info_id, gen_rand());
-}
-
-void input_mouse_scroll_engine(input_buffer_t *a){
-	net->write(package_input_buffer(a), host_info_id, gen_rand());
-}
-
-void input_keyboard_engine(input_buffer_t *a){
-	if(a->int_data[INPUT_TYPE_KEYBOARD_KEY] == SDLK_f){
-		ms_sleep(5000); // reserved key for debugging things
-	}else{
-		net->write(package_input_buffer(a), host_info_id, gen_rand());
-	}
 }
 
 void input_init(){
@@ -88,17 +63,10 @@ void input_engine(){
 		switch(input_buffer_vector[i]->type){
 		case INPUT_TYPE_MOUSE_MOTION:
 			input_mouse_motion_engine(input_buffer_vector[i]);
-			delete_input_buffer(input_buffer_vector[i]);
+			delete_input_buffer_id(input_buffer_vector[i]->array.id);
 			break;
 		default:
-			std::vector<std::vector<std::string>> tmp_input = input_buffer_vector[i]->array.gen_string_vector();
-			std::string send_data;
-			for(unsigned long int n = 0;n < tmp_input.size();n++){
-				for(unsigned long int c = 0;c < tmp_input[n].size();c++){
-					send_data += tmp_input[n][c];
-				}
-			}
-			net->write(send_data, host_info_id, gen_rand());
+			net->write(input_buffer_vector[i]->array.gen_updated_string(INT_MAX), host_info_id);
 			break;
 		}
 	}
