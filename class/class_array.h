@@ -23,7 +23,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "cstdio"
 	#include "cstdlib"
 	#include "vector"
-	//#define DEBUG_SEPERATOR 1
+	#define DEBUG_SEPERATOR 1
 	#ifndef DEBUG_SEPERATOR
 		#define ARRAY_ITEM_SEPERATOR_START		(char*)"\x01"
 		#define ARRAY_ITEM_SEPERATOR_END		(char*)"\x02"
@@ -32,8 +32,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		#define ARRAY_INT_SEPERATOR_START		(char*)"\x05"
 		#define ARRAY_INT_SEPERATOR_END			(char*)"\x06"
 		#define ARRAY_LONG_DOUBLE_SEPERATOR_START	(char*)"\x07"
-	//	#define ARRAY_LONG_DOUBLE_SEPERATOR_END		(char*)"\x08" // CAUTION: ASCII BACKSPACE
-		#define ARRAY_LONG_DOUBLE_SEPERATOR_END		(char*)"\x7e" //breaks the rule
+		#define ARRAY_LONG_DOUBLE_SEPERATOR_END		(char*)"\x08" // CAUTION: ASCII BACKSPACE
 		#define ARRAY_STRING_SEPERATOR_START		(char*)"\x09"
 		#define ARRAY_STRING_SEPERATOR_END		(char*)"\x0a"
 		#define ARRAY_ID_START				(char*)"\x0b"
@@ -73,6 +72,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		long int string_hash;
 		long int long_double_hash;
 	public:
+		void* pointer;
 		std::string data_type;
 		long double last_update;
 		int id;
@@ -83,17 +83,21 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::string gen_long_double_string();
 		std::string gen_int_string();
 		std::string gen_string_string();
-		array_t(); // TODO: put data_type in the initializer
+		array_t(void*); // TODO: put data_type in the initializer
+		~array_t();
 		bool id_match(int);
 		void parse_string_entry(std::string);
-		void close();
 		bool updated(int*);
 	};
-	extern std::vector<array_t*> array_vector;
+	//extern std::vector<array_t*> array_vector;
 	extern long int array_scan_for_id(long int);
 	extern void add_two_arrays(array_t*, array_t*);
 	extern void update_class_data(std::string, int);
 	extern void add_array_to_vector(array_t*);
 	extern void delete_array_from_vector(array_t*);
 	extern void delete_array_id(int);
+	extern void* find_array_pointer(int, std::string type = "");
+	extern std::vector<array_t*> array_vector;
+	extern std::vector<void*> all_entries_of_type(std::string);
+	extern std::vector<void*> all_pointers_of_type(std::string);
 #endif

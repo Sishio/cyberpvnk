@@ -1,7 +1,7 @@
 #include "net_ip.h"
 
 int net_ip_t::init(int argc, char** argv, int tmp_conn_id){
-	net_ip_connection_info_t *tmp_conn = find_net_ip_connection_info_pointer(tmp_conn_id);
+	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_array_pointer(tmp_conn_id);
 	assert(tmp_conn != nullptr);
 	connection_info_id = tmp_conn_id;
 	SDLNet_Init();
@@ -51,7 +51,7 @@ std::string net_ip_t::receive_now(){
 
 int net_ip_t::send_now(net_ip_write_buffer_t *data){
 	int return_value = 0;
-	net_ip_connection_info_t *tmp_conn = find_net_ip_connection_info_pointer(data->connection_info_id);
+	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_array_pointer(data->connection_info_id);
 	if(outbound == NULL){
 		printf("Cannot use outbound port. Check to see if you have proper permissions to use raw sockets\n");
 		return_value = -1;

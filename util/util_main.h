@@ -43,6 +43,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define UTIL_TIME_SECOND 1
 	#define CHECK_BIT(var, pos, val) (var & (val << pos))
 	#define SET_BIT(var, pos, val) ((*var) |= ((val) << (pos)))
+	struct sort_t{
+		void *pointer;
+		int value;
+	};
 	class timer_struct_t{
 	private:
 		long double start_time;
@@ -77,4 +81,5 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern bool check_for_parameter(const std::string, int, char**);
 	extern void switch_values(void*, void*);
 	extern void switch_values(void**, void**);
+	extern void sorting_algorithm(std::vector<void*>, int);
 #endif

@@ -44,14 +44,10 @@ static void net_engine_parse(std::string a){
 //}
 
 static void net_connect(int host_info_id){
-	assert(find_client_pointer(self_id) != nullptr);
-	client_t *tmp_client = find_client_pointer(self_id);
+	assert(find_array_pointer(self_id) != nullptr);
+	client_t *tmp_client = (client_t*)find_array_pointer(self_id);
 	assert(tmp_client != nullptr);
-	net_ip_connection_info_t *self_info = find_net_ip_connection_info_pointer(tmp_client->connection_info_id);
-	assert(self_info != nullptr);
-	self_info->ip = "127.0.0.1";
-	self_info->port = NET_CLIENT_PORT;
-	std::string packet = self_info->array.gen_updated_string(INT_MAX);
+	std::string packet = (new net_ip_connection_info_t)->array.gen_updated_string(INT_MAX);
 	packet += NET_JOIN;
 	printf("Sending packet '%s'\n",packet.c_str());
 	net->write(packet, host_info_id);
@@ -66,12 +62,11 @@ static void net_connect(int host_info_id){
 			connection_established = true;
 		}
 	}
-	self_info = nullptr;
 }
 
 void net_init(){
-	net_ip_connection_info_t *self_info = new_net_ip_connection_info();
-	net_ip_connection_info_t *host_info = new_net_ip_connection_info();
+	net_ip_connection_info_t *self_info = new net_ip_connection_info_t;
+	net_ip_connection_info_t *host_info = new net_ip_connection_info_t;
 	host_info_id = host_info->array.id;
 	self_info_id = self_info->array.id;
 	host_info->ip = "127.0.0.1";
@@ -115,7 +110,7 @@ static void net_receive_engine(){
 }
 
 static void net_send_engine(){
-	client_t *client_tmp = find_client_pointer(self_id);
+  client_t *client_tmp = (client_t*)find_array_pointer(self_id);
 	if(client_tmp == nullptr){
 		return;
 	}

@@ -42,12 +42,14 @@ long int array_highest_id(){
 	return id;
 }
 
-array_t::array_t(){
+array_t::array_t(void* tmp_pointer){
+	pointer = tmp_pointer;
 	id = gen_rand();
 	if(id == -1){
 		id = gen_rand();
 	}
 	int_array.push_back(&id);
+	array_vector.push_back(this);
 }
 
 bool array_t::id_match(int a){
@@ -132,7 +134,7 @@ void array_t::parse_int_from_string(std::string a){
 	const std::vector<std::string> int_data = pull_items(ARRAY_INT_SEPERATOR_START, a, ARRAY_INT_SEPERATOR_END, &entries_for_data);
 	const unsigned int int_data_size = int_data.size();
 	for(unsigned int i = 0;i < int_data_size;i++){
-		printf("int_data[%d]: %s\n", i, int_data[i].c_str());
+		printf("int_data[%d]: %s\n", entries_for_data[i], int_data[i].c_str());
 		*int_array[entries_for_data[i]] = atoi(int_data[i].c_str());
 	}
 }
@@ -143,7 +145,7 @@ void array_t::parse_long_double_from_string(std::string a){
 	const unsigned int long_double_data_size = long_double_data.size();
 	assert(long_double_data_size == entries_for_data.size());
 	for(unsigned int i = 0;i < long_double_data_size;i++){
-		*long_double_array[entries_for_data[i]] = atoi(long_double_data[i].c_str());
+		*long_double_array[entries_for_data[i]] = atof(long_double_data[i].c_str());
 	}
 }
 
@@ -153,29 +155,13 @@ void array_t::parse_string_from_string(std::string a){
 	const unsigned int string_data_size = string_data.size();
 	assert(string_data_size == entries_for_data.size());
 	for(unsigned int i = 0;i < string_data_size;i++){
-		*string_array[entries_for_data[i]] = atoi(string_data[i].c_str());
+		printf("string_array[%d]: %s\n",entries_for_data[i], string_data[i].c_str());
+		*string_array[entries_for_data[i]] = string_data[i];
 	}
 }
 
 static std::string array_gen_data_vector_entry(std::string data, unsigned int start){
 	return wrap(ARRAY_STARTING_START, std::to_string(start), ARRAY_STARTING_END) + wrap(ARRAY_ITEM_SEPERATOR_START,data,ARRAY_ITEM_SEPERATOR_END);
-}
-
-void array_t::close(){
-	int_array.clear();
-	string_array.clear();
-	long_double_array.clear();
-}
-
-void delete_array_id(int id){
-	const unsigned long int array_size = array_vector.size();
-	for(unsigned long int i = 0;i < array_size;i++){
-		if(array_vector[i]->id == id){
-			delete array_vector[i];
-			array_vector.erase(array_vector.begin()+i);
-			return;
-		}
-	}
 }
 
 bool array_t::updated(int *what_to_update){
@@ -233,20 +219,6 @@ std::string array_t::gen_long_double_string(){
 	return return_value;
 }
 
-void add_array_to_vector(array_t *a){
-	array_vector.push_back(a);
-}
-
-void delete_array_from_vector(array_t *b){
-	const unsigned int array_size = array_vector.size();
-	for(unsigned int i = 0;i < array_size;i++){
-		if(array_vector[i] == b){
-			array_vector.erase(array_vector.begin()+i);
-			break;
-		}
-	}
-}
-
 int pull_id(std::string a){
 	int return_value;
 	const unsigned long int start = a.find_first_of(ARRAY_ID_START);
@@ -268,31 +240,27 @@ void update_class_data(std::string a, int what_to_update){
 	if(tmp == nullptr){
 		std::string type = a.substr(a.find_first_of(ARRAY_TYPE_SEPERATOR_START)+1, a.find_first_of(ARRAY_TYPE_SEPERATOR_END)-a.find_first_of(ARRAY_TYPE_SEPERATOR_START)-1);
 		if(type == "coord_t"){
-			if((what_to_update&(1<<0)) == 1){ // TODO: Update this to use the macros
-				coord_vector.push_back(new coord_t);
-				tmp = &coord_vector[coord_vector.size()-1]->array;
+			if((what_to_update&(1<<0)) == 1){
+				tmp = &((new coord_t)->array);
 			}
 		}else if(type == "model_t"){
 			if((what_to_update&(1<<1)) == 1){
-				model_vector.push_back(new model_t);
-				tmp = &model_vector[model_vector.size()-1]->array;
+				tmp = &((new model_t)->array);
 			}
 		}else if(type == "input_buffer_t"){
 			if((what_to_update&(1<<2)) == 1){
-				input_buffer_vector.push_back(new input_buffer_t);
-				tmp = &input_buffer_vector[input_buffer_vector.size()-1]->array;
+				tmp = &((new input_buffer_t)->array);
 			}
 		}else if(type == "render_buffer_t"){
 			if((what_to_update&(1<<3)) == 1){
-				render_buffer_vector.push_back(new render_buffer_t);
-				tmp = &render_buffer_vector[render_buffer_vector.size()-1]->array;
+				tmp = &((new render_buffer_t)->array);
 			}
 		}else if(type == "client_t"){
 			if((what_to_update&(1<<4)) == 1){
-				client_vector.push_back(new client_t);
-				tmp = &client_vector[client_vector.size()-1]->array;
+				tmp = &((new client_t)->array);
 			}
 		}else{
+			printf("type is '%s'\n", type.c_str());
 			assert(false);
 		}
 	}
@@ -305,4 +273,96 @@ void add_two_arrays(array_t *a, array_t *b){
 	a->int_array.insert(a->int_array.end(), b->int_array.begin(), b->int_array.end());
 	a->long_double_array.insert(a->long_double_array.end(), b->long_double_array.begin(), b->long_double_array.end());
 	a->string_array.insert(a->string_array.end(), b->string_array.begin(), b->string_array.end());
+}
+
+array_t::~array_t(){
+	/*std::vector<array_t*>::iterator array_pos_in_vector = std::find_if(array_vector.begin(), array_vector.end(), pointer_device_t(this));
+	if(likely(array_pos_in_vector != array_vector.end())){
+		*array_pos_in_vector = nullptr;
+		array_vector.erase(array_pos_in_vector);
+	}else{
+		printf("Could not find array in vector\n");
+	}*/
+	for(unsigned long int i = 0;i < array_vector.size();i++){
+		if(array_vector[i] == this){
+			array_vector[i] = nullptr;
+			array_vector.erase(array_vector.begin()+i);
+			return;
+		}
+	}
+	printf("Could not find the array in the vector, THIS IS BAD\n");
+}
+
+bool alphabetical_order(const array_t *a, const array_t *b){return a->data_type < b->data_type;}
+bool order_by_id(const array_t *a, const array_t *b){
+	return a->id < b->id;
+}
+
+bool array_is_sorted_by_type(){
+	for(unsigned long int i = 0;i < array_vector.size()-1;i++){
+		if(array_vector[i]->data_type > array_vector[i+1]->data_type){
+			return false;
+		}
+	}
+	return true;
+}
+
+bool array_is_sorted_by_id(){
+	for(unsigned long int i = 1;i < array_vector.size();i++){
+		const std::string old_type = array_vector[i-1]->data_type;
+		const long int old_id = array_vector[i-1]->id;
+		if(unlikely(old_id > array_vector[i]->id && old_type == array_vector[i]->data_type)){
+			return false;
+		}
+	}
+	return true;
+}
+
+static void optimal_array_sort(){
+	if(unlikely(!array_is_sorted_by_type())){
+		std::sort(array_vector.begin(), array_vector.end(), alphabetical_order); // sort by the value of the data_type
+	}
+	if(unlikely(!array_is_sorted_by_id())){
+		const unsigned long int array_size = array_vector.size();
+		for(unsigned long int i = 0;i < array_size;i++){ // sort all of the data_types (in groups) by their ID
+			const std::string old_type = array_vector[i]->data_type;
+			const int old_entry = i;
+			while(likely(old_type == array_vector[i]->data_type && i < array_size-1)){
+				i++;
+			}
+			std::sort(array_vector.begin()+old_entry, array_vector.begin()+i, order_by_id);
+		}
+	}
+}
+
+// TODO: change this to item
+void* find_array_pointer(int id, std::string type){
+	optimal_array_sort();
+	if(type == ""){
+		for(unsigned long int i = 0;i < array_vector.size();i++){
+			if(unlikely(array_vector[i]->id == id)){
+				return array_vector[i]->pointer;
+			}
+		}
+	}else{
+	}
+	return nullptr;
+}
+
+std::vector<void*> all_entries_of_type(std::string type){
+	std::vector<void*> return_value;
+	for(unsigned long int i = 0;i < array_vector.size();i++){
+		if(unlikely(array_vector[i]->data_type == type)){
+			return_value.push_back((void*)array_vector[i]);
+		}
+	}
+	return return_value;
+}
+
+std::vector<void*> all_pointers_of_type(std::string type){
+	std::vector<void*> tmp = all_entries_of_type(type);
+	for(unsigned long int i = 0;i < tmp.size();i++){
+		tmp[i] = ((array_t*)tmp[i])->pointer;
+	}
+	return tmp;
 }

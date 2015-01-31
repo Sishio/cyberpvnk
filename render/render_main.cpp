@@ -3,7 +3,6 @@
 
 extern unsigned long int tick;
 extern bool once_per_second;
-extern std::vector<render_buffer_t*> render_buffer_vector;
 
 void model_render(model_t*);
 
@@ -111,8 +110,9 @@ void render_t::init_generate_window(){
 	glEnable(GL_DEPTH_TEST);
 	glShadeModel(GL_SMOOTH);
 	glDepthFunc(GL_LEQUAL);
-	glShadeModel (GL_SMOOTH);
 	glEnable(GL_NORMALIZE);
+	render_context = SDL_GL_CreateContext(render_screen);
+	SDL_GL_MakeCurrent(render_screen, render_context);
 }
 
 void render_t::init_load_models(){
@@ -132,22 +132,19 @@ void render_t::loop_render_buffer(){
 	glRotatef(coord->x_angle, 1.0f, 0.0f, 0.0f);
 	glRotatef(coord->y_angle, 0.0f, 1.0f, 0.0f);
 	glTranslatef(-coord->x,-coord->y,-coord->z);
-	const unsigned int render_buffer_vector_size = render_buffer_vector.size();
-	for(unsigned int i = 0;i < render_buffer_vector_size;i++){
-		if(render_buffer_vector[i] != nullptr){
-			coord_t *local_coord = find_coord_pointer(render_buffer_vector[i]->coord_id);
+	const unsigned int array_size = array_vector.size();
+	for(unsigned int i = 0;i < array_size;i++){
+		if(array_vector[i] != nullptr && array_vector[i]->data_type == "render_buffer_t"){
+		  coord_t *local_coord = (coord_t*)find_array_pointer(((render_buffer_t*)(array_vector[i]))->coord_id);
 			glPushMatrix();
 			glTranslatef(local_coord->x, local_coord->y, local_coord->z);
 			glRotatef(local_coord->x_angle,1.0f,0.0f,0.0f);
-			glRotatef(local_coord->y_angle,0.0f,1.0f,0.0f);
-			if(render_buffer_vector[i]->model_id != -1){
-				glPushMatrix();
-				glTranslatef(100,100,100);
-				glPopMatrix();
-				model_render(find_model_pointer(render_buffer_vector[i]->model_id));
-			}else if(local_coord->model_id != -1){
-				model_render(find_model_pointer(local_coord->model_id));
+			printf("local_coord->model_id: %d\n",local_coord->model_id);
+			model_t *model = (model_t*)find_array_pointer(local_coord->model_id);
+			if(model == nullptr){
+			  model = (model_t*)find_array_pointer(((render_buffer_t*)(array_vector[i]))->model_id);
 			}
+			model_render(model);
 			glPopMatrix();
 		}
 	}
@@ -184,20 +181,19 @@ int render_t::loop(coord_t *a){ // TODO: Divide this up into smaller chunks
 	coord = a;
 	assert(a != nullptr || a != NULL);
 	int return_value = 0;
-	render_context = SDL_GL_CreateContext(render_screen);
-	SDL_GL_MakeCurrent(render_screen, render_context);
 	loop_init();
 	loop_update();
 	loop_render_buffer();
 	loop_render_screen();
-	SDL_GL_DeleteContext(render_context);
 	return return_value;
 }
 
 void render_t::close(){
 	blank();
+	SDL_GL_DeleteContext(render_context);
+	render_context = nullptr;
 	SDL_DestroyWindow(render_screen);
-	render_screen = NULL;
+	render_screen = nullptr;
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
 

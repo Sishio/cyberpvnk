@@ -17,16 +17,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "limits.h"
 #include "class_main.h"
 
-std::vector<coord_t*> coord_vector;
-std::vector<model_t*> model_vector;
-std::vector<render_buffer_t*> render_buffer_vector;
-std::vector<net_ip_connection_info_t*> net_ip_connection_info_vector;
-std::vector<client_t*> client_vector;
-std::vector<input_buffer_t*> input_buffer_vector;
-
-coord_t *new_coord();
-model_t *new_model();
-
 void coord_t::update_array_pointers(){
 	array.long_double_array.clear();
 	array.long_double_array.push_back(&x);
@@ -42,13 +32,12 @@ void coord_t::update_array_pointers(){
 	array.data_type = "coord_t";
 }
 
-coord_t::coord_t(){
+coord_t::coord_t() : array(this){
 	x = y = z = x_angle = y_angle = x_vel = y_vel = z_vel = 0;
 	physics_time = 0;
 	old_time = get_time();
 	model_id = -1;
 	mobile = true;
-	add_array_to_vector(&array);
 	update_array_pointers();
 }
 
@@ -74,76 +63,68 @@ void coord_t::set_y_angle(bool add, long double a){
 	}else y_angle = a;
 }
 
-void coord_t::apply_motion(int type){
-	const long double sine_y_rot = sin(y_angle*RADIAN);
-	const long double cosine_y_rot = cos(y_angle*RADIAN);
-	switch(type){
-	case INPUT_MOTION_FORWARD:
-		x_vel += sine_y_rot;
-		z_vel += -cosine_y_rot;
-		break;
-	case INPUT_MOTION_BACKWARD:
-		x_vel += -sine_y_rot;
-		z_vel += cosine_y_rot;
-		break;
-	case INPUT_MOTION_LEFT:
-		x_vel += -cosine_y_rot;
-		z_vel += -sine_y_rot;
-		break;
-	case INPUT_MOTION_RIGHT:
-		x_vel += cosine_y_rot;
-		z_vel += sine_y_rot;
-		break;
-	default:
-		assert(false);
-		break;
-	}
-}
-
-void coord_t::close(){
-	array.close();
-	delete_array_from_vector(&array);
-}
+coord_t::~coord_t(){}
 
 void model_t::update_array(){
 	array.data_type = "model_t";
 }
 
-model_t::model_t(){
-	add_array_to_vector(&array);
+model_t::model_t() : array(this){
 	update_array();
+}
+
+model_t::~model_t(){
+	const unsigned long int coord_size = coord.size();
+	for(unsigned long int i = 0;i < coord_size;i++){
+		delete coord[i];
+		coord[i] = nullptr;
+	}
+	coord.clear();
+
+	const unsigned long int vertex_size = vertex.size();
+	for(unsigned long int i = 0;i < vertex_size;i++){
+		delete vertex[i];
+		vertex[i] = nullptr;
+	}
+	vertex.clear();
+
+	const unsigned long int faces_size = faces.size();
+	for(unsigned long int i = 0;i < faces_size;i++){
+		delete faces[i];
+		faces[i] = nullptr;
+	}
+	faces.clear();
+
+	const unsigned long int normals_size = normals.size();
+	for(unsigned long int i = 0;i < normals_size;i++){
+		delete normals[i];
+		normals[i] = nullptr;
+	}
+	normals.clear();
+
+	texture.clear();
+	lists.clear();
+
+	const unsigned long int materials_size = materials.size();
+	for(unsigned long int i = 0;i < materials_size;i++){
+		delete materials[i];
+		materials[i] = nullptr;
+	}
+	materials.clear();
+
+	const unsigned long int texturecoordinate_size = texturecoordinate.size();
+	for(unsigned long int i = 0;i < texturecoordinate_size;i++){
+		delete texturecoordinate[i];
+		texturecoordinate[i] = nullptr;
+	}
+	texturecoordinate.clear();
+	ismaterial = isnormals = istexture = false;
 }
 
 void model_t::get_size(long double *x, long double *y, long double *z){
 	x[0] = x[1] = 0;
 	y[0] = y[1] = 0;
 	z[0] = z[1] = 0;
-}
-
-void model_t::close(){
-	array.close();
-	delete_array_from_vector(&array);
-	//delete all the dynamically allocated memory
-	for(unsigned long int i=0;i<(unsigned long int)coord.size();i++)
-		delete coord[i];
-	for(unsigned long int i=0;i<(unsigned long int)faces.size();i++)
-		delete faces[i];
-	for(unsigned long int i=0;i<(unsigned long int)normals.size();i++)
-		delete normals[i];
-	for(unsigned long int i=0;i<(unsigned long int)vertex.size();i++)
-		delete vertex[i];
-	for(unsigned long int i=0;i<(unsigned long int)materials.size();i++)
-		delete materials[i];
-	for(unsigned long int i=0;i<(unsigned long int)texturecoordinate.size();i++)
-		delete texturecoordinate[i];
-	//and all elements from the vector
-	coord.clear();
-	faces.clear();
-	normals.clear();
-	vertex.clear();
-	materials.clear();
-	texturecoordinate.clear();
-
 }
 
 void client_t::update_array(){
@@ -153,64 +134,29 @@ void client_t::update_array(){
 	array.data_type = "client_t";
 }
 
-client_t::client_t(){
-	coord_t *coord = new_coord();
-	model_t *model = new_model();
-	net_ip_connection_info_t *connection_info = new_net_ip_connection_info();
-	add_array_to_vector(&array);
+client_t::client_t() : array(this){
+	coord_t *coord = new coord_t;
+	model_t *model = new model_t;
+	net_ip_connection_info_t *connection_info = new net_ip_connection_info_t;
 	model_id = model->array.id;
 	coord_id = coord->array.id;
 	connection_info_id = connection_info->array.id;
-	find_coord_pointer(coord_id)->model_id = model_id;
+	coord->model_id = model_id;
 	update_array();
 }
 
-void client_t::close(){
-	delete_array_from_vector(&array);
-}
+client_t::~client_t(){}
 
-render_buffer_t::render_buffer_t(){
-	add_array_to_vector(&array);
+render_buffer_t::render_buffer_t() : array(this){
 	array.int_array.push_back(&coord_id);
 	array.int_array.push_back(&model_id);
 	array.data_type = "render_buffer_t";
 }
 
-client_t *new_client(){
-	client_t *return_value = new client_t;
-	client_vector.push_back(return_value);
-	return return_value;
-}
+render_buffer_t::~render_buffer_t(){}
 
-coord_t *new_coord(){
-	coord_t *a = new coord_t;
-	coord_vector.push_back(a);
-	return a;
-}
-
-model_t *new_model(){
-	model_t *a = new model_t;
-	model_vector.push_back(a);
-	return a;
-}
-
-input_buffer_t *new_input_buffer(){
-	input_buffer_t *return_value = new input_buffer_t;
-	input_buffer_vector.push_back(return_value);
-	return return_value;
-}
-
-void delete_input_buffer_id(int id){
-	const unsigned long int input_buffer_size = input_buffer_vector.size();
-	for(unsigned long int i = 0;i < input_buffer_size;i++){
-		if(input_buffer_vector[i]->array.id == id){
-			delete input_buffer_vector[i];
-			input_buffer_vector[i] = nullptr;
-		}
-	}
-}
-
-input_buffer_t::input_buffer_t(){
+input_buffer_t::input_buffer_t() : array(this){
+	array.id = 0; // reserve zero for input_buffers because ID collisions could happen and these aren't referred to outside of the main input function in the server.
 	array.data_type = "input_buffer_t";
 	array.int_array.push_back(&type);
 	array.int_array.push_back(&client_id);
@@ -221,111 +167,12 @@ input_buffer_t::input_buffer_t(){
 	for(unsigned int i = 0;i < 8;i++){
 		int_data[i] = 0;
 	}
+	//TODO: make the array bigger and split it in half. one half has to be filled out verbatium for the key to match and the other doesn't have to be (perhaps a timestamp or something like that).
 }
 
-input_buffer_t::~input_buffer_t(){
-	delete_array_from_vector(&array);
-}
+input_buffer_t::~input_buffer_t(){}
 
-void delete_coord(int id){
-	for(unsigned long int i = 0;i < coord_vector.size();i++){
-		if(coord_vector[i]->array.id == id){
-			delete coord_vector[i];
-			coord_vector.erase(coord_vector.begin()+i);
-			return;
-		}
-	}
-}
-
-coord_t *find_coord_pointer(int id){
-	const unsigned long int coord_size = coord_vector.size();
-	for(unsigned long int i = 0;i < coord_size;i++){
-		if(coord_vector[i]->array.id == id){
-			return coord_vector[i];
-		}
-	}
-	return nullptr;
-}
-
-model_t *find_model_pointer(int id){
-	const unsigned long int model_size = model_vector.size();
-	for(unsigned long int i = 0;i < model_size;i++){
-		if(model_vector[i]->array.id == id){
-			return model_vector[i];
-		}
-	}
-	return nullptr;
-}
-
-render_buffer_t *new_render_buffer(){
-	render_buffer_t *a = new render_buffer_t();
-	render_buffer_vector.push_back(a);
-	return a;
-}
-
-render_buffer_t *find_render_buffer_pointer(int id){
-	const unsigned long int render_buffer_vector_size = render_buffer_vector.size();
-	for(unsigned long int i = 0;i < render_buffer_vector_size;i++){
-		if(render_buffer_vector[i]->array.id == id){
-			return render_buffer_vector[i];
-		}
-	}
-	return nullptr;
-}
-
-void add_render_buffer(render_buffer_t *a){
-	const unsigned long int render_buffer_vector_size = render_buffer_vector.size();
-	for(unsigned long int i = 0;i < render_buffer_vector_size;i++){
-		if(render_buffer_vector[i] == nullptr){
-			render_buffer_vector[i] = a;
-			return;
-		}
-	}
-	render_buffer_vector.push_back(a);
-}
-
-net_ip_connection_info_t* new_net_ip_connection_info(){
-	net_ip_connection_info_t *return_value = new net_ip_connection_info_t;
-	net_ip_connection_info_vector.push_back(return_value);
-	return return_value;
-}
-
-net_ip_connection_info_t* find_net_ip_connection_info_pointer(int id){
-	const unsigned long int net_ip_connection_info_size = net_ip_connection_info_vector.size();
-	for(unsigned long int i = 0;i < net_ip_connection_info_size;i++){
-		if(net_ip_connection_info_vector[i]->array.id == id){
-			return net_ip_connection_info_vector[i];
-		}
-	}
-	return nullptr;
-}
-
-client_t *find_client_pointer(int id){
-	const unsigned long int client_size = client_vector.size();
-	for(unsigned long int i = 0;i < client_size;i++){
-		if(client_vector[i]->array.id == id){
-			return client_vector[i];
-		}
-	}
-	return nullptr;
-}
-
-
-
-void delete_input_buffer(input_buffer_t *a){
-	if(unlikely(a == nullptr)) return;
-	const unsigned long int input_buffer_size = input_buffer_vector.size();
-	for(unsigned long int i = 0;i < input_buffer_size;i++){
-		if(input_buffer_vector[i]->array.id == a->array.id){
-			delete input_buffer_vector[i];
-			input_buffer_vector[i] = nullptr;
-			input_buffer_vector.erase(input_buffer_vector.begin()+i);
-			return;
-		}
-	}
-}
-
-net_ip_connection_info_t::net_ip_connection_info_t(){
+net_ip_connection_info_t::net_ip_connection_info_t() : array(this){
 	array.data_type = "net_ip_connection_info_t";
 	array.int_array.push_back(&port);
 	array.int_array.push_back(&connection_type);
@@ -334,35 +181,101 @@ net_ip_connection_info_t::net_ip_connection_info_t(){
 
 net_ip_connection_info_t::~net_ip_connection_info_t(){}
 
-
-void delete_client_id(int a){
-	for(unsigned long int i = 0;i < client_vector.size();i++){
-		if(client_vector[i]->array.id == a){
-			delete_array_id(client_vector[i]->array.id);
-			delete client_vector[i];
-			client_vector.erase(client_vector.begin()+i);
-			return;
-		}
-	}
-}
-
-void delete_client_entry(int a){
-	delete_array_id(client_vector[a]->array.id);
-	delete client_vector[a];
-	client_vector.erase(client_vector.begin()+a);
-}
-
-void delete_coord_entry(int a){
-	delete_array_id(coord_vector[a]->array.id);
-	delete coord_vector[a];
-	coord_vector.erase(coord_vector.begin()+a);
-}
-
-input_settings_t::input_settings_t(){
+input_settings_t::input_settings_t() : array(this){
 	for(unsigned long int i = 0;i < 64;i++){
+		int_data[i][0] = int_data[i][1] = -1;
 		array.int_array.push_back(&int_data[i][0]);
 		array.int_array.push_back(&int_data[i][1]);
 	}
 }
 
 input_settings_t::~input_settings_t(){}
+
+gametype_t::gametype_t(std::string gametype_file_) : array(this){
+	if(gametype_file_ == ""){
+		printf("assuming this is a client and the server data has not been loaded yet\n");
+	}else{
+		gametype_file = gametype_file_;
+		reload_gametype();
+	}
+	array.int_array.push_back(&base_gametype);
+	array.int_array.push_back(&win);
+	array.int_array.push_back(&win_degree);
+	array.int_array.push_back(&point);
+	array.int_array.push_back(&point_degree);
+	array.int_array.push_back(&team_max_count);
+	array.int_array.push_back(&team_max_size);
+	array.int_array.push_back(&round_max_count);
+	array.int_array.push_back(&round_max_size);
+	array.data_type = "gametype_t";
+}
+
+void gametype_t::apply_core_gametype(){
+	switch(base_gametype){
+	case GAMETYPE_FFA:
+		win = GAMETYPE_WIN_POINT_COUNT;
+		win_degree = 50;
+		point = GAMETYPE_POINT_KILL;
+		point_degree = 1;
+		team_max_count = 512;
+		team_max_size = 1;
+		round_max_count = 32;
+		round_max_size = 60*60;
+		break;
+	case GAMETYPE_TDM:
+		win = GAMETYPE_WIN_POINT_COUNT;
+		win_degree = 50;
+		point = GAMETYPE_POINT_KILL;
+		point_degree = 1;
+		team_max_count = 4;
+		team_max_size = 128;
+		round_max_count = 32;
+		round_max_size = 60*60;
+		break;
+	case GAMETYPE_FREE:
+		win = GAMETYPE_WIN_POINT_COUNT;
+		win_degree = 50;
+		point = GAMETYPE_POINT_KILL;
+		point_degree = 1;
+		team_max_count = 512;
+		team_max_size = 1;
+		round_max_count = 32;
+		round_max_size = 60*6000;
+		break;
+	}
+}
+
+void gametype_t::reload_gametype(){
+	if(gametype_file != ""){
+		std::ifstream in(gametype_file);
+		if(in.is_open()){
+			char line[512];
+			while(in.getline(line, 512)){
+				std::string tmp_gametype_array[8];
+				std::stringstream ss;
+				ss << line;
+				ss >> tmp_gametype_array[0] >>
+					tmp_gametype_array[1] >> 
+					tmp_gametype_array[2] >> 
+					tmp_gametype_array[3] >> 
+					tmp_gametype_array[4] >> 
+					tmp_gametype_array[5] >> 
+					tmp_gametype_array[6] >> 
+					tmp_gametype_array[7];
+				if(tmp_gametype_array[0] == "gametype"){
+					if(tmp_gametype_array[1] == "ffa"){
+						base_gametype = GAMETYPE_FFA;
+					}else if(tmp_gametype_array[2] == "tdm"){
+						base_gametype = GAMETYPE_TDM;
+					}else if(tmp_gametype_array[3] == "free"){
+						base_gametype = GAMETYPE_FREE;
+					}
+					apply_core_gametype();
+				}
+			}
+		}
+	}
+}
+
+gametype_t::~gametype_t(){
+}

@@ -43,42 +43,60 @@ bool once_per_second = false;
 static int choice = -1;
 bool engine_and_module[3] = {true};
 
+#define TEST_LOGIC_IP "96.35.24.245"
+
 void test_logic_loop(){
-	coord_t a;
-	a.x = 1;
-	a.y = 2;
-	a.z = 3;
-	a.x_angle = 4;
-	a.y_angle = 5;
-	a.x_vel = 6;
-	a.y_vel = 7;
-	a.z_vel = 8;
-	coord_t b;
-	int updated_int = INT_MAX;
-	SET_BIT(&updated_int, ARRAY_INT_HASH_BIT, 1);
-	SET_BIT(&updated_int, ARRAY_STRING_HASH_BIT, 1);
-	SET_BIT(&updated_int, ARRAY_LONG_DOUBLE_HASH_BIT, 1);
-	std::string the_string = a.array.gen_updated_string(updated_int);
-	b.array.parse_string_entry(the_string);
-	b.print();
-	printf("\n\nfrom\n\n%s\n", the_string.c_str());
+/*	coord_t *coord = new coord_t;
+	model_t *model = new model_t;
+	coord->model_id = model->array.id;
+	model_load(model, "test.obj");
+	render_buffer_t *render_buffer = new render_buffer_t;
+	render_buffer->coord_id = coord->array.id;
+	render_buffer->model_id = coord->model_id;
+	client_t *tmp_client = (client_t*)find_array_pointer(self_id);
+	render->loop((coord_t*)(find_array_pointer(tmp_client->coord_id)));
+	delete model;
+	delete render_buffer;
+	delete coord;
+*/
+/*	net_ip_connection_info_t tmp_conn_info;
+	tmp_conn_info.ip = TEST_LOGIC_IP;
+	tmp_conn_info.port = NET_CLIENT_PORT;
+	std::string send_data = "0123456789";
+	net->write(send_data, tmp_conn_info.array.id);
+	net->loop();
+	std::string read_value = net->read();
+	if(read_value != ""){
+		printf("%s\n", read_value.c_str());
+	}
+	ms_sleep(1000);
+*/
+	net_ip_connection_info_t tmp_conn_info;
+	tmp_conn_info.ip = TEST_LOGIC_IP;
+	tmp_conn_info.port = NET_CLIENT_PORT;
+	net_ip_connection_info_t copy_of_conn;
+	copy_of_conn.array.parse_string_entry(tmp_conn_info.array.gen_updated_string(INT_MAX));
+	printf("tmp_conn_info.ip: %s\ttmp_conn_info.port: %d\n", tmp_conn_info.ip.c_str(), tmp_conn_info.port);
+	printf("copy_of_conn.ip: %s\tcopy_of_conn.port: %d\n", copy_of_conn.ip.c_str(), copy_of_conn.port);
+	for(unsigned long int i = 0;i < copy_of_conn.array.string_array.size();i++){
+		printf("copy_of_conn.array.string_array[%lu]: %s\n", i, copy_of_conn.array.string_array[i]->c_str());
+	}
 }
 
+static net_ip_connection_info_t tmp_conn_info;
+
 static void test_logic_init(){
-	net_ip_connection_info_t *tmp_conn_info = new_net_ip_connection_info();
-	tmp_conn_info->ip = "127.0.0.1";
-	tmp_conn_info->port = NET_CLIENT_PORT;
-	find_client_pointer(self_id)->connection_info_id = tmp_conn_info->array.id;
-	net = new net_t(argc_, argv_, tmp_conn_info->array.id);
+	//render = new render_t(argc_, argv_);
+	tmp_conn_info.ip = TEST_LOGIC_IP;
+	tmp_conn_info.port = NET_CLIENT_PORT;
+	net = new net_t(argc_, argv_, tmp_conn_info.array.id);
 }
 
 static void test_logic_close(){
-	if(net != nullptr){
-		delete net;
-		net = nullptr;
-	}else{
-		printf("The network module has already been deleted. There is something wrong\n");
-	}
+	delete net;
+	net = nullptr;
+	//delete render;
+	//render = nullptr;
 }
 
 static void render_all_init(){
@@ -106,7 +124,10 @@ static void net_all_init(){
 
 static void init(int choice){
 	printf("Allocating & initializing self\n");
-	self_id = new_client()->array.id;
+	client_t *tmp_client = new client_t;
+	self_id = tmp_client->array.id;
+	tmp_client->coord_id = (new coord_t)->array.id;
+	tmp_client->model_id = (new model_t)->array.id;
 	engine_and_module[0] = !check_for_parameter("--render-disable", argc_, argv_);
 	engine_and_module[1] = !check_for_parameter("--input-disable", argc_, argv_);
 	engine_and_module[2] = !check_for_parameter("--net-disable", argc_, argv_);
@@ -146,6 +167,11 @@ static void net_all_close(){
 }
 
 static void close(){
+	client_t *self = (client_t*)find_array_pointer(self_id);
+	assert(self != nullptr);
+	delete (coord_t*)find_array_pointer(self->coord_id);
+	delete (model_t*)find_array_pointer(self->model_id);
+	delete self;
 	switch(choice){
 	case 1:
 		render_all_close();
@@ -180,9 +206,9 @@ static void engine_loop(){
 static void module_loop(){
 	if(input != nullptr && input->loop() == TERMINATE) terminate = true;
 	if(render != nullptr){
-		client_t *self_tmp = find_client_pointer(self_id);
+		client_t *self_tmp = (client_t*)find_array_pointer(self_id);
 		if(self_tmp != nullptr){
-			coord_t *coord_tmp = find_coord_pointer(self_tmp->coord_id);
+			coord_t *coord_tmp = (coord_t*)find_array_pointer(self_tmp->coord_id);
 			render->loop(coord_tmp);
 		}
 	}

@@ -202,4 +202,76 @@ void switch_values(void **a, void **b){
 	a = b;
 	b = c;
 }
+/*
+// tgmath from stackexchange contributed this little bit:
 
+// should I optimize for nearly sorted vectors?
+
+int quick_sort_partition(std::vector<sort_t>& A, int p,int q){
+	int x= A[p].value;
+	int i=p;
+	int j;
+	for(j=p+1; j<q; j++){
+		if(A[j].value <= x){ // unlikely()?
+			i=i+1;
+			std::swap(A[i],A[j]);
+		}
+	}
+	std::swap(A[i],A[p]);
+	return i;
+}
+
+void quick_sort(std::vector<sort_t>& A, int p,int q){
+	int r;
+	if(p < q){
+		r=quick_sort_partition(A, p ,q);
+		quick_sort(A,p,r);  
+		quick_sort(A,r+1,q);
+	}
+}
+
+// I hope this can run faster than std::sort().
+void sorting_algorithm(std::vector<void*> *pointer, int mem_offset_bytes){
+	const unsigned long int pointer_size = pointer->size();
+	std::vector<sort_t> tmp_sort;
+	for(unsigned long int i = 0;i < pointer_size;i++){
+		sort_t sort_;
+		sort_.pointer = (*pointer)[i];
+		bool* bool_pointer = (bool*)(*pointer)[i];
+		sort_.value = *(bool_pointer + mem_offset_bytes); // don't use void* since void* has no set size, bool has a size of one
+		tmp_sort.push_back(sort_);
+	}
+	quick_sort(tmp_sort, 0, tmp_sort.size()+1);
+	for(unsigned long int i = 0;i < pointer_size;i++){
+		(*pointer)[i] = tmp_sort[i].pointer;
+	}
+}
+
+
+// quick_vector_search(std::vector<void*>, int, int): searches the vector for a value (at the offset).
+// this takes advantage of the quick sort algorithm and searches for the value pretty fast
+// this only provides a speedup if the vector is sorted with quick sort
+// this only works when a vector is of a pointer type (although a non-pointer type shouldn't be that hard to implement).
+
+int quick_vector_search(std::vector<void*> vector_, int search_offset, int value){
+	long int split_point = vector.size()/2;
+	while(true){
+		const int tmp_value = *(vector_[split_point]+search_offset);
+		if(tmp_value > value){
+			split_point *= -0.5*split_point;
+		}else if(tmp_value < value){
+			split_point *= 0.5*split_point;
+		}else if(tmp_value == value){
+			return split_point;
+		}
+		if(split_point <= 0 || split_point >= vector_size()-1){
+			break;
+		}
+	}
+	for(unsigned long int i = 0;i < vector_.size();i++){
+		if(*(vector_[i]+search_offset) == value){
+			return i;
+		}
+	}
+}
+*/

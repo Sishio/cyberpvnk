@@ -19,6 +19,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "class_extra.h"
 	#include "../util/util_main.h"
 	#include "sstream"
+	#include "algorithm"
 	#include "vector"
 	#include "string"
 	#include "climits"
@@ -50,19 +51,43 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define INPUT_TYPE_MOUSE_SCROLL 3
 		#define INPUT_TYPE_MOUSE_SCROLL_UP 0
 		#define INPUT_TYPE_MOUSE_SCROLL_DOWN 1
+
 	#define INPUT_MOTION_FORWARD 0
 	#define INPUT_MOTION_BACKWARD 1
 	#define INPUT_MOTION_LEFT 2
 	#define INPUT_MOTION_RIGHT 3
+	#define GAMETYPE_FFA 1
+	#define GAMETYPE_TDM 2
+	#define GAMETYPE_FREE 3
+	#define GAMETYPE_WIN_POINT_COUNT 1
+	#define GAMETYPE_POINT_KILL 1
+	class gametype_t{
+	private:
+		std::string gametype_file;
+		int base_gametype;
+		int win;
+		int win_degree;
+		int point;
+		int point_degree;
+		int team_max_count;
+		int team_max_size;
+		int round_max_count;
+		int round_max_size;
+	public:
+		array_t array;
+		void reload_gametype();
+		void apply_core_gametype();
+		gametype_t(std::string);
+		~gametype_t();
+	};
 	class net_ip_connection_info_t{
 	public:
-		net_ip_connection_info_t();
-		~net_ip_connection_info_t();
 		array_t array;
 		int connection_type; // UDP or TCP
 		std::string ip;
 		int port;
-		// TCP socket when that is implemented
+		net_ip_connection_info_t();
+		~net_ip_connection_info_t();
 	};
 	class input_settings_t{
 	public:
@@ -73,14 +98,13 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	};
 	class input_buffer_t{
 	public:
-		input_buffer_t();
-		~input_buffer_t();
 		array_t array;
 		int client_id;
 		int type;
 		int int_data[8];
+		input_buffer_t();
+		~input_buffer_t();
 	};
-
 	struct face{
 		int facenum;
 		bool four;
@@ -106,6 +130,14 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		float u,v;
 		texcoord(float a,float b);
 	};
+	struct pointer_device_t{
+		pointer_device_t(void* id):pointer(id){
+		}
+		bool operator()(void *test){
+			return test == pointer;
+		}
+		void *pointer;
+	};
 	class model_t{
 	private:
 		void load_parse_vector(std::string);
@@ -121,6 +153,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<texcoord*> texturecoordinate;
 		bool ismaterial,isnormals,istexture;
 		model_t();
+		~model_t();
 		void get_size(long double*, long double*, long double*);
 		void close();
 		unsigned long long int collective_size;
@@ -139,8 +172,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void print();
 		void set_x_angle(bool,long double);
 		void set_y_angle(bool,long double);
-		void apply_motion(int);
-		void close();
+		~coord_t();
 		std::vector<unsigned long int> nearby_coord;
 		int model_id;
 	};
@@ -151,12 +183,13 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		int model_id;
 		int connection_info_id;
 		client_t();
+		~client_t();
 		void update_array();
-		void close();
 	};
 	class render_buffer_t{
 	public:
 		render_buffer_t();
+		~render_buffer_t();
 		array_t array;
 		int model_id;
 		int coord_id;
@@ -167,41 +200,4 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<input_buffer_t> input_buffer;
 		client_extra_t();
 	};
-	extern std::vector<input_buffer_t*> input_buffer_vector;
-	extern std::vector<client_t*> client_vector;
-	extern std::vector<coord_t*> coord_vector;
-	extern std::vector<model_t*> model_vector;
-	extern std::vector<render_buffer_t*> render_buffer_vector;
-	/*
-	namespaces?
-	*/
-	//coord_t
-	extern coord_t* new_coord();
-	extern coord_t *find_coord_pointer(int);
-	extern void delete_coord_id(int);
-
-	//model_t
-	extern model_t* new_model();
-	extern model_t *find_model_pointer(int);
-	extern void delete_model_id(int);
-
-	//client_t
-	extern client_t* new_client();
-	extern client_t *find_client_pointer(int);
-	extern void delete_client_id(int);
-
-	//input_buffer_t
-	extern input_buffer_t* new_input_buffer();
-	extern input_buffer_t* find_input_buffer_pointer(int);
-	extern void delete_input_buffer_id(int);
-
-	//render_buffer_t
-	extern render_buffer_t* new_render_buffer();
-	extern render_buffer_t *find_render_buffer_pointer(int);
-	extern void delete_render_buffer_id(int);
-
-	//net_ip_connection_info_t
-	extern net_ip_connection_info_t* new_net_ip_connection_info();
-	extern net_ip_connection_info_t* find_net_ip_connection_info_pointer(int);
-	extern void delete_net_ip_connection_info_id(int);
 #endif

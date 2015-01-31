@@ -1,0 +1,12 @@
+#ifndef SERVER_CLUSTER_H
+	#define SERVER_CLUSTER_H
+	#include "server_net.h"
+	#include "cstdio"
+	class server_entity_t{
+	private:
+		int type;
+		std::string passcode;
+	public:
+		void loop(); // adding and taking care of this stuff
+	};
+#endif

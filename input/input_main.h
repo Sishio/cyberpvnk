@@ -20,6 +20,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../main.h"
 	#include "signal.h"
 	#include "cstdio"
+	#include "algorithm"
 	#include "string"
 	#include "cassert"
 	#include "../class/class_main.h"
@@ -42,7 +43,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 			void input_parse_key_down(SDL_Event);
 		public:
 			bool is_used;
-			SDL_Event event;
 			void blank();
 			input_t(int,char**);
 			bool query_key(input_buffer_t* buffer = NULL,int sdl_key = 0,char key = '\0');

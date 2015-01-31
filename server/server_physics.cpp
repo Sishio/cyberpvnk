@@ -17,29 +17,16 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "server_main.h"
 #include "server_physics.h"
 
-extern std::vector<coord_t*> coord;
-extern std::vector<coord_extra_t> coord_extra;
-extern std::vector<model_t*> model;
-extern std::vector<model_extra_t> model_extra;
 extern int scan_model_for_id(int);
 extern bool terminate;
-
-extern thread_t *thread;
-
-static unsigned long int coord_size;
-static unsigned long int model_size;
-
 static void coord_physics_iteration(coord_t*);
-
 static long double once_per_second_time = 0;
 static bool once_per_second = false;
 
-#define X_PLANE 'x'
-#define Y_PLANE 'y'
-#define Z_PLANE 'z'
+extern loop_t server_loop_code;
 
 static void once_per_second_update(){
-	if(once_per_second_time > 1){
+	if(unlikely(once_per_second_time > 1)){
 		while(once_per_second_time > 1){
 			printf("once_per_second_update(): my god this is slow\n");
 			once_per_second_time -= 1;
@@ -51,59 +38,102 @@ static void once_per_second_update(){
 	}
 }
 
-static void update_vector_sizes(){
-	coord_size = coord_vector.size();
-	model_size = model_vector.size();
-}
-
-static void coord_physics_apply_input(coord_t *a, input_buffer_t *b){
-	input_settings_t *input_settings = new input_settings_t;
-	switch(b->type){
-	case INPUT_TYPE_KEYBOARD:
-		for(unsigned long int i = 0;i < 64;i++){
-			bool detected = input_settings->int_data[i][0] == b->int_data[INPUT_TYPE_KEYBOARD_KEY] || (b->int_data[INPUT_TYPE_KEYBOARD_CHAR] != 0 && input_settings->int_data[i][0] == b->int_data[INPUT_TYPE_KEYBOARD_CHAR]);
-			if(detected){
-				a->apply_motion(input_settings->int_data[i][1]);
-			}
-		}
+static void apply_input(coord_t *a, int event){
+	const long double sin_y_rot = sin(a->y_angle);
+	//const long double sin_x_rot = sin(a->x_angle);
+	const long double cos_y_rot = cos(a->y_angle);
+	const long double cos_x_rot = cos(a->x_angle);
+	switch(event){
+	case INPUT_MOTION_FORWARD:
+		a->x_vel += sin_y_rot*cos_x_rot;
+		a->z_vel -= cos_y_rot*cos_x_rot;
 		break;
-	case INPUT_TYPE_MOUSE_MOTION:
+	case INPUT_MOTION_BACKWARD:
+		a->x_vel -= sin_y_rot*cos_x_rot;
+		a->y_vel += cos_y_rot*cos_x_rot;
 		break;
-	case INPUT_TYPE_MOUSE_PRESS:
+	case INPUT_MOTION_LEFT:
+		a->x_vel -= cos_y_rot;
+		a->z_vel -= sin_y_rot;
+		break;
+	case INPUT_MOTION_RIGHT:
+		a->x_vel += cos_y_rot;
+		a->z_vel += sin_y_rot;
+		break;
+	default:
 		break;
 	}
-	delete input_settings;
-	input_settings = nullptr;
+}
+
+static void coord_physics_apply_input(coord_t *a, input_buffer_t *b, input_settings_t *input_settings = nullptr){
+	int search_integer = 0;
+	switch(b->type){
+	case INPUT_TYPE_KEYBOARD:
+		search_integer = b->int_data[INPUT_TYPE_KEYBOARD_CHAR];
+		break;
+	default:
+		break;
+	}
+	bool no_input_settings = false;
+	if(input_settings == nullptr){
+		no_input_settings = true;
+		input_settings = new input_settings_t;
+		printf("Warning: no input_settings provided, using the default values\n");
+		input_settings->int_data[0][0] = 'w';
+		input_settings->int_data[0][1] = INPUT_MOTION_FORWARD;
+		input_settings->int_data[1][0] = 'a';
+		input_settings->int_data[1][1] = INPUT_MOTION_LEFT;
+		input_settings->int_data[2][0] = 's';
+		input_settings->int_data[2][1] = INPUT_MOTION_BACKWARD;
+		input_settings->int_data[3][0] = 'd';
+		input_settings->int_data[3][1] = INPUT_MOTION_RIGHT;
+	}
+	for(unsigned long int i = 0;i < 64;i++){
+		if(input_settings->int_data[i][0] == search_integer){
+			apply_input(a, input_settings->int_data[i][1]);
+			break;
+		}
+	}
+	if(no_input_settings){
+		delete input_settings;
+		input_settings = nullptr;
+	}
 }
 
 static void apply_all_input(){
-	for(unsigned long int i = 0;i < input_buffer_vector.size();i++){
-		printf("Applying input\n");
-		client_t *tmp_client = find_client_pointer(input_buffer_vector[i]->client_id);
-		term_if_true(tmp_client == nullptr, (char*)"tmp_client is nullptr");
-		coord_physics_apply_input(find_coord_pointer(tmp_client->coord_id), input_buffer_vector[i]);
-		input_buffer_vector.erase(input_buffer_vector.begin()+i);
+	std::vector<void*> tmp_input_buffer = all_pointers_of_type("input_buffer_t");
+	const unsigned long int tmp_input_buffer_size = tmp_input_buffer.size();
+	for(unsigned long int i = 0;i < tmp_input_buffer_size;i++){
+		client_t *tmp_client = (client_t*)find_array_pointer(((input_buffer_t*)tmp_input_buffer[i])->client_id);
+		if(tmp_client != nullptr){
+			coord_physics_apply_input((coord_t*)find_array_pointer(tmp_client->coord_id), (input_buffer_t*)tmp_input_buffer[i]);
+			delete (input_buffer_t*)tmp_input_buffer[i];
+		}
+		tmp_client = nullptr;
 	}
 }
 
-void physics_init(){
-	loop_code.push_back(physics_engine);
+void physics_init(std::string gametype_load = "gametype/default"){
+	loop_add(&server_loop_code, physics_engine);
+	new gametype_t(gametype_load);
 }
 
-void physics_close(){}
+void physics_close(){
+	loop_del(&server_loop_code, physics_engine);
+}
 
 void physics_engine(){
-	update_vector_sizes();
 	once_per_second_update();
 	apply_all_input();
-	for(unsigned long int i = 0;i < coord_size;i++){
-		coord_physics_iteration(coord_vector[i]);
+	std::vector<void*> coord_buffer = all_pointers_of_type("coord_t");;
+	for(unsigned long int i = 0;i < coord_buffer.size();i++){
+		coord_physics_iteration((coord_t*)array_vector[i]);
 	}
 }
 
 static void coord_physics_iteration(coord_t *a){
-	term_if_true(a == nullptr,(char*)"coord_physics_iteration a is NULL/nullptr\n"); // the overhead is minimal
-	long double time = get_time();
+	term_if_true(a == nullptr,(char*)"coord_physics_iteration a is NULL/nullptr\n");
+	const long double time = get_time();
 	a->physics_time = time-(a->old_time);
 	a->old_time = time;
 	if(a->mobile){
@@ -111,6 +141,10 @@ static void coord_physics_iteration(coord_t *a){
 		a->y_vel += GRAVITY_RATE*a->physics_time;
 		a->y += a->y_vel*a->physics_time;
 		a->z += a->z_vel*a->physics_time;
+		const long double mul = 1/(1+(.9*a->physics_time));
+		a->x_vel *= mul;
+		a->y_vel *= mul;
+		a->z_vel *= mul;
 	}else{
 		a->x_vel = a->y_vel = a->z_vel = 0;
 	}

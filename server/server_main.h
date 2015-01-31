@@ -17,6 +17,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef SERVER_MAIN_H
 	#define SERVER_MAIN_H
 	#include "../main.h"
+	#include "../loop/loop_main.h"
 	#include "../net/net_main.h"
 	#include "../class/class_main.h"
 	#include "../class/class_array.h"

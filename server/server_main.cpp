@@ -10,6 +10,7 @@ net_ip_connection_info_t *self_info = nullptr; // TODO: rename this to prevent c
 thread_t *thread = nullptr;
 
 bool terminate = false;
+loop_t server_loop_code;
 
 int argc_;
 char **argv_;
@@ -73,7 +74,7 @@ void init(int choice){
 	case 1:
 		server_info_init();
 		net_init();
-		physics_init();
+		physics_init("gametype/default");
 		render_init();
 		break;
 	case 2:
@@ -111,15 +112,10 @@ int main(int argc, char **argv){
 	argv_ = argv;
 	init(menu());
 	printf("Starting the main loop\n");
+	int loop_code = INT_MIN;
+	SET_BIT(&loop_code, LOOP_CODE_MT, 0);
 	while(terminate == false){
-/*		physics_engine();
-		net_engine();
-		render_engine();
-*/
-		const unsigned long int loop_code_size = loop_code.size();
-		for(unsigned long int i = 0;i < loop_code_size;i++){
-			(loop_code[i])();
-		}
+		loop_run(&server_loop_code, loop_code);
 		ms_sleep(sleep_time);
 	}
 	close();

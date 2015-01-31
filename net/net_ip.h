@@ -35,8 +35,13 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define NET_IP_SERVER_RECEIVE_PORT		50000
 	#define NET_IP_CLIENT_RECEIVE_PORT		50001
 	// refer to net_const.h for how the special characters are delegated
-	#define NET_IP_RETURN_ADDRESS_START		(char*)"\1e"
-	#define NET_IP_RETURN_ADDRESS_END		(char*)"\1f"
+	#ifdef DEBUG_SEPERATOR
+		#define NET_IP_RETURN_ADDRESS_START	(char*)"Z"
+		#define NET_IP_RETURN_ADDRESS_END	(char*)"Y"
+	#else
+		#define NET_IP_RETURN_ADDRESS_START		(char*)"\1e"
+		#define NET_IP_RETURN_ADDRESS_END		(char*)"\1f"
+	#endif
 	class net_ip_write_buffer_t{
 	public:
 		bool sent;

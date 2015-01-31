@@ -30,10 +30,10 @@ extern input_t *input;
 
 void input_mouse_motion_engine(input_buffer_t *a){
 	assert(render != nullptr);
-	client_t *self_tmp = find_client_pointer(self_id);
+	client_t *self_tmp = (client_t*)find_array_pointer(self_id);
 	coord_t *coord = nullptr;
 	if(self_tmp != nullptr){
-		coord = find_coord_pointer(self_tmp->coord_id);
+		coord = (coord_t*)find_array_pointer(self_tmp->coord_id);
 	}
 	int x = a->int_data[INPUT_TYPE_MOUSE_MOTION_X];
 	int y = a->int_data[INPUT_TYPE_MOUSE_MOTION_Y];
@@ -43,7 +43,7 @@ void input_mouse_motion_engine(input_buffer_t *a){
 		coord->set_y_angle(true, x-screen_x_size_half);
 		coord->set_x_angle(true, y-screen_y_size_half);
 		if(net != nullptr){
-			int what_to_update = INT_MIN;
+			int what_to_update = 0;
 			coord->array.updated(&what_to_update); // TODO: Force the server to only use the x and y angles and NOT the rest of the coordinate
 			net->write(coord->array.gen_updated_string(what_to_update), host_info_id);
 		}
@@ -57,16 +57,17 @@ void input_init(){
 
 void input_engine(){
 	input->loop();
-	for(unsigned int i = 0;i < input_buffer_vector.size();i++){
-		while(input_buffer_vector[i] == nullptr) i++;
-		input_buffer_vector[i]->client_id = self_id;
-		switch(input_buffer_vector[i]->type){
+	std::vector<void*> input_buffer = all_pointers_of_type("input_buffer_t");
+	const unsigned long int input_buffer_size = input_buffer.size();
+	for(unsigned int i = 0;i < input_buffer_size;i++){
+		((input_buffer_t*)input_buffer[i])->client_id = self_id;
+		switch(((input_buffer_t*)input_buffer[i])->type){
 		case INPUT_TYPE_MOUSE_MOTION:
-			input_mouse_motion_engine(input_buffer_vector[i]);
-			delete_input_buffer_id(input_buffer_vector[i]->array.id);
+			input_mouse_motion_engine(((input_buffer_t*)input_buffer[i]));
+			delete (input_buffer_t*)input_buffer[i];
 			break;
 		default:
-			net->write(input_buffer_vector[i]->array.gen_updated_string(INT_MAX), host_info_id);
+			net->write(array_vector[i]->gen_updated_string(INT_MAX), host_info_id);
 			break;
 		}
 	}
