@@ -57,7 +57,12 @@ void test_logic_init(){}
 void test_logic_engine(){}
 void test_logic_close(){}
 
+void simple_signal_handler(int signum){
+	terminate = true;
+}
+
 void init(int choice){
+	signal(SIGINT, simple_signal_handler);
 	for(int i = 0;i < argc_;i++){
 		char *next_item;
 		if(i+i == argc_){
@@ -95,6 +100,7 @@ void close(){
 	physics_close();
 	render_close();
 	test_logic_close();
+	delete_all_data();
 	// the functions are smart enough to not close if they never initialized
 }
 

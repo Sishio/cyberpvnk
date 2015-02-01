@@ -35,15 +35,13 @@ static inline void net_check_and_apply_pingout(unsigned long int tmp_entry){
 
 static void net_client_join(std::string data){
 	client_t *client_tmp = new client_t;
-	net_ip_connection_info_t *connection_pointer = (net_ip_connection_info_t*)find_array_pointer(client_tmp->connection_info_id);
-	printf("data:%s\n",data.c_str());
-	connection_pointer->array.parse_string_entry(data);
-	client_tmp->connection_info_id = connection_pointer->array.id;
-	client_tmp->model_id = (new model_t)->array.id;
-	client_tmp->coord_id = (new coord_t)->array.id;
+	const long int old_id = client_tmp->connection_info_id;
+	net_ip_connection_info_t *tmp_net_ip = (net_ip_connection_info_t*)find_pointer(client_tmp->connection_info_id);
+	tmp_net_ip->array.parse_string_entry(data);
+	tmp_net_ip->array.id = client_tmp->connection_info_id = old_id;
+	printf("tmp_net_ip id is '%d'\n", tmp_net_ip->array.id);
+	printf("tmp_net_ip.ip:%s\ttmp_net_ip.port: %d\n", tmp_net_ip->ip.c_str(), tmp_net_ip->port);
 	std::string return_packet = NET_JOIN + std::to_string(client_tmp->array.id);
-	printf("New client IP address: %s\n", connection_pointer->ip.c_str());
-	printf("New client port address: %d\n", connection_pointer->port);
 	net->write(return_packet, client_tmp->connection_info_id);
 }
 
@@ -91,7 +89,8 @@ static void net_send_data(){
 			}
 			for(unsigned long int i = 0;i < array_vector.size();i++){
 				if(unlikely(array_vector[i]->data_type == "client_t")){
-					net_ip_connection_info_t *tmp_net = (net_ip_connection_info_t*)find_array_pointer(((client_t*)array_vector[i]->pointer)->connection_info_id);
+					client_t *tmp_client = (client_t*)(array_vector[i]->pointer);
+					net_ip_connection_info_t *tmp_net = (net_ip_connection_info_t*)find_pointer(tmp_client->connection_info_id);
 					if(tmp_net == nullptr){
 						printf("Could not find the client net_ip_connection_info class, not sending to said client\n");
 					}else{

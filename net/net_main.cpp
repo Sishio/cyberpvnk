@@ -83,6 +83,7 @@ net_t::net_t(int argc, char** argv, int b){
 	blank();
 	init_parse_parameters(argc,argv);
 	init_initialize_subsystems(argc,argv,b);
+	packet_id_count = 0;
 }
 
 int net_t::loop(){
@@ -95,8 +96,8 @@ int net_t::loop(){
 void net_t::write(std::string data, int a, unsigned long int packet_id){ // the data should be sent to the server regardless
 	term_if_true(ip == nullptr,(char*)"ip write when ip == nullptr\n");
 	if(packet_id == 0){
-		packet_id = packet_id_count;
 		packet_id_count++;
+		packet_id = packet_id_count;
 	}
 	ip->write(data, a, packet_id);
 }

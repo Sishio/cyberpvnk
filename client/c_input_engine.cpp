@@ -30,10 +30,10 @@ extern input_t *input;
 
 void input_mouse_motion_engine(input_buffer_t *a){
 	assert(render != nullptr);
-	client_t *self_tmp = (client_t*)find_array_pointer(self_id);
+	client_t *self_tmp = (client_t*)find_pointer(self_id);
 	coord_t *coord = nullptr;
 	if(self_tmp != nullptr){
-		coord = (coord_t*)find_array_pointer(self_tmp->coord_id);
+		coord = (coord_t*)find_pointer(self_tmp->coord_id);
 	}
 	int x = a->int_data[INPUT_TYPE_MOUSE_MOTION_X];
 	int y = a->int_data[INPUT_TYPE_MOUSE_MOTION_Y];

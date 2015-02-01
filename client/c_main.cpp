@@ -43,7 +43,7 @@ bool once_per_second = false;
 static int choice = -1;
 bool engine_and_module[3] = {true};
 
-#define TEST_LOGIC_IP "96.35.24.245"
+#define TEST_LOGIC_IP "127.0.0.1"
 
 void test_logic_loop(){
 /*	coord_t *coord = new coord_t;
@@ -59,28 +59,22 @@ void test_logic_loop(){
 	delete render_buffer;
 	delete coord;
 */
-/*	net_ip_connection_info_t tmp_conn_info;
-	tmp_conn_info.ip = TEST_LOGIC_IP;
-	tmp_conn_info.port = NET_CLIENT_PORT;
-	std::string send_data = "0123456789";
-	net->write(send_data, tmp_conn_info.array.id);
-	net->loop();
-	std::string read_value = net->read();
-	if(read_value != ""){
-		printf("%s\n", read_value.c_str());
-	}
-	ms_sleep(1000);
-*/
 	net_ip_connection_info_t tmp_conn_info;
 	tmp_conn_info.ip = TEST_LOGIC_IP;
 	tmp_conn_info.port = NET_CLIENT_PORT;
-	net_ip_connection_info_t copy_of_conn;
-	copy_of_conn.array.parse_string_entry(tmp_conn_info.array.gen_updated_string(INT_MAX));
-	printf("tmp_conn_info.ip: %s\ttmp_conn_info.port: %d\n", tmp_conn_info.ip.c_str(), tmp_conn_info.port);
-	printf("copy_of_conn.ip: %s\tcopy_of_conn.port: %d\n", copy_of_conn.ip.c_str(), copy_of_conn.port);
-	for(unsigned long int i = 0;i < copy_of_conn.array.string_array.size();i++){
-		printf("copy_of_conn.array.string_array[%lu]: %s\n", i, copy_of_conn.array.string_array[i]->c_str());
+	std::string send_data = tmp_conn_info.array.gen_updated_string(INT_MAX);
+	for(unsigned long int i = 0;i < 1024;i++){
+		net->write(send_data, tmp_conn_info.array.id);
 	}
+	net->loop();
+	std::string read_value = net->read();
+	while((read_value = net->read()) != ""){
+		net_ip_connection_info_t tmp;
+		tmp.array.parse_string_entry(read_value);
+		printf("tmp.ip: %s\ttmp.port: %d\n",tmp.ip.c_str(), tmp.port);
+		ms_sleep(1);
+	}
+	ms_sleep(1000);
 }
 
 static net_ip_connection_info_t tmp_conn_info;
@@ -167,11 +161,6 @@ static void net_all_close(){
 }
 
 static void close(){
-	client_t *self = (client_t*)find_array_pointer(self_id);
-	assert(self != nullptr);
-	delete (coord_t*)find_array_pointer(self->coord_id);
-	delete (model_t*)find_array_pointer(self->model_id);
-	delete self;
 	switch(choice){
 	case 1:
 		render_all_close();
@@ -185,6 +174,7 @@ static void close(){
 		assert(false);
 		break;
 	}
+	delete_all_data();
 }
 
 static void function_timer(void (*function)(void), std::string function_title){
@@ -206,9 +196,9 @@ static void engine_loop(){
 static void module_loop(){
 	if(input != nullptr && input->loop() == TERMINATE) terminate = true;
 	if(render != nullptr){
-		client_t *self_tmp = (client_t*)find_array_pointer(self_id);
+		client_t *self_tmp = (client_t*)find_pointer(self_id);
 		if(self_tmp != nullptr){
-			coord_t *coord_tmp = (coord_t*)find_array_pointer(self_tmp->coord_id);
+			coord_t *coord_tmp = (coord_t*)find_pointer(self_tmp->coord_id);
 			render->loop(coord_tmp);
 		}
 	}

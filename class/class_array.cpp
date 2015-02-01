@@ -17,6 +17,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "class_main.h"
 #include "class_array.h"
 
+//#define CLASS_DEBUG_OUTPUT 1
+
 long int array_scan_for_id(int); // IDs cannot be sent over the internet if they are any type other than long double, string, or int
 
 std::vector<array_t*> array_vector;
@@ -57,18 +59,26 @@ bool array_t::id_match(int a){
 }
 
 void array_t::parse_string_entry(std::string tmp_string){
+	#ifdef CLASS_DEBUG_OUTPUT
 	printf("tmp_string FROM parse_string_entry: %s\n", tmp_string.c_str());
+	#endif
 	last_update = get_time();
 	if(tmp_string.find_first_of(ARRAY_INT_SEPERATOR_START) != std::string::npos){
+		#ifdef CLASS_DEBUG_OUTPUT
 		printf("Parsing int from string\n");
+		#endif
 		parse_int_from_string(tmp_string);
 	}
 	if(tmp_string.find_first_of(ARRAY_LONG_DOUBLE_SEPERATOR_START) != std::string::npos){
+		#ifdef CLASS_DEBUG_OUTPUT
 		printf("Parsing long_double from string\n");
+		#endif
 		parse_long_double_from_string(tmp_string);
 	}
 	if(tmp_string.find_first_of(ARRAY_STRING_SEPERATOR_START) != std::string::npos){
+		#ifdef CLASS_DEBUG_OUTPUT
 		printf("Parsing string from string\n");
+		#endif
 		parse_string_from_string(tmp_string);
 	}
 }
@@ -87,14 +97,16 @@ std::string array_t::gen_updated_string(int what_to_update){
 	if(CHECK_BIT(what_to_update, ARRAY_INT_HASH_BIT, 1)){
 		return_value += gen_int_string();
 	}
-	return return_value;
+	return wrap(ARRAY_TYPE_SEPERATOR_START, data_type, ARRAY_TYPE_SEPERATOR_END) + return_value;
 }
 
 unsigned int array_t::pull_starting_number(std::string a){
 	const unsigned long int start = a.find_first_of(ARRAY_STARTING_START);
 	const unsigned long int end = a.find_first_of(ARRAY_STARTING_END);
 	if(start == end){
+		#ifdef CLASS_DEBUG_OUTPUT
 		printf("pull_starting_number start==end %s\n", a.c_str());
+		#endif
 	}
 	return atoi(a.substr(start+1, end-start-1).c_str());
 }
@@ -118,7 +130,9 @@ std::vector<std::string> array_t::pull_items(char *x, std::string a, char *y, st
 		const unsigned long int end = a.find_first_of(y);
 		std::string tmp_string_whole = a.substr(start+1, end-start-1);
 		const unsigned long int start_number = pull_starting_number(tmp_string_whole);
+		#ifdef CLASS_DEBUG_OUTPUT
 		printf("tmp_string_whole: %s\n", tmp_string_whole.c_str());
+		#endif
 		const std::vector<std::string> tmp_vector = pull_items_data(ARRAY_ITEM_SEPERATOR_START, tmp_string_whole, ARRAY_ITEM_SEPERATOR_END);
 		for(unsigned long int i = 0;i < tmp_vector.size();i++){
 			entries_for_data->push_back(i+start_number);
@@ -134,7 +148,9 @@ void array_t::parse_int_from_string(std::string a){
 	const std::vector<std::string> int_data = pull_items(ARRAY_INT_SEPERATOR_START, a, ARRAY_INT_SEPERATOR_END, &entries_for_data);
 	const unsigned int int_data_size = int_data.size();
 	for(unsigned int i = 0;i < int_data_size;i++){
+		#ifdef CLASS_DEBUG_OUTPUT
 		printf("int_data[%d]: %s\n", entries_for_data[i], int_data[i].c_str());
+		#endif
 		*int_array[entries_for_data[i]] = atoi(int_data[i].c_str());
 	}
 }
@@ -155,7 +171,9 @@ void array_t::parse_string_from_string(std::string a){
 	const unsigned int string_data_size = string_data.size();
 	assert(string_data_size == entries_for_data.size());
 	for(unsigned int i = 0;i < string_data_size;i++){
+		#ifdef CLASS_DEBUG_OUTPUT
 		printf("string_array[%d]: %s\n",entries_for_data[i], string_data[i].c_str());
+		#endif
 		*string_array[entries_for_data[i]] = string_data[i];
 	}
 }
@@ -234,31 +252,21 @@ void update_class_data(std::string a, int what_to_update){
 	for(unsigned long int i = 0;i < array_vector_size;i++){
 		if(unlikely(array_vector[i]->id == id)){
 			tmp = array_vector[i];
-			return;
+			break;
 		}
 	}
 	if(tmp == nullptr){
 		std::string type = a.substr(a.find_first_of(ARRAY_TYPE_SEPERATOR_START)+1, a.find_first_of(ARRAY_TYPE_SEPERATOR_END)-a.find_first_of(ARRAY_TYPE_SEPERATOR_START)-1);
 		if(type == "coord_t"){
-			if((what_to_update&(1<<0)) == 1){
-				tmp = &((new coord_t)->array);
-			}
+			tmp = &((new coord_t)->array);
 		}else if(type == "model_t"){
-			if((what_to_update&(1<<1)) == 1){
-				tmp = &((new model_t)->array);
-			}
+			tmp = &((new model_t)->array);
 		}else if(type == "input_buffer_t"){
-			if((what_to_update&(1<<2)) == 1){
-				tmp = &((new input_buffer_t)->array);
-			}
+			tmp = &((new input_buffer_t)->array);
 		}else if(type == "render_buffer_t"){
-			if((what_to_update&(1<<3)) == 1){
-				tmp = &((new render_buffer_t)->array);
-			}
+			tmp = &((new render_buffer_t)->array);
 		}else if(type == "client_t"){
-			if((what_to_update&(1<<4)) == 1){
-				tmp = &((new client_t)->array);
-			}
+			tmp = &((new client_t)->array);
 		}else{
 			printf("type is '%s'\n", type.c_str());
 			assert(false);
@@ -276,24 +284,17 @@ void add_two_arrays(array_t *a, array_t *b){
 }
 
 array_t::~array_t(){
-	/*std::vector<array_t*>::iterator array_pos_in_vector = std::find_if(array_vector.begin(), array_vector.end(), pointer_device_t(this));
+	std::vector<array_t*>::iterator array_pos_in_vector = std::find_if(array_vector.begin(), array_vector.end(), pointer_device_t(this));
 	if(likely(array_pos_in_vector != array_vector.end())){
 		*array_pos_in_vector = nullptr;
 		array_vector.erase(array_pos_in_vector);
 	}else{
 		printf("Could not find array in vector\n");
-	}*/
-	for(unsigned long int i = 0;i < array_vector.size();i++){
-		if(array_vector[i] == this){
-			array_vector[i] = nullptr;
-			array_vector.erase(array_vector.begin()+i);
-			return;
-		}
 	}
-	printf("Could not find the array in the vector, THIS IS BAD\n");
 }
 
 bool alphabetical_order(const array_t *a, const array_t *b){return a->data_type < b->data_type;}
+
 bool order_by_id(const array_t *a, const array_t *b){
 	return a->id < b->id;
 }
@@ -318,7 +319,7 @@ bool array_is_sorted_by_id(){
 	return true;
 }
 
-static void optimal_array_sort(){
+/*static void optimal_array_sort(){
 	if(unlikely(!array_is_sorted_by_type())){
 		std::sort(array_vector.begin(), array_vector.end(), alphabetical_order); // sort by the value of the data_type
 	}
@@ -333,19 +334,33 @@ static void optimal_array_sort(){
 			std::sort(array_vector.begin()+old_entry, array_vector.begin()+i, order_by_id);
 		}
 	}
-}
+}*/
 
-// TODO: change this to item
-void* find_array_pointer(int id, std::string type){
-	optimal_array_sort();
-	if(type == ""){
-		for(unsigned long int i = 0;i < array_vector.size();i++){
-			if(unlikely(array_vector[i]->id == id)){
-				return array_vector[i]->pointer;
-			}
-		}
+void* find_pointer(int id, std::string type){
+	/*optimal_array_sort();
+	std::vector<void*> *array;
+	if(type != ""){
+		array = new std::vector<void*>;
+		*array = all_entries_of_type(type);
 	}else{
+		array = (std::vector<void*>*)&array_vector;
 	}
+	const unsigned long int array_size = array_vector.size();
+	for(unsigned long int i = 0;i < array_size;i++){
+		if(unlikely(((array_t*)(*array)[i])->id == id)){
+			return ((array_t*)(*array)[i])->pointer;
+		}
+	}
+	if(type != ""){
+		delete array;
+		array = nullptr;
+	}*/
+	for(unsigned long int i = 0;i < array_vector.size();i++){
+		if(array_vector[i]->id == id){
+			return array_vector[i]->pointer;
+		}
+	}
+	printf("could not find the pointer to the array with an ID of '%d'\n", id);
 	return nullptr;
 }
 
@@ -360,9 +375,34 @@ std::vector<void*> all_entries_of_type(std::string type){
 }
 
 std::vector<void*> all_pointers_of_type(std::string type){
-	std::vector<void*> tmp = all_entries_of_type(type);
-	for(unsigned long int i = 0;i < tmp.size();i++){
-		tmp[i] = ((array_t*)tmp[i])->pointer;
+	std::vector<void*> return_value;
+	for(unsigned long int i = 0;i < array_vector.size();i++){
+		if(unlikely(array_vector[i]->data_type == type)){
+			return_value.push_back((void*)(((array_t*)array_vector[i])->pointer));
+		}
 	}
-	return tmp;
+	return return_value;
+}
+
+void delete_all_data(){
+	std::vector<array_t*> array_vector_ = array_vector;
+	for(unsigned long int i = 0;i < array_vector_.size();i++){
+		const std::string type = array_vector_[i]->data_type;
+		void* void_ptr = array_vector_[i]->pointer;
+		printf("deleting excess %s\n", type.c_str());
+		if(type == "coord_t"){
+			delete (coord_t*)void_ptr;
+		}else if(type == "model_t"){
+			delete (model_t*)void_ptr;
+		}else if(type == "render_buffer_t"){
+			delete (render_buffer_t*)void_ptr;
+		}else if(type == "input_buffer_t"){
+			delete (input_buffer_t*)void_ptr;
+		}else if(type == "input_setings_t"){
+			delete (input_settings_t*)void_ptr;
+		}else if(type == "client_t"){
+			delete (client_t*)void_ptr;
+		}
+		void_ptr = nullptr;
+	}
 }

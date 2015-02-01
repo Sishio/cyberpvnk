@@ -104,9 +104,9 @@ static void apply_all_input(){
 	std::vector<void*> tmp_input_buffer = all_pointers_of_type("input_buffer_t");
 	const unsigned long int tmp_input_buffer_size = tmp_input_buffer.size();
 	for(unsigned long int i = 0;i < tmp_input_buffer_size;i++){
-		client_t *tmp_client = (client_t*)find_array_pointer(((input_buffer_t*)tmp_input_buffer[i])->client_id);
+		client_t *tmp_client = (client_t*)find_pointer(((input_buffer_t*)tmp_input_buffer[i])->client_id);
 		if(tmp_client != nullptr){
-			coord_physics_apply_input((coord_t*)find_array_pointer(tmp_client->coord_id), (input_buffer_t*)tmp_input_buffer[i]);
+			coord_physics_apply_input((coord_t*)find_pointer(tmp_client->coord_id), (input_buffer_t*)tmp_input_buffer[i]);
 			delete (input_buffer_t*)tmp_input_buffer[i];
 		}
 		tmp_client = nullptr;
@@ -127,7 +127,7 @@ void physics_engine(){
 	apply_all_input();
 	std::vector<void*> coord_buffer = all_pointers_of_type("coord_t");;
 	for(unsigned long int i = 0;i < coord_buffer.size();i++){
-		coord_physics_iteration((coord_t*)array_vector[i]);
+		coord_physics_iteration((coord_t*)coord_buffer[i]);
 	}
 }
 

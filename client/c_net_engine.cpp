@@ -44,10 +44,13 @@ static void net_engine_parse(std::string a){
 //}
 
 static void net_connect(int host_info_id){
-	assert(find_array_pointer(self_id) != nullptr);
-	client_t *tmp_client = (client_t*)find_array_pointer(self_id);
+	assert(find_pointer(self_id) != nullptr);
+	client_t *tmp_client = (client_t*)find_pointer(self_id);
 	assert(tmp_client != nullptr);
-	std::string packet = (new net_ip_connection_info_t)->array.gen_updated_string(INT_MAX);
+	net_ip_connection_info_t net_conn_info;
+	net_conn_info.ip = "127.0.0.1";
+	net_conn_info.port = NET_CLIENT_PORT;
+	std::string packet = net_conn_info.array.gen_updated_string(INT_MAX);
 	packet += NET_JOIN;
 	printf("Sending packet '%s'\n",packet.c_str());
 	net->write(packet, host_info_id);
@@ -110,7 +113,7 @@ static void net_receive_engine(){
 }
 
 static void net_send_engine(){
-  client_t *client_tmp = (client_t*)find_array_pointer(self_id);
+  client_t *client_tmp = (client_t*)find_pointer(self_id);
 	if(client_tmp == nullptr){
 		return;
 	}

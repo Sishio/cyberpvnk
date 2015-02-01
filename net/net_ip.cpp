@@ -1,7 +1,7 @@
 #include "net_ip.h"
 
 int net_ip_t::init(int argc, char** argv, int tmp_conn_id){
-	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_array_pointer(tmp_conn_id);
+	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_pointer(tmp_conn_id);
 	assert(tmp_conn != nullptr);
 	connection_info_id = tmp_conn_id;
 	SDLNet_Init();
@@ -51,7 +51,7 @@ std::string net_ip_t::receive_now(){
 
 int net_ip_t::send_now(net_ip_write_buffer_t *data){
 	int return_value = 0;
-	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_array_pointer(data->connection_info_id);
+	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_pointer(data->connection_info_id);
 	if(outbound == NULL){
 		printf("Cannot use outbound port. Check to see if you have proper permissions to use raw sockets\n");
 		return_value = -1;
@@ -97,6 +97,7 @@ int net_ip_t::send_now(net_ip_write_buffer_t *data){
 			outbound_packet->data = outbound_data;
 			SDLNet_UDP_Send(outbound, -1, outbound_packet);
 			printf("Sending a packet of value '%s'\n", outbound_data);
+			ms_sleep(2);
 			total_byte_size += outbound_packet->len;
 			if(unlikely(total_byte_size > max_total_sent_byte)){
 				// no packet loss if the client is sending data to itself
@@ -136,10 +137,10 @@ bool net_ip_t::receive_check_read_array(std::string a, unsigned long int packet_
 
 void net_ip_t::loop_receive(){
 	std::string inbound_packet_string;
-	while((inbound_packet_string = receive_now()) != ""){ // speed this up DRASTICALLLY or get it out of a loop
-		const unsigned long int start = inbound_packet_string.find_first_of(NET_PACKET_ID_START)+1;
-		const unsigned long int end = inbound_packet_string.find_first_of(NET_PACKET_ID_END)-1;
-		const std::string tmp_packet_id = inbound_packet_string.substr(start,end-start);
+	while((inbound_packet_string = receive_now()) != ""){
+		const unsigned long int start = inbound_packet_string.find_first_of(NET_PACKET_ID_START);
+		const unsigned long int end = inbound_packet_string.find_first_of(NET_PACKET_ID_END);
+		const std::string tmp_packet_id = inbound_packet_string.substr(start+1,end-start-1);
 		const unsigned long int packet_id = atoi(tmp_packet_id.c_str());
 		receive_check_read_array(inbound_packet_string, packet_id);
 	}

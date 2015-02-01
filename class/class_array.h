@@ -96,7 +96,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern void add_array_to_vector(array_t*);
 	extern void delete_array_from_vector(array_t*);
 	extern void delete_array_id(int);
-	extern void* find_array_pointer(int, std::string type = "");
+	extern void* find_pointer(int, std::string type = "");
+	extern void delete_all_data();
 	extern std::vector<array_t*> array_vector;
 	extern std::vector<void*> all_entries_of_type(std::string);
 	extern std::vector<void*> all_pointers_of_type(std::string);

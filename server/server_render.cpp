@@ -29,9 +29,9 @@ void render_engine(){
 			const long int coord_id = ((render_buffer_t*)array_vector[i]->pointer)->coord_id;
 			long int model_id;
 			if(((client_t*)array_vector[i]->pointer)->model_id == 0){
-				model_id = ((coord_t*)find_array_pointer(coord_id))->model_id;
+				model_id = ((coord_t*)find_pointer(coord_id))->model_id;
 			}else{
-				model_id = ((coord_t*)find_array_pointer(coord_id))->model_id;
+				model_id = ((coord_t*)find_pointer(coord_id))->model_id;
 			}
 			bool found_client = false;
 			for(unsigned long int n = 0;n < array_size;n++){

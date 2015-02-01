@@ -135,14 +135,14 @@ void render_t::loop_render_buffer(){
 	const unsigned int array_size = array_vector.size();
 	for(unsigned int i = 0;i < array_size;i++){
 		if(array_vector[i] != nullptr && array_vector[i]->data_type == "render_buffer_t"){
-		  coord_t *local_coord = (coord_t*)find_array_pointer(((render_buffer_t*)(array_vector[i]))->coord_id);
+		  coord_t *local_coord = (coord_t*)find_pointer(((render_buffer_t*)(array_vector[i]))->coord_id);
 			glPushMatrix();
 			glTranslatef(local_coord->x, local_coord->y, local_coord->z);
 			glRotatef(local_coord->x_angle,1.0f,0.0f,0.0f);
 			printf("local_coord->model_id: %d\n",local_coord->model_id);
-			model_t *model = (model_t*)find_array_pointer(local_coord->model_id);
+			model_t *model = (model_t*)find_pointer(local_coord->model_id);
 			if(model == nullptr){
-			  model = (model_t*)find_array_pointer(((render_buffer_t*)(array_vector[i]))->model_id);
+			  model = (model_t*)find_pointer(((render_buffer_t*)(array_vector[i]))->model_id);
 			}
 			model_render(model);
 			glPopMatrix();
