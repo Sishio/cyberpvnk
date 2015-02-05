@@ -25,21 +25,26 @@ int net_ip_t::init(int argc, char** argv, int tmp_conn_id){
 }
 
 std::string net_ip_t::read(std::string search){
+	read_buffer_lock.lock();
 	std::string return_value = "";
 	const unsigned long int read_buffer_size = read_buffer.size();
 	for(unsigned long int i = 0;i < read_buffer_size;i++){
 		if(read_buffer[i].finished() && (search == "" || read_buffer[i].gen_string().find_first_of(search) != std::string::npos)){
 			return_value = read_buffer[i].gen_string();
 			read_buffer.erase(read_buffer.begin()+i);
+			read_buffer_lock.unlock();
 			return return_value;
 		}
 	}
+	read_buffer_lock.unlock();
 	return return_value;
 }
 
 void net_ip_t::write(std::string data, int b, unsigned long int packet_id){
 	net_ip_write_buffer_t write_buffer_tmp(data, packet_id, b);
+	write_buffer_lock.lock();
 	write_buffer.push_back(write_buffer_tmp);
+	write_buffer_lock.unlock();
 }
 
 std::string net_ip_t::receive_now(){
@@ -96,8 +101,6 @@ int net_ip_t::send_now(net_ip_write_buffer_t *data){
 			outbound_packet->len = raw_packets[i].size()+1;
 			outbound_packet->data = outbound_data;
 			SDLNet_UDP_Send(outbound, -1, outbound_packet);
-			printf("Sending a packet of value '%s'\n", outbound_data);
-			ms_sleep(2);
 			total_byte_size += outbound_packet->len;
 			if(unlikely(total_byte_size > max_total_sent_byte)){
 				// no packet loss if the client is sending data to itself
@@ -115,14 +118,17 @@ int net_ip_t::send_now(net_ip_write_buffer_t *data){
 void net_ip_t::loop_send(){
 	const unsigned long int write_buffer_size = write_buffer.size();
 	total_sent_bytes = 0;
+	write_buffer_lock.lock();
 	for(unsigned long int i = 0;i < write_buffer_size;i++){
 		send_now(&write_buffer[i]);
 	}
 	write_buffer.clear();
+	write_buffer_lock.unlock();
 }
 
 bool net_ip_t::receive_check_read_array(std::string a, unsigned long int packet_id){
 	const unsigned long int read_buffer_size = read_buffer.size();
+	read_buffer_lock.lock();
 	for(unsigned long int i = 0;i < read_buffer_size;i++){
 		if(read_buffer[i].packet_id == packet_id){
 			read_buffer[i].parse_packet_segment(a);
@@ -132,6 +138,7 @@ bool net_ip_t::receive_check_read_array(std::string a, unsigned long int packet_
 	net_ip_read_buffer_t tmp_read(packet_id);
 	tmp_read.parse_packet_segment(a);
 	read_buffer.push_back(tmp_read);
+	read_buffer_lock.unlock();
 	return true;
 }
 

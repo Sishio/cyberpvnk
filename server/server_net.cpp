@@ -24,25 +24,53 @@ static loop_t net_loop_code;
 extern loop_t server_loop_code;
 extern std::vector<array_t*> array_vector;
 
-static inline void net_check_and_apply_pingout(unsigned long int tmp_entry){
+static void net_check_and_apply_pingout(unsigned long int tmp_entry){
 	client_t *tmp = (client_t*)(array_vector[tmp_entry]->pointer);
 	const long double current_time = get_time();
-	const long double pingout = 3;
-	if(unlikely(tmp->array.last_update > current_time + pingout)){
+	const long double pingout = 3; // timer is always in seconds
+	printf("last_update: %Lf\n", tmp->array.last_update);
+	printf("%Lf + 3\n", current_time);
+	if(tmp->array.last_update == 0){
+		return;
+	}
+	if(unlikely(tmp->array.last_update + pingout < current_time)){
+		delete (coord_t*)find_pointer(tmp->coord_id);
+		delete (model_t*)find_pointer(tmp->model_id);
+		delete (net_ip_connection_info_t*)find_pointer(tmp->connection_info_id);
 		delete tmp;
+		tmp = nullptr;
+		printf("client has pinged out\n");
 	}
 }
 
+static double last_client_net_run = 0;
+#define CLIENT_MAX_JOIN_RATE .2
+
 static void net_client_join(std::string data){
-	client_t *client_tmp = new client_t;
-	const long int old_id = client_tmp->connection_info_id;
-	net_ip_connection_info_t *tmp_net_ip = (net_ip_connection_info_t*)find_pointer(client_tmp->connection_info_id);
-	tmp_net_ip->array.parse_string_entry(data);
-	tmp_net_ip->array.id = client_tmp->connection_info_id = old_id;
-	printf("tmp_net_ip id is '%d'\n", tmp_net_ip->array.id);
-	printf("tmp_net_ip.ip:%s\ttmp_net_ip.port: %d\n", tmp_net_ip->ip.c_str(), tmp_net_ip->port);
-	std::string return_packet = NET_JOIN + std::to_string(client_tmp->array.id);
-	net->write(return_packet, client_tmp->connection_info_id);
+	bool accept_client = false;
+	if(last_client_net_run != 0){
+		double time_test = get_time()-last_client_net_run;
+		accept_client = time_test*CLIENT_MAX_JOIN_RATE >= 1;
+	}else{
+		accept_client = true;
+	}
+	if(likely(accept_client)){
+		last_client_net_run = get_time();
+		client_t *client_tmp = new client_t;
+		const long int old_id = client_tmp->connection_info_id;
+		net_ip_connection_info_t *tmp_net_ip = new net_ip_connection_info_t;
+		client_tmp->connection_info_id = tmp_net_ip->array.id;
+		client_tmp->model_id = (new model_t)->array.id;
+		client_tmp->coord_id = (new coord_t)->array.id;
+		tmp_net_ip->array.parse_string_entry(data);
+		tmp_net_ip->array.id = client_tmp->connection_info_id = old_id;
+		printf("tmp_net_ip id is '%d'\n", tmp_net_ip->array.id);
+		printf("tmp_net_ip.ip:%s\ttmp_net_ip.port: %d\n", tmp_net_ip->ip.c_str(), tmp_net_ip->port);
+		std::string return_packet = NET_JOIN + std::to_string(client_tmp->array.id);
+		net->write(return_packet, client_tmp->connection_info_id);
+	}else{
+		printf("someone is spamming the server with join requests\n");
+	}
 }
 
 static void net_send_data();
@@ -70,32 +98,21 @@ void net_init(){
 }
 
 static void net_send_data(){
-	int blank_what_to_update;
-	SET_BIT(&blank_what_to_update, ARRAY_INT_HASH_BIT, 0);
-	SET_BIT(&blank_what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 0);
-	SET_BIT(&blank_what_to_update, ARRAY_STRING_HASH_BIT, 0);
 	int what_to_update = INT_MAX;
+	SET_BIT(&what_to_update, ARRAY_INT_HASH_BIT, 1);
+	SET_BIT(&what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 1);
+	SET_BIT(&what_to_update, ARRAY_STRING_HASH_BIT, 1);
 	for(unsigned long int c = 0;c < array_vector.size();c++){
-		if(array_vector[c]->updated(&what_to_update)){
-			std::string gen_string;
-			if(CHECK_BIT(what_to_update, ARRAY_INT_HASH_BIT, 1)){
-				gen_string += array_vector[c]->gen_int_string();
-			}
-			if(CHECK_BIT(what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 1)){
-				gen_string += array_vector[c]->gen_long_double_string();
-			}
-			if(CHECK_BIT(what_to_update, ARRAY_STRING_HASH_BIT, 1)){
-				gen_string += array_vector[c]->gen_string_string();
-			}
-			for(unsigned long int i = 0;i < array_vector.size();i++){
-				if(unlikely(array_vector[i]->data_type == "client_t")){
-					client_t *tmp_client = (client_t*)(array_vector[i]->pointer);
-					net_ip_connection_info_t *tmp_net = (net_ip_connection_info_t*)find_pointer(tmp_client->connection_info_id);
-					if(tmp_net == nullptr){
-						printf("Could not find the client net_ip_connection_info class, not sending to said client\n");
-					}else{
-						net->write(gen_string, ((client_t*)array_vector[i]->pointer)->connection_info_id);
-					}
+		std::string gen_string = array_vector[c]->gen_updated_string(what_to_update);
+		for(unsigned long int i = 0;i < array_vector.size();i++){
+			if(unlikely(array_vector[i]->data_type == "client_t")){
+				client_t *tmp_client = (client_t*)(array_vector[i]->pointer);
+				net_ip_connection_info_t *tmp_net = (net_ip_connection_info_t*)find_pointer(tmp_client->connection_info_id);
+				if(find_pointer(tmp_client->connection_info_id) == nullptr){
+					printf("Could not find the client net_ip_connection_info class, not sending to said client\n");
+				}else{
+					net->write(gen_string, tmp_client->connection_info_id);
+					printf("sent data (ID: %d) to a client (IP: %s)\n", array_vector[c]->id, tmp_net->ip.c_str());
 				}
 			}
 		}
@@ -106,7 +123,6 @@ static void net_send_data(){
 static void net_read_data(){
 	std::string data = "";
 	while((data = net->read()) != ""){
-		// switch over to a string based system
 		if(data.find_first_of(NET_JOIN) != std::string::npos){
 			net_client_join(data);
 		}else if(data.find_first_of(ARRAY_ITEM_SEPERATOR_START) != std::string::npos){

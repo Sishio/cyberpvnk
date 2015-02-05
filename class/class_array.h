@@ -72,6 +72,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		long int string_hash;
 		long int long_double_hash;
 	public:
+		void update_pointers();
 		void* pointer;
 		std::string data_type;
 		long double last_update;
@@ -83,7 +84,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::string gen_long_double_string();
 		std::string gen_int_string();
 		std::string gen_string_string();
-		array_t(void*); // TODO: put data_type in the initializer
+		array_t(void*, bool add); // TODO: put data_type in the initializer
 		~array_t();
 		bool id_match(int);
 		void parse_string_entry(std::string);

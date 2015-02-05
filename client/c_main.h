@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "../loop/loop_main.h"
 #include "../main.h"
 #include "../net/net_main.h"
 #include "../render/render_main.h"
@@ -24,5 +25,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "cstdio"
 #ifndef C_MAIN_H
 	#define C_MAIN_H
+	extern loop_t loop;
 	extern int menu_loop();
 #endif

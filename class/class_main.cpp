@@ -18,7 +18,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "class_main.h"
 
 void coord_t::update_array_pointers(){
-	array.long_double_array.clear();
+	array.update_pointers(); // clears everything
 	array.long_double_array.push_back(&x);
 	array.long_double_array.push_back(&y);
 	array.long_double_array.push_back(&z);
@@ -27,12 +27,11 @@ void coord_t::update_array_pointers(){
 	array.long_double_array.push_back(&x_vel);
 	array.long_double_array.push_back(&y_vel);
 	array.long_double_array.push_back(&z_vel);
-	array.int_array.clear();
 	array.int_array.push_back(&model_id);
 	array.data_type = "coord_t";
 }
 
-coord_t::coord_t() : array(this){
+coord_t::coord_t(bool add) : array(this, add){
 	x = y = z = x_angle = y_angle = x_vel = y_vel = z_vel = 0;
 	physics_time = 0;
 	old_time = get_time();
@@ -69,7 +68,7 @@ void model_t::update_array(){
 	array.data_type = "model_t";
 }
 
-model_t::model_t() : array(this){
+model_t::model_t(bool add) : array(this, add){
 	update_array();
 }
 
@@ -128,26 +127,20 @@ void model_t::get_size(long double *x, long double *y, long double *z){
 }
 
 void client_t::update_array(){
-	array.int_array.clear();
+	array.update_pointers();
 	array.int_array.push_back(&model_id);
 	array.int_array.push_back(&coord_id);
+	array.int_array.push_back(&connection_info_id);
 	array.data_type = "client_t";
 }
 
-client_t::client_t() : array(this){
-	coord_t *coord = new coord_t;
-	model_t *model = new model_t;
-	net_ip_connection_info_t *connection_info = new net_ip_connection_info_t;
-	model_id = model->array.id;
-	coord_id = coord->array.id;
-	connection_info_id = connection_info->array.id;
-	coord->model_id = model_id;
+client_t::client_t(bool add) : array(this, add){
 	update_array();
 }
 
 client_t::~client_t(){}
 
-render_buffer_t::render_buffer_t() : array(this){
+render_buffer_t::render_buffer_t(bool add) : array(this, add){
 	array.int_array.push_back(&coord_id);
 	array.int_array.push_back(&model_id);
 	array.data_type = "render_buffer_t";
@@ -155,7 +148,7 @@ render_buffer_t::render_buffer_t() : array(this){
 
 render_buffer_t::~render_buffer_t(){}
 
-input_buffer_t::input_buffer_t() : array(this){
+input_buffer_t::input_buffer_t(bool add) : array(this, add){
 	array.id = 0; // reserve zero for input_buffers because ID collisions could happen and these aren't referred to outside of the main input function in the server.
 	array.data_type = "input_buffer_t";
 	array.int_array.push_back(&type);
@@ -172,7 +165,7 @@ input_buffer_t::input_buffer_t() : array(this){
 
 input_buffer_t::~input_buffer_t(){}
 
-net_ip_connection_info_t::net_ip_connection_info_t() : array(this){
+net_ip_connection_info_t::net_ip_connection_info_t(bool add) : array(this, add){
 	array.data_type = "net_ip_connection_info_t";
 	array.int_array.push_back(&port);
 	array.int_array.push_back(&connection_type);
@@ -181,7 +174,7 @@ net_ip_connection_info_t::net_ip_connection_info_t() : array(this){
 
 net_ip_connection_info_t::~net_ip_connection_info_t(){}
 
-input_settings_t::input_settings_t() : array(this){
+input_settings_t::input_settings_t(bool add) : array(this, add){
 	for(unsigned long int i = 0;i < 64;i++){
 		int_data[i][0] = int_data[i][1] = -1;
 		array.int_array.push_back(&int_data[i][0]);
@@ -191,7 +184,7 @@ input_settings_t::input_settings_t() : array(this){
 
 input_settings_t::~input_settings_t(){}
 
-gametype_t::gametype_t(std::string gametype_file_) : array(this){
+gametype_t::gametype_t(std::string gametype_file_, bool add) : array(this, add){
 	if(gametype_file_ == ""){
 		printf("assuming this is a client and the server data has not been loaded yet\n");
 	}else{

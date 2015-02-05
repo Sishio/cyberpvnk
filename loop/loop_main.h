@@ -25,6 +25,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<void(*)()> code;
 	};
 	extern void loop_add(loop_t*, void(*)());
-	extern void loop_run(loop_t*, int);
+	extern void loop_run(loop_t*, int settings = 0);
 	extern void loop_del(loop_t*, void(*)());
 #endif

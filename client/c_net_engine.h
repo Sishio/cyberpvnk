@@ -14,11 +14,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+#include "../loop/loop_main.h"
 #include "../class/class_main.h"
 #include "../net/net_main.h"
 #ifndef C_NET_ENGINE_H
 	#define C_NET_ENGINE_H
+	#include "../client/c_main.h"
 	#include "../net/net_const.h"
 	extern void net_init();
 	extern void net_engine();

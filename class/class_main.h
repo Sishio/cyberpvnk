@@ -77,7 +77,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		array_t array;
 		void reload_gametype();
 		void apply_core_gametype();
-		gametype_t(std::string);
+		gametype_t(std::string, bool add_to_array_vector = true);
 		~gametype_t();
 	};
 	class net_ip_connection_info_t{
@@ -86,12 +86,12 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		int connection_type; // UDP or TCP
 		std::string ip;
 		int port;
-		net_ip_connection_info_t();
+		net_ip_connection_info_t(bool add_to_array_vector = true);
 		~net_ip_connection_info_t();
 	};
 	class input_settings_t{
 	public:
-		input_settings_t();
+		input_settings_t(bool add_to_array_vector = true);
 		~input_settings_t();
 		array_t array;
 		int int_data[64][2];
@@ -102,7 +102,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		int client_id;
 		int type;
 		int int_data[8];
-		input_buffer_t();
+		input_buffer_t(bool add_to_array_vector = true);
 		~input_buffer_t();
 	};
 	struct face{
@@ -152,7 +152,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<material*> materials;
 		std::vector<texcoord*> texturecoordinate;
 		bool ismaterial,isnormals,istexture;
-		model_t();
+		model_t(bool add_to_array_vector = true);
 		~model_t();
 		void get_size(long double*, long double*, long double*);
 		void close();
@@ -167,7 +167,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		long double physics_time;
 		long double old_time;
 		bool mobile;
-		coord_t();
+		coord_t(bool add_to_array_vector = true);
 		void update_array_pointers();
 		void print();
 		void set_x_angle(bool,long double);
@@ -182,13 +182,13 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		int coord_id;
 		int model_id;
 		int connection_info_id;
-		client_t();
+		client_t(bool add_to_array_vector = true);
 		~client_t();
 		void update_array();
 	};
 	class render_buffer_t{
 	public:
-		render_buffer_t();
+		render_buffer_t(bool add_to_array_vector = true);
 		~render_buffer_t();
 		array_t array;
 		int model_id;

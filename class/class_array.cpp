@@ -44,14 +44,17 @@ long int array_highest_id(){
 	return id;
 }
 
-array_t::array_t(void* tmp_pointer){
+array_t::array_t(void* tmp_pointer, bool add_array_to_vector){
 	pointer = tmp_pointer;
 	id = gen_rand();
 	if(id == -1){
 		id = gen_rand();
 	}
-	int_array.push_back(&id);
-	array_vector.push_back(this);
+	update_pointers();
+	if(add_array_to_vector){
+		array_vector.push_back(this);
+	}
+	last_update = get_time();
 }
 
 bool array_t::id_match(int a){
@@ -97,7 +100,12 @@ std::string array_t::gen_updated_string(int what_to_update){
 	if(CHECK_BIT(what_to_update, ARRAY_INT_HASH_BIT, 1)){
 		return_value += gen_int_string();
 	}
-	return wrap(ARRAY_TYPE_SEPERATOR_START, data_type, ARRAY_TYPE_SEPERATOR_END) + return_value;
+	return return_value;
+}
+
+void array_t::update_pointers(){
+	int_array.clear();
+	int_array.push_back(&id);
 }
 
 unsigned int array_t::pull_starting_number(std::string a){
@@ -241,7 +249,8 @@ int pull_id(std::string a){
 	int return_value;
 	const unsigned long int start = a.find_first_of(ARRAY_ID_START);
 	const unsigned long int end = a.find_first_of(ARRAY_ID_END);
-	return_value = atoi(a.substr(start+1, end-start-1).c_str());
+	std::string id_string = a.substr(start+1, end-start-1).c_str();
+	return_value = atoi(id_string.c_str());
 	return return_value;
 }
 
@@ -249,14 +258,18 @@ void update_class_data(std::string a, int what_to_update){
 	array_t *tmp = nullptr;
 	int id = pull_id(a);
 	const unsigned long int array_vector_size = array_vector.size();
+	//printf("Generated an ID of %d\n", id);
+	//printf("data to parse: %s\n", a.c_str());
 	for(unsigned long int i = 0;i < array_vector_size;i++){
 		if(unlikely(array_vector[i]->id == id)){
+	//		printf("FOUND AN EXISTING COPY AND UPDATING IT\n");
 			tmp = array_vector[i];
 			break;
 		}
 	}
 	if(tmp == nullptr){
 		std::string type = a.substr(a.find_first_of(ARRAY_TYPE_SEPERATOR_START)+1, a.find_first_of(ARRAY_TYPE_SEPERATOR_END)-a.find_first_of(ARRAY_TYPE_SEPERATOR_START)-1);
+		printf("Writing a new variable since the one being referred to doesn't exist yet (type: %s) (ID of data: %d)\n", type.c_str(), id);
 		if(type == "coord_t"){
 			tmp = &((new coord_t)->array);
 		}else if(type == "model_t"){
@@ -267,13 +280,21 @@ void update_class_data(std::string a, int what_to_update){
 			tmp = &((new render_buffer_t)->array);
 		}else if(type == "client_t"){
 			tmp = &((new client_t)->array);
+		}else if(type == "net_ip_connection_info_t"){
+			tmp = &((new net_ip_connection_info_t)->array);
+		}else if(type == "gametype_t"){
+			tmp = &((new gametype_t(""))->array);
 		}else{
-			printf("type is '%s'\n", type.c_str());
 			assert(false);
 		}
 	}
-	if(tmp != nullptr){
-		tmp->parse_string_entry(a);
+	tmp->parse_string_entry(a);
+	if(tmp->id != id){
+		printf("tmp->id (%d) != id (%d)\n", tmp->id, id);
+		printf("data: %s\n", a.c_str());
+		ms_sleep(10);
+	}else{
+		tmp->id = id;
 	}
 }
 
@@ -389,7 +410,7 @@ void delete_all_data(){
 	for(unsigned long int i = 0;i < array_vector_.size();i++){
 		const std::string type = array_vector_[i]->data_type;
 		void* void_ptr = array_vector_[i]->pointer;
-		printf("deleting excess %s\n", type.c_str());
+		printf("deleting excess %s with an ID of %d\n", type.c_str(), array_vector_[i]->id);
 		if(type == "coord_t"){
 			delete (coord_t*)void_ptr;
 		}else if(type == "model_t"){

@@ -64,6 +64,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	};
 	class net_ip_t{
 	private:
+		std::mutex read_buffer_lock;
+		std::mutex write_buffer_lock;
 		unsigned long int total_sent_bytes;
 		std::vector<net_ip_read_buffer_t> read_buffer;
 		std::vector<net_ip_write_buffer_t> write_buffer;
