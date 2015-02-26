@@ -20,23 +20,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 extern int scan_model_for_id(int);
 extern bool terminate;
 static void coord_physics_iteration(coord_t*);
-static long double once_per_second_time = 0;
-static bool once_per_second = false;
 
+extern bool once_per_second;
 extern loop_t server_loop_code;
-
-static void once_per_second_update(){
-	if(unlikely(once_per_second_time > 1)){
-		while(once_per_second_time > 1){
-			printf("once_per_second_update(): my god this is slow\n");
-			once_per_second_time -= 1;
-		}
-		once_per_second = true;
-		printf("OPS code will run. OPS CLOCK: %Lf\n",once_per_second_time);
-	}else{
-		once_per_second = false;
-	}
-}
 
 static void apply_input(coord_t *a, int event){
 	const long double sin_y_rot = sin(a->y_angle);
@@ -114,7 +100,7 @@ static void apply_all_input(){
 }
 
 void physics_init(std::string gametype_load = "gametype/default"){
-	loop_add(&server_loop_code, physics_engine);
+	loop_add(&server_loop_code, "physics_engine", physics_engine);
 	new gametype_t(gametype_load);
 }
 
@@ -125,8 +111,9 @@ void physics_close(){
 void physics_engine(){
 	once_per_second_update();
 	apply_all_input();
-	std::vector<void*> coord_buffer = all_pointers_of_type("coord_t");;
-	for(unsigned long int i = 0;i < coord_buffer.size();i++){
+	std::vector<void*> coord_buffer = all_pointers_of_type("coord_t");
+	const unsigned long int coord_size = coord_buffer.size();
+	for(unsigned long int i = 0;i < coord_size;i++){
 		coord_physics_iteration((coord_t*)coord_buffer[i]);
 	}
 }
@@ -141,10 +128,15 @@ static void coord_physics_iteration(coord_t *a){
 		a->y_vel += GRAVITY_RATE*a->physics_time;
 		a->y += a->y_vel*a->physics_time;
 		a->z += a->z_vel*a->physics_time;
-		const long double mul = 1/(1+(.9*a->physics_time));
-		a->x_vel *= mul;
-		a->y_vel *= mul;
-		a->z_vel *= mul;
+		const long double pos_mul = 1/(1+(.9*a->physics_time));
+		a->x_vel *= pos_mul;
+		a->y_vel *= pos_mul;
+		a->z_vel *= pos_mul;
+		a->x_angle += a->x_angle_vel*a->physics_time;
+		a->y_angle += a->y_angle_vel*a->physics_time;
+		const long double angle_mul = 1/(1+(.1*a->physics_time));
+		a->x_angle_vel *= angle_mul;
+		a->y_angle_vel *= angle_mul;
 	}else{
 		a->x_vel = a->y_vel = a->z_vel = 0;
 	}

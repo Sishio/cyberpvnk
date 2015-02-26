@@ -24,15 +24,9 @@ static loop_t net_loop_code;
 extern loop_t server_loop_code;
 extern std::vector<array_t*> array_vector;
 
-static void net_check_and_apply_pingout(unsigned long int tmp_entry){
-	client_t *tmp = (client_t*)(array_vector[tmp_entry]->pointer);
+static void net_check_and_apply_pingout(client_t *tmp){
 	const long double current_time = get_time();
 	const long double pingout = 3; // timer is always in seconds
-	printf("last_update: %Lf\n", tmp->array.last_update);
-	printf("%Lf + 3\n", current_time);
-	if(tmp->array.last_update == 0){
-		return;
-	}
 	if(unlikely(tmp->array.last_update + pingout < current_time)){
 		delete (coord_t*)find_pointer(tmp->coord_id);
 		delete (model_t*)find_pointer(tmp->model_id);
@@ -57,13 +51,11 @@ static void net_client_join(std::string data){
 	if(likely(accept_client)){
 		last_client_net_run = get_time();
 		client_t *client_tmp = new client_t;
-		const long int old_id = client_tmp->connection_info_id;
 		net_ip_connection_info_t *tmp_net_ip = new net_ip_connection_info_t;
+		tmp_net_ip->array.parse_string_entry(data);
 		client_tmp->connection_info_id = tmp_net_ip->array.id;
 		client_tmp->model_id = (new model_t)->array.id;
 		client_tmp->coord_id = (new coord_t)->array.id;
-		tmp_net_ip->array.parse_string_entry(data);
-		tmp_net_ip->array.id = client_tmp->connection_info_id = old_id;
 		printf("tmp_net_ip id is '%d'\n", tmp_net_ip->array.id);
 		printf("tmp_net_ip.ip:%s\ttmp_net_ip.port: %d\n", tmp_net_ip->ip.c_str(), tmp_net_ip->port);
 		std::string return_packet = NET_JOIN + std::to_string(client_tmp->array.id);
@@ -79,19 +71,19 @@ static void net_read_data();
 
 void net_init(){
 	if(net_init_bool == false){
+		net_loop_code.name = "net loop code";
 		net_ip_connection_info_t *tmp_conn_info = new net_ip_connection_info_t;
 		tmp_conn_info->ip = "127.0.0.1";
 		tmp_conn_info->port = NET_SERVER_PORT;
 		net = new net_t(argc_, argv_, tmp_conn_info->array.id);
 		net_init_bool = true;
-		SET_BIT(&class_data_settings, CLASS_DATA_COORD_BIT, 1);
-		SET_BIT(&class_data_settings, CLASS_DATA_MODEL_BIT, 1);
-		SET_BIT(&class_data_settings, CLASS_DATA_CLIENT_BIT, 1);
-		loop_code.push_back(net_engine);
-		loop_add(&net_loop_code, net_read_data);
-		loop_add(&net_loop_code, net_pingout);
-		loop_add(&net_loop_code, net_send_data);
-		loop_add(&server_loop_code, net_engine);
+		SET_BIT(class_data_settings, CLASS_DATA_COORD_BIT, 1);
+		SET_BIT(class_data_settings, CLASS_DATA_MODEL_BIT, 1);
+		SET_BIT(class_data_settings, CLASS_DATA_CLIENT_BIT, 1);
+		loop_add(&net_loop_code, "net_read_data", net_read_data);
+		loop_add(&net_loop_code, "net_pingout", net_pingout);
+		loop_add(&net_loop_code, "net_send_data",  net_send_data);
+		loop_add(&server_loop_code, "net_engine",  net_engine);
 	}else{
 		printf("net_init has already been initalized, not re-running the initializer\n");
 	}
@@ -99,60 +91,69 @@ void net_init(){
 
 static void net_send_data(){
 	int what_to_update = INT_MAX;
-	SET_BIT(&what_to_update, ARRAY_INT_HASH_BIT, 1);
-	SET_BIT(&what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 1);
-	SET_BIT(&what_to_update, ARRAY_STRING_HASH_BIT, 1);
-	for(unsigned long int c = 0;c < array_vector.size();c++){
-		std::string gen_string = array_vector[c]->gen_updated_string(what_to_update);
-		for(unsigned long int i = 0;i < array_vector.size();i++){
-			if(unlikely(array_vector[i]->data_type == "client_t")){
-				client_t *tmp_client = (client_t*)(array_vector[i]->pointer);
-				net_ip_connection_info_t *tmp_net = (net_ip_connection_info_t*)find_pointer(tmp_client->connection_info_id);
-				if(find_pointer(tmp_client->connection_info_id) == nullptr){
-					printf("Could not find the client net_ip_connection_info class, not sending to said client\n");
-				}else{
-					net->write(gen_string, tmp_client->connection_info_id);
-					printf("sent data (ID: %d) to a client (IP: %s)\n", array_vector[c]->id, tmp_net->ip.c_str());
-				}
+        std::vector<void*> client_vector = all_pointers_of_type("client_t");
+	const unsigned long int client_vector_size = client_vector.size();
+	if(once_per_second){
+		const std::string reset_vector = wrap(ARRAY_FUNCTION_START, "reset_vector", ARRAY_FUNCTION_END);
+		for(unsigned long int i = 0;i < client_vector_size;i++){
+			net->write(reset_vector, ((client_t*)client_vector[i])->connection_info_id);
+		}
+	}
+	const unsigned long int array_vector_size = array_vector.size();
+	for(unsigned long int c = 0;c < array_vector_size;c++){
+		if(once_per_second == true){
+			SET_BIT(what_to_update, ARRAY_INT_HASH_BIT, 1);
+			SET_BIT(what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 1);
+			SET_BIT(what_to_update, ARRAY_STRING_HASH_BIT, 1);
+		}else{
+			array_vector[c]->updated(&what_to_update);
+		}
+		const std::string gen_string = array_vector[c]->gen_updated_string(what_to_update);
+		for(unsigned long int i = 0;i < client_vector_size;i++){
+			client_t *tmp_client = (client_t*)client_vector[i];
+			if(find_pointer(tmp_client->connection_info_id) == nullptr){
+				printf("Could not find the client net_ip_connection_info class, not sending to said client\n");
+			}else{
+				net->write(gen_string, tmp_client->connection_info_id);
 			}
 		}
 	}
-
 }
 
 static void net_read_data(){
 	std::string data = "";
+        std::vector<std::string> packets_gathered;
 	while((data = net->read()) != ""){
-		if(data.find_first_of(NET_JOIN) != std::string::npos){
-			net_client_join(data);
-		}else if(data.find_first_of(ARRAY_ITEM_SEPERATOR_START) != std::string::npos){
-			update_class_data(data, class_data_settings);
-		}else{
-			printf("Could not identify what this packet is, scraping it and moving forward\n");
+		packets_gathered.push_back(data);
+	}
+	const unsigned long int packets_gathered_size = packets_gathered.size();
+	for(unsigned long int i = 0;i < packets_gathered_size;i++){
+		if(packets_gathered[i].find_first_of(NET_JOIN) != std::string::npos){
+			net_client_join(packets_gathered[i]);
+		}else if(packets_gathered[i].find_first_of(ARRAY_ITEM_SEPERATOR_START) != std::string::npos){
+			update_class_data(packets_gathered[i], class_data_settings);
 		}
 	}
 }
 
 static void net_pingout(){
-	for(unsigned long int i = 0;i < array_vector.size();i++){
-		if(unlikely(array_vector[i]->data_type == "client_t")){
-			net_check_and_apply_pingout(i);
-		}
+	std::vector<void*> client_vector = all_pointers_of_type("client_t");
+	const unsigned long int client_vector_size = client_vector.size();
+	for(unsigned long int i = 0;i < client_vector_size;i++){
+		net_check_and_apply_pingout((client_t*)client_vector[i]);
 	}
 }
+
+int net_loop_settings = 0;
 
 void net_engine(){
 	net->loop();
-	int settings = 1;
-	loop_run(&net_loop_code, settings);
+	SET_BIT(net_loop_settings, LOOP_CODE_MT, 1);
+	loop_run(&net_loop_code, &net_loop_settings);
 }
 
 void net_close(){
-	for(unsigned long int i = 0;i < loop_code.size();i++){
-		if(loop_code[i] == net_engine){
-			loop_code[i] = nullptr;
-			loop_code.erase(loop_code.begin()+i);
-			break;
-		}
-	}
+	delete net;
+	net = nullptr;
+	loop_del(&server_loop_code, net_engine);
 }

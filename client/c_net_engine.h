@@ -21,6 +21,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define C_NET_ENGINE_H
 	#include "../client/c_main.h"
 	#include "../net/net_const.h"
+	extern net_t *net;
+	extern array_id_t host_info_id;
+	extern array_id_t self_info_id;
 	extern void net_init();
 	extern void net_engine();
 	extern void net_close();

@@ -16,8 +16,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "../class/class_main.h"
 #include "../render/render_main.h"
+#include "c_main.h"
 #ifndef C_RENDER_ENGINE
 	#define C_RENDER_ENGINE
+	extern render_t *render;
 	extern void render_init();
 	extern void render_engine();
 	extern void render_close();

@@ -33,24 +33,6 @@ std::string net_generate_ip_address(std::string prefix){
 	return data_str;
 }
 
-void net_write_array_vector(std::vector<std::vector<std::string>> a, int b, net_t *net){
-	const unsigned long int packet_id = gen_rand();
-	const unsigned long int a_size = a.size();
-	for(unsigned long int i = 0;i < a_size;i++){
-		const unsigned long int a_i_size = a[i].size();
-		for(unsigned long int n = 0;n < a_i_size;n++){
-			net->write(a[i][n], b, packet_id);
-		}
-	}
-}
-
-void net_loop(net_t* a){
-	while(true){
-		a->loop();
-		ms_sleep(1);
-	}
-}
-
 void net_t::blank(){
 }
 

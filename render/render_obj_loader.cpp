@@ -59,18 +59,36 @@ texcoord::texcoord(float a,float b){
 	u=a;
 	v=b;
 }
-int objloader_t::load(const char *filename, model_t *model){
-	std::ifstream in(filename);	//open the model file
-	if(!in.is_open()){
-		printf("Could not open the object file %s\n",filename);
-		return -1;
+
+static std::vector<std::string*> parse_model_file(model_t *model){
+	std::vector<std::string*> tmp;
+	unsigned long int last_place = 0;
+	const unsigned long int entire_object_file_size = model->entire_object_file.size();
+	while(entire_object_file_size > last_place){
+		const unsigned long int new_place = model->entire_object_file.find_first_of("\n");
+		const char *buf = model->entire_object_file.substr(last_place, new_place-last_place).c_str();
+		last_place = new_place;
+		tmp.push_back(new std::string(buf));
 	}
-	char buf[256];	//temp buffer
-	int curmat=0;	//the current (default) material is 0, it's used, when we read the faces
-	while(!in.eof()){
-		in.getline(buf,256);	//while we are not in the end of the file, read everything as a string to the coord vector
-		coord.push_back(new std::string(buf));
+	return tmp;
+}
+static std::vector<std::string> parse_material_file(model_t *model, int current_one){
+	std::vector<std::string> tmp;
+	unsigned long int last_place = 0;
+	const unsigned long int entire_object_file_size = model->entire_material_file[current_one].size();
+	while(entire_object_file_size > last_place){
+		const unsigned long int new_place = model->entire_material_file[current_one].find_first_of("\n");
+		const char *buf = model->entire_material_file[current_one].substr(last_place, new_place-last_place).c_str();
+		last_place = new_place;
+		tmp.push_back(buf);
 	}
+	return tmp;
+}
+
+int objloader_t::load(model_t *model){
+	unsigned long int material_pos = 0;
+	int curmat;
+	coord = parse_model_file(model);
 	for(unsigned long int i=0;i<(unsigned long int)coord.size();i++){	//and then go through all line and decide what kind of line it is
 		if((*coord[i])[0]=='#'){	//if it's a comment
 			continue;	//we don't have to do anything with it
@@ -119,25 +137,9 @@ int objloader_t::load(const char *filename, model_t *model){
 					break;
 				}
 			}
-		}
-		#ifndef SERVER
-		else if((*coord[i])[0]=='m' && (*coord[i])[1]=='t' && (*coord[i])[2]=='l' && (*coord[i])[3]=='l'){
-			char filen[200];
-			sscanf(coord[i]->c_str(),"mtllib %s",filen);	//read the filename
-			std::string filen_string = "../" + (std::string)filen;
-			std::ifstream mtlin(filen_string);	//open the file
-			if(!mtlin.is_open()){
-				printf("Cannot opent the material file '%s' for object '%s'\n",filen_string.c_str(), filename);
-				clean();
-				return -1;
-			}
-			ismaterial=true;	//we use materials
-			std::vector<std::string> tmp;//contain all of the line of the file
-			char c[200];
-			while(!mtlin.eof()){
-				mtlin.getline(c,200);	//read all lines to tmp
-				tmp.push_back(c);
-			}
+		}else if((*coord[i])[0]=='m' && (*coord[i])[1]=='t' && (*coord[i])[2]=='l' && (*coord[i])[3]=='l'){
+			ismaterial=true;
+			std::vector<std::string> tmp = parse_material_file(model, material_pos);
 			char name[200];	//name of the material
 			char filename_[200];	//filename of the texture
 			float amb[3] = {0},dif[3] = {0},spec[3] = {0},alpha = 0,ns = 0,ni = 0;	//colors, shininess, and something else
@@ -201,7 +203,6 @@ int objloader_t::load(const char *filename, model_t *model){
 			//but OpenGL use bottom left corner as 0,0, so I convert it
 			istexture=true;
 		}
-		#endif // SERVER
 	}
 	if(materials.size() == 0){	//if some reason the material file doesn't contain any material, we don't have material
 		ismaterial=false;
@@ -260,6 +261,37 @@ objloader_t::objloader_t(){
 
 void model_load(model_t *a, std::string file){
 	assert(a != nullptr || a != NULL);
-	objloader_t obj_loader;
-	obj_loader.load(file.c_str(), a);
+	bool loadable = false;
+	if(a->entire_object_file == ""){
+		if(file != ""){
+			std::ifstream in(file);
+			if(in.is_open()){
+				char data[512];
+				while(in.getline(data, 512)){
+					a->entire_object_file += (std::string)data + "\n";
+	                                std::string data_2;
+					std::stringstream ss;
+					ss << data;
+					ss >> data >> data_2;
+					if((std::string)data == (std::string)"mtllib"){
+						std::ifstream in_(data_2);
+						a->entire_material_file.push_back("");
+						const unsigned long int material_pos = a->entire_material_file.size()-1;
+						while(in_.getline(data, 512)){
+							a->entire_material_file[material_pos] += (std::string)data + "\n";
+						}
+					}
+				}
+			}
+			loadable = true;
+		}else{
+			loadable = false;
+		}
+	}else{
+		loadable = true;
+	}
+	if(likely(loadable)){
+		objloader_t obj_loader;
+		obj_loader.load(a);
+	}
 }

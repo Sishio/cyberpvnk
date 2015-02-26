@@ -21,10 +21,20 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../util/util_main.h"
 	#include "vector"
 	#include "thread"
-	struct loop_t{
-		std::vector<void(*)()> code;
+	#define LOOP_PRINT_THIS_TIME 1
+	struct loop_entry_t{
+		void(*code)();
+		std::string name;
 	};
-	extern void loop_add(loop_t*, void(*)());
-	extern void loop_run(loop_t*, int settings = 0);
+	struct loop_t{
+		loop_t();
+		long double target_rate;
+		long double average_rate;
+		std::string name;
+		std::vector<loop_entry_t> code;
+		int settings;
+	};
+	extern void loop_add(loop_t*, std::string, void(*)());
+	extern void loop_run(loop_t*, int*);
 	extern void loop_del(loop_t*, void(*)());
 #endif

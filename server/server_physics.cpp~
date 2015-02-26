@@ -1,145 +1,151 @@
+/*
+Czech_mate by Daniel
+This file is part of Czech_mate.
+
+Czech_mate is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License Version 2 as published by
+the Free Software Foundation, 
+
+Czech_mate is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
+*/
+#include "server_main.h"
 #include "server_physics.h"
 
-extern std::vector<coord_t*> coord;
-extern std::vector<coord_t*> coord_updated;
-extern std::vector<model_t*> model;
-extern std::vector<model_t*> model_updated;
+extern int scan_model_for_id(int);
+extern bool terminate;
+static void coord_physics_iteration(coord_t*);
+static long double once_per_second_time = 0;
+static bool once_per_second = false;
 
-static double physics_time = 0;
-static double old_time = 0;
+extern loop_t server_loop_code;
 
-static int coord_size;
-
-static void check_model(coord_t *a, model_t *b){
-	if(b == nullptr && a->model != nullptr){
-		b = a->model;
+static void once_per_second_update(){
+	if(unlikely(once_per_second_time > 1)){
+		while(once_per_second_time > 1){
+			printf("once_per_second_update(): my god this is slow\n");
+			once_per_second_time -= 1;
+		}
+		once_per_second = true;
+		printf("OPS code will run. OPS CLOCK: %Lf\n",once_per_second_time);
+	}else{
+		once_per_second = false;
 	}
 }
 
-static char model_overlap(double *a, double *b){
-	if(a[0] <= b[1]){
-		return 1;
-		if(a[1] >= b[0]){
-			return 2;
+static void apply_input(coord_t *a, int event){
+	const long double sin_y_rot = sin(a->y_angle);
+	//const long double sin_x_rot = sin(a->x_angle);
+	const long double cos_y_rot = cos(a->y_angle);
+	const long double cos_x_rot = cos(a->x_angle);
+	switch(event){
+	case INPUT_MOTION_FORWARD:
+		a->x_vel += sin_y_rot*cos_x_rot;
+		a->z_vel -= cos_y_rot*cos_x_rot;
+		break;
+	case INPUT_MOTION_BACKWARD:
+		a->x_vel -= sin_y_rot*cos_x_rot;
+		a->y_vel += cos_y_rot*cos_x_rot;
+		break;
+	case INPUT_MOTION_LEFT:
+		a->x_vel -= cos_y_rot;
+		a->z_vel -= sin_y_rot;
+		break;
+	case INPUT_MOTION_RIGHT:
+		a->x_vel += cos_y_rot;
+		a->z_vel += sin_y_rot;
+		break;
+	default:
+		break;
+	}
+}
+
+static void coord_physics_apply_input(coord_t *a, input_buffer_t *b, input_settings_t *input_settings = nullptr){
+	int search_integer = 0;
+	switch(b->type){
+	case INPUT_TYPE_KEYBOARD:
+		search_integer = b->int_data[INPUT_TYPE_KEYBOARD_CHAR];
+		break;
+	default:
+		break;
+	}
+	bool no_input_settings = false;
+	if(input_settings == nullptr){
+		no_input_settings = true;
+		input_settings = new input_settings_t;
+		printf("Warning: no input_settings provided, using the default values\n");
+		input_settings->int_data[0][0] = 'w';
+		input_settings->int_data[0][1] = INPUT_MOTION_FORWARD;
+		input_settings->int_data[1][0] = 'a';
+		input_settings->int_data[1][1] = INPUT_MOTION_LEFT;
+		input_settings->int_data[2][0] = 's';
+		input_settings->int_data[2][1] = INPUT_MOTION_BACKWARD;
+		input_settings->int_data[3][0] = 'd';
+		input_settings->int_data[3][1] = INPUT_MOTION_RIGHT;
+	}
+	for(unsigned long int i = 0;i < 64;i++){
+		if(input_settings->int_data[i][0] == search_integer){
+			apply_input(a, input_settings->int_data[i][1]);
+			break;
 		}
 	}
-	return 0;
-}
-
-//static double straight_velocity(coord_t *a){
-//	return sqrt((a->x_vel*a->x_vel) + (a->y_vel*a->y_vel));
-//}
-
-static void gravity(coord_t *a, model_t *b = nullptr){
-	check_model(a,b);
-	a->y_vel -= 9.81*physics_time;
-}
-
-static bool overlap(coord_t *a, coord_t *b){
-	double x[2] = {0},x_[2] = {0};
-	double y[2] = {0},y_[2] = {0};
-	double z[2] = {0},z_[2] = {0};
-	b->model->get_size(x,y,z);
-	x[0] += b->x;
-	x[1] += b->x;
-	y[0] += b->y;
-	y[1] += b->y;
-	z[0] += b->z;
-	z[1] += b->z;
-	a->model->get_size(x_,y_,z_);
-	x_[0] += a->x;
-	x_[1] += a->x;
-	y_[0] += a->y;
-	y_[1] += a->y;
-	z_[0] += a->z;
-	z_[1] += a->z;
-	if(model_overlap(x,x_) == 2){
-		if(model_overlap(y,y_) == 2){
-			if(model_overlap(z,z_) == 2){
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-static bool same_sign(double *a, double *b){
-	if(sign(a) != sign(b)){
-		return false;
-	}
-	return true;
-}
-
-static void interaction(coord_t *a, coord_t *b){
-	if(overlap(a,b)){
-		if(same_sign(&a->x_vel,&b->x_vel)){
-			if(a->x_vel > b->x_vel){
-				b->x_vel = a->x_vel;
-			}else{
-				a->x_vel = b->x_vel;
-			}
-		}else{
-			const double mul = 1+(.25*physics_time);
-			a->x_vel /= mul;
-			b->x_vel /= mul;
-		}
-		if(same_sign(&a->y_vel,&b->y_vel)){
-			if(a->y_vel > b->y_vel){
-				b->y_vel = a->y_vel;
-			}else{
-				a->y_vel = b->y_vel;
-			}
-		}else{
-			const double mul = 1+(.25*physics_time);
-			a->y_vel /= mul;
-			b->y_vel /= mul;
-		}
-		if(same_sign(&a->z_vel,&b->z_vel)){
-			if(a->z_vel > b->z_vel){
-				b->z_vel = a->z_vel;
-			}else{
-				a->z_vel = b->z_vel;
-			}
-		}else{
-			const double mul = 1+(.25*physics_time);
-			a->z_vel /= mul;
-			b->z_vel /= mul;
-		}
+	if(no_input_settings){
+		delete input_settings;
+		input_settings = nullptr;
 	}
 }
 
-static void sanity_check(coord_t *a){
-	if(a->mobile == false){
-		a->x_vel = a->y_vel = a->z_vel = 0;
+static void apply_all_input(){
+	std::vector<void*> tmp_input_buffer = all_pointers_of_type("input_buffer_t");
+	const unsigned long int tmp_input_buffer_size = tmp_input_buffer.size();
+	for(unsigned long int i = 0;i < tmp_input_buffer_size;i++){
+		client_t *tmp_client = (client_t*)find_pointer(((input_buffer_t*)tmp_input_buffer[i])->client_id);
+		if(tmp_client != nullptr){
+			coord_physics_apply_input((coord_t*)find_pointer(tmp_client->coord_id), (input_buffer_t*)tmp_input_buffer[i]);
+			delete (input_buffer_t*)tmp_input_buffer[i];
+		}
+		tmp_client = nullptr;
 	}
 }
 
-static void sanity_check_inner_loop(coord_t *a, coord_t *b){
-	if(a->array->id_match(b->array->id)){
-		coord_t **c = &a;
-		coord_t **d = &b;
-		if(c == d){
-			delete b;
-			b = nullptr;
-		}
-		c = nullptr;
-		d = nullptr;
-	}
+void physics_init(std::string gametype_load = "gametype/default"){
+	loop_add(&server_loop_code, physics_engine);
+	new gametype_t(gametype_load);
+}
+
+void physics_close(){
+	loop_del(&server_loop_code, physics_engine);
 }
 
 void physics_engine(){
-	double new_time = get_time();
-	physics_time = new_time-old_time;
-	old_time = new_time;
-	coord_size = coord.size();
-	for(int i = 0;i < coord_size;i++){
-		coord_t *a = coord[i];
-		gravity(a);
-		for(int n = i+1;n < coord_size;n++){
-			interaction(a,coord[n]); // with other objects
-			sanity_check_inner_loop(a,coord[n]);
-		}
-		sanity_check(a);
-		a = nullptr;
+	once_per_second_update();
+	apply_all_input();
+	std::vector<void*> coord_buffer = all_pointers_of_type("coord_t");;
+	for(unsigned long int i = 0;i < coord_buffer.size();i++){
+		coord_physics_iteration((coord_t*)coord_buffer[i]);
+	}
+}
+
+static void coord_physics_iteration(coord_t *a){
+	term_if_true(a == nullptr,(char*)"coord_physics_iteration a is NULL/nullptr\n");
+	const long double time = get_time();
+	a->physics_time = time-(a->old_time);
+	a->old_time = time;
+	if(a->mobile){
+		a->x += a->x_vel*a->physics_time;
+		a->y_vel += GRAVITY_RATE*a->physics_time;
+		a->y += a->y_vel*a->physics_time;
+		a->z += a->z_vel*a->physics_time;
+		const long double mul = 1/(1+(.9*a->physics_time));
+		a->x_vel *= mul;
+		a->y_vel *= mul;
+		a->z_vel *= mul;
+	}else{
+		a->x_vel = a->y_vel = a->z_vel = 0;
 	}
 }

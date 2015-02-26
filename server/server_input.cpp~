@@ -1,0 +1,13 @@
+#include "server_input.h"
+
+static input_t *input = nullptr;
+
+void input_init(){
+  input = new input_t(argc_, argv_);
+}
+
+void input_engine(){
+}
+
+void input_close(){
+}

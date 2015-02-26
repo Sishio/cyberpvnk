@@ -41,8 +41,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define UTIL_SHELL_DELETE 0
 	#define UTIL_TIME_MILLISECOND 0
 	#define UTIL_TIME_SECOND 1
-	#define CHECK_BIT(var, pos, val) (var & (val << pos))
-	#define SET_BIT(var, pos, val) ((*var) |= ((val) << (pos)))
+	#define CHECK_BIT(var, pos) ((var & ( 1 << pos )) >> pos)
+	#define SET_BIT(var,pos,val) (var ^= (-val ^ var) & (1 << pos))
+	#define FLIP_BIT(var, pos) (var ^= (1 << pos))	
 	struct sort_t{
 		void *pointer;
 		int value;
@@ -57,29 +58,22 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void end_timer();
 		long double get_time(int);
 	};
+	extern void update_progress_bar(long double);
+	extern bool once_per_second;
+	extern void once_per_second_update();
 	extern std::string wrap(char *start, std::string data, char *end);
 	extern std::vector<std::string> pull_items_data(char*, std::string, char*);
-	extern int util_shell(int,char*);
+	extern int util_shell(int, std::string);
 	extern void ms_sleep(long double);
 	extern unsigned long int gen_rand(unsigned int a = UINT_MAX);
 	extern short int term_if_true(bool, char*);
 	extern short int warn_if_true(bool, char*);
-	extern bool long_double_cmp(long double a,long double b,long double degree_of_error = (long double)0.001);
 	extern bool probably_equal(int,int);
 	extern long double get_time();
 	extern bool sign(long double*);
-	extern int encrypt(int);
-	extern int encrypt(int*,int); // I don't think this will ever be needed
-	extern int encrypt(std::vector<int>);
-	extern int encrypt(std::vector<int*>);
-	extern int encrypt(std::vector<double>);
-	extern int encrypt(std::vector<double*>);
-	extern int encrypt(std::vector<long double>);
-	extern int encrypt(std::vector<long double*>);
-	extern int encrypt(std::vector<std::string>);
-	extern int encrypt(std::vector<std::string*>);
 	extern bool check_for_parameter(const std::string, int, char**);
 	extern void switch_values(void*, void*);
 	extern void switch_values(void**, void**);
 	extern void sorting_algorithm(std::vector<void*>, int);
+	extern void sanatize_input(std::string*);
 #endif

@@ -22,6 +22,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../class/class_main.h"
 	#include "../class/class_array.h"
 	#include "../util/util_main.h"
+	#include "../input/input_main.h"
+	#include "../render/render_main.h"
 	#include "sstream"
 	#include "fstream"
 	#include "string"
@@ -42,5 +44,5 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern std::vector<coord_t*> coord;
 	extern std::vector<model_extra_t> model_extra;
 	extern std::vector<model_t*> model;
-	extern std::vector<void(*)()> loop_code;
+	extern int loop_settings;
 #endif

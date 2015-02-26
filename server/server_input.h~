@@ -1,0 +1,9 @@
+#ifndef SERVER_INPUT_H
+	#define SERVER_INPUT_H
+	#include "cstdio"
+	#include "iostream"
+	#include "../input/input_main.h"
+extern void input_engine_init();
+extern void input_engine_loop();
+extern void input_engine_close();
+#endif

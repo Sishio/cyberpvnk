@@ -33,7 +33,7 @@
 	public:
 		objloader_t();	
 		~objloader_t();	//free the textures and lists
-		int load(const char*  filename, model_t *model);	//the main model load function
+		int load(model_t *model);	//the main model load function
 	};
-	void model_load(model_t*, std::string);
+	void model_load(model_t* a, std::string file = "");
 #endif

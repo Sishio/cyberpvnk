@@ -1,24 +1,108 @@
 #include "net_ip.h"
 
-int net_ip_t::init(int argc, char** argv, int tmp_conn_id){
-	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_pointer(tmp_conn_id);
-	assert(tmp_conn != nullptr);
-	connection_info_id = tmp_conn_id;
-	SDLNet_Init();
-	if(!(outbound = SDLNet_UDP_Open(0))){
-		printf("Could not open the outbound port\n");
-	}else{
-		printf("Opened the outbound socket\n");
-	}
-	if(tmp_conn->port != 0){
-		if(!(inbound = SDLNet_UDP_Open(tmp_conn->port))){
-			printf("Could not open the inbound port\n");
+std::string pull_global_ip_address(){
+	std::string return_value;
+	#ifdef __linux
+		system("wget http://checkip.dyndns.org/ -o ip.file");
+		std::ifstream in("ip.file");
+		if(in.is_open() == false){
+			printf("Could not parse the IP file\n");
 		}else{
-			printf("Opened the inbound socket\n");
+			char data[512];
+			in.getline(data, 511);
+			return_value = return_value.substr(return_value.find_first_of(":") + 2, return_value.find_first_of("</body>")-return_value.find_first_of(":")-2);
 		}
-	}else{
-		printf("The tmp_conn port is zero, this should not happen\n");
+	#else
+		printf("Global IP pulling is a Linux only thing right now.\n");
+	#endif
+	if(return_value == ""){
+		printf("Insert the GLOBAL IP address: ");
+		char data[512];
+		scanf("%s\n", data);
+		return_value = data;
 	}
+	printf("Global IP address is %s\n", return_value.c_str());
+	return return_value;
+}
+
+static std::string parse_ifconfig_line_for_ip_address(std::string tmp){
+	std::string return_value;
+	if(tmp.find_first_of("inet addr: ") != std::string::npos){
+		const unsigned long int start_point = tmp.find_first_of("inet addr: ")+11;
+		std::string tmp_2 = tmp;
+		tmp_2.substr(start_point, 512);
+		const unsigned long int size = tmp.find_first_of(" ")-1;
+		return_value = tmp.substr(start_point, size);
+	}
+	return return_value;
+}
+
+std::string pull_local_ip_address(std::string local_ip){
+	std::string return_value = "";
+	#ifdef __linux
+		system("ifconfig > ifconfig.file");
+		std::ifstream in("ifconfig.file");
+		if(in.is_open() == false){
+			printf("Could not parse the IP file\n");
+		}else{
+			char data[512];
+			while(in.getline(data, 512) && return_value == ""){
+				std::string tmp = parse_ifconfig_line_for_ip_address(data);
+				if(tmp != ""){
+					if(local_ip == ""){
+						if(tmp.find_first_of(local_ip.substr(0,local_ip.find_first_of("."))) != std::string::npos){
+							return_value = tmp;
+						}
+					}else{
+						return_value = tmp;
+					}
+				}
+			}
+		}
+	#else
+		printf("Local IP pulling is a Linux only thing right now.\n");
+	#endif
+	if(return_value == ""){
+		char data_tmp[512];
+		printf("Insert the LOCAL IP address: ");
+		scanf("%s\n", data_tmp);
+		return_value = data_tmp;
+	}
+	printf("Local IP address if %s\n", return_value.c_str());
+	return return_value;
+}
+
+std::string net_gen_ip_address(std::string host_ip){
+	std::string return_value;
+	std::string first_segment = host_ip.substr(0, host_ip.find_first_of("."));
+	printf("first_segment: %s\n", first_segment.c_str());
+	if(first_segment == "192" || first_segment == "10"){
+		return_value = pull_local_ip_address(host_ip);
+	}else if(first_segment == "127"){
+		return_value = "127.0.0.1";
+	}else{
+		return_value = pull_global_ip_address();
+	}
+	return return_value;
+}
+
+void net_ip_t::update_outbound_port(array_id_t new_net_id){
+	delete outbound;
+	outbound = new udp_socket_t(new_net_id);
+}
+
+void net_ip_t::update_inbound_port(array_id_t new_net_id){
+	delete inbound;
+	inbound = new udp_socket_t(new_net_id);
+}
+
+int net_ip_t::init(int argc, char** argv, int tmp_conn_id){
+	SDLNet_Init();
+	net_ip_connection_info_t *tmp_conn_2 = new net_ip_connection_info_t;
+	tmp_conn_2->port = 0;
+	tmp_conn_2->ip = "127.0.0.1";
+	outbound = new udp_socket_t(tmp_conn_2->array.id);
+	inbound = new udp_socket_t(tmp_conn_id);
 	outbound_packet = SDLNet_AllocPacket(512);
 	inbound_packet = SDLNet_AllocPacket(512);
 	return 0;
@@ -32,8 +116,7 @@ std::string net_ip_t::read(std::string search){
 		if(read_buffer[i].finished() && (search == "" || read_buffer[i].gen_string().find_first_of(search) != std::string::npos)){
 			return_value = read_buffer[i].gen_string();
 			read_buffer.erase(read_buffer.begin()+i);
-			read_buffer_lock.unlock();
-			return return_value;
+			break;
 		}
 	}
 	read_buffer_lock.unlock();
@@ -48,7 +131,7 @@ void net_ip_t::write(std::string data, int b, unsigned long int packet_id){
 }
 
 std::string net_ip_t::receive_now(){
-	if(SDLNet_UDP_Recv(inbound,inbound_packet)){
+	if(SDLNet_UDP_Recv(inbound->socket,inbound_packet)){
 		return (char*)inbound_packet->data;
 	}
 	return "";
@@ -64,8 +147,6 @@ int net_ip_t::send_now(net_ip_write_buffer_t *data){
 	}
 	unsigned long int position = 0;
 	if(tmp_conn != nullptr){
-		//printf("Destination IP: %s\n", tmp_conn->ip.c_str());
-		//printf("Destination Port: %d\n", tmp_conn->port);
 		std::vector<std::string> raw_packets;
 		std::string data_prefix = wrap(NET_PACKET_ID_START, std::to_string(data->packet_id), NET_PACKET_ID_END);
 		if(data->data.size() > NET_MTU-NET_MTU_OVERHEAD){
@@ -91,16 +172,16 @@ int net_ip_t::send_now(net_ip_write_buffer_t *data){
 		raw_packets[0] = NET_PACKET_START + raw_packets[0];
 		raw_packets[raw_packets_size-1] += NET_PACKET_END;
 		IPaddress IP;
-		SDLNet_ResolveHost(&IP, tmp_conn->ip.c_str(), tmp_conn->port);
+		SDLNet_ResolveHost(&IP, tmp_conn->ip.c_str(), (unsigned short int)tmp_conn->port);
 		outbound_packet->address.host = IP.host;
 		outbound_packet->address.port = IP.port;
 		unsigned long int total_byte_size = 0;
 		const unsigned long int max_total_sent_byte = 8*KILOBYTE_TO_BYTE;
 		for(unsigned long int i = 0;i < raw_packets_size;i++){
 			unsigned char* outbound_data = (unsigned char *)raw_packets[i].c_str();
-			outbound_packet->len = raw_packets[i].size()+1;
+			outbound_packet->len = (int)(raw_packets[i].size()+1);
 			outbound_packet->data = outbound_data;
-			SDLNet_UDP_Send(outbound, -1, outbound_packet);
+			SDLNet_UDP_Send(outbound->socket, -1, outbound_packet);
 			total_byte_size += outbound_packet->len;
 			if(unlikely(total_byte_size > max_total_sent_byte)){
 				// no packet loss if the client is sending data to itself
@@ -129,27 +210,33 @@ void net_ip_t::loop_send(){
 bool net_ip_t::receive_check_read_array(std::string a, unsigned long int packet_id){
 	const unsigned long int read_buffer_size = read_buffer.size();
 	read_buffer_lock.lock();
+	bool return_value = false;
 	for(unsigned long int i = 0;i < read_buffer_size;i++){
 		if(read_buffer[i].packet_id == packet_id){
+			return_value = true;
 			read_buffer[i].parse_packet_segment(a);
-			return true;
+			break;
 		}
 	}
-	net_ip_read_buffer_t tmp_read(packet_id);
-	tmp_read.parse_packet_segment(a);
-	read_buffer.push_back(tmp_read);
+	if(return_value == false){
+		net_ip_read_buffer_t tmp_read((int)packet_id);
+		tmp_read.parse_packet_segment(a);
+		read_buffer.push_back(tmp_read);
+	}
 	read_buffer_lock.unlock();
-	return true;
+	return return_value;
 }
 
 void net_ip_t::loop_receive(){
 	std::string inbound_packet_string;
-	while((inbound_packet_string = receive_now()) != ""){
-		const unsigned long int start = inbound_packet_string.find_first_of(NET_PACKET_ID_START);
-		const unsigned long int end = inbound_packet_string.find_first_of(NET_PACKET_ID_END);
-		const std::string tmp_packet_id = inbound_packet_string.substr(start+1,end-start-1);
-		const unsigned long int packet_id = atoi(tmp_packet_id.c_str());
-		receive_check_read_array(inbound_packet_string, packet_id);
+	for(unsigned long int i = 0;i < 512;i++){
+		if((inbound_packet_string = receive_now()) != ""){
+			const unsigned long int start = inbound_packet_string.find_first_of(NET_PACKET_ID_START);
+			const unsigned long int end = inbound_packet_string.find_first_of(NET_PACKET_ID_END);
+			const std::string tmp_packet_id = inbound_packet_string.substr(start+1,end-start-1);
+			const unsigned long int packet_id = atoi(tmp_packet_id.c_str());
+			receive_check_read_array(inbound_packet_string, packet_id);
+		}
 	}
 }
 
@@ -159,25 +246,15 @@ void net_ip_t::loop(){
 }
 
 void net_ip_t::close(){
-	SDLNet_UDP_Close(inbound);
+	delete inbound;
+	delete outbound;
 	SDLNet_FreePacket(inbound_packet);
-	SDLNet_UDP_Close(outbound);
 	outbound_packet->data = NULL;
 	SDLNet_FreePacket(outbound_packet);
 	SDLNet_Quit();
 }
 
-int net_ip_t::loop_receive_mt(){
-	while(terminate == false) loop_receive();
-	return 0;
-}
-
-int net_ip_t::loop_send_mt(){
-	while(terminate == false) loop_send();
-	return 0;
-}
-
-net_ip_write_buffer_t::net_ip_write_buffer_t(std::string a, unsigned long int b, int c){
+net_ip_write_buffer_t::net_ip_write_buffer_t(std::string a, net_packet_id b, int c){
 	data = a;
 	packet_id = b;
 	connection_info_id = c;
@@ -195,7 +272,7 @@ std::vector<std::string> net_ip_write_buffer_t::gen_string_vector(){
 }
 
 
-net_ip_read_buffer_t::net_ip_read_buffer_t(int id){
+net_ip_read_buffer_t::net_ip_read_buffer_t(net_packet_id id){
 	packet_id = id;
 }
 
@@ -246,4 +323,18 @@ std::string net_ip_read_buffer_t::gen_string(){
 		return_value += tmp_value;
 	}
 	return return_value;
+}
+
+udp_socket_t::udp_socket_t(int tmp_connection_info_id){
+	connection_info_id = tmp_connection_info_id;
+	socket = SDLNet_UDP_Open(((net_ip_connection_info_t*)find_pointer(connection_info_id))->port);
+	if(unlikely(!socket)){
+		printf("Socket will not open\n");
+	}
+}
+
+udp_socket_t::~udp_socket_t(){
+	if(likely(!socket)){
+		SDLNet_UDP_Close(socket);
+	}
 }

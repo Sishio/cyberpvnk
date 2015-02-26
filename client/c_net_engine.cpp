@@ -19,9 +19,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 extern bool once_per_second;
 extern bool terminate;
 
-int host_info_id = 0;
-int self_info_id = 0;
-extern int self_id;
+array_id_t host_info_id = 0;
+array_id_t self_info_id = 0;
+extern array_id_t self_id;
 
 extern int argc_;
 extern char **argv_;
@@ -30,11 +30,35 @@ net_t *net = nullptr;
 
 static loop_t net_loop_mt;
 
+static void net_execute_function(std::string a){
+	if(a == "reset_vector"){
+		printf("resetting the vector\n");
+		for(unsigned long int i = 0;i < array_vector.size();i++){
+			const std::string type = array_vector[i]->data_type;
+			void* void_ptr = array_vector[i]->pointer;
+			if(type == "coord_t"){
+				delete (coord_t*)void_ptr;
+			}else if(type == "model_t"){
+				delete (model_t*)void_ptr;
+			}else if(type == "input_buffer_t"){
+				delete (input_buffer_t*)void_ptr;
+			}else if(type == "input_setings_t"){
+				delete (input_settings_t*)void_ptr;
+			}else if(type == "client_t" && self_id != array_vector[i]->id){
+				delete (client_t*)void_ptr;
+			}
+			void_ptr = nullptr;
+		}
+	}else{
+		printf("unknown net_execute_funciton was received: %s\n", a.c_str());
+	}
+}
+
 static void net_engine_parse(std::string a){
 	if(a.find_first_of(ARRAY_TYPE_SEPERATOR_START) != std::string::npos){
 		update_class_data(a, CLASS_DATA_UPDATE_EVERYTHING);
-	}else{
-		printf("Unknown data was received:%s\n", a.c_str());
+	}else if(a.find_first_of(ARRAY_FUNCTION_START) != std::string::npos){
+		net_execute_function(a.substr(a.find_first_of(ARRAY_FUNCTION_START)+1, a.find_first_of(ARRAY_FUNCTION_END)-a.find_first_of(ARRAY_FUNCTION_START)-1));
 	}
 }
 
@@ -45,25 +69,18 @@ static void net_engine_parse(std::string a){
 //	return tmp;
 //}
 
-void net_module_loop(){
+static void net_module_loop(){
 	net->loop();
 }
 
-static void net_connect(int host_info_id){
-	assert(find_pointer(self_id) != nullptr);
-	client_t *tmp_client = (client_t*)find_pointer(self_id);
-	assert(tmp_client != nullptr);
-	net_ip_connection_info_t net_conn_info;
-	net_conn_info.ip = "127.0.0.1";
-	net_conn_info.port = NET_CLIENT_PORT;
-	std::string packet = net_conn_info.array.gen_updated_string(INT_MAX);
-	packet += NET_JOIN;
-	printf("Sending packet '%s'\n",packet.c_str());
-	net->write(packet, host_info_id);
-	std::string connecting_packet;
+static void net_connect(int host_info_id_){
+	std::string packet = ((net_ip_connection_info_t*)find_pointer(self_info_id))->array.gen_updated_string(INT_MAX) + NET_JOIN;
+	net->write(packet, host_info_id_);
 	bool connection_established = false;
 	while(connection_established == false){
 		net->loop();
+		printf("Waiting for the reply packet\n");
+                std::string connecting_packet;
 		if((connecting_packet = net->read(NET_JOIN)) != ""){
 			printf("Received '%s' from the server\n", connecting_packet.c_str());
 			connecting_packet.erase(connecting_packet.begin()+connecting_packet.find_first_of(NET_JOIN));
@@ -88,27 +105,33 @@ static void net_send_engine(){
 	client_t *client_tmp = (client_t*)find_pointer(self_id);
 	if(client_tmp == nullptr){
 		printf("I don't have a pointer to myself yet, cannot send the server any update packet. This is bad\n");
-		return;
+	}else{
+		int what_to_update;
+		if(likely(once_per_second == false)){
+			client_tmp->array.updated(&what_to_update);
+		}else{
+			what_to_update = INT_MIN;
+		}
+		// guarantees that data will be sent. if no data is sent after a while, the server pings us out.
+		// terrible architecture, I need to fix it
+		std::string data = client_tmp->array.gen_updated_string(what_to_update);
+		net->write(data.c_str(), host_info_id);
 	}
-	int what_to_update = INT_MIN;
-	std::string data = client_tmp->array.gen_updated_string(what_to_update);
-	net->write(data.c_str(), host_info_id);
 }
 
 void net_init(){
-	loop_add(&net_loop_mt, net_module_loop);
-	loop_add(&net_loop_mt, net_receive_engine);
-	loop_add(&net_loop_mt, net_send_engine);
-	loop_add(&loop, net_engine);
+	loop_add(&net_loop_mt, "net_module_loop", net_module_loop);
+	loop_add(&net_loop_mt, "net_receive_engine", net_receive_engine);
+	loop_add(&net_loop_mt, "net_send_engine", net_send_engine);
+	loop_add(&loop, "net_engine", net_engine);
 	net_ip_connection_info_t *self_info = new net_ip_connection_info_t;
 	net_ip_connection_info_t *host_info = new net_ip_connection_info_t;
 	host_info_id = host_info->array.id;
 	self_info_id = self_info->array.id;
-	host_info->ip = "127.0.0.1";
+	host_info->ip = "127.0.0.1"; // don't delete the host
 	self_info->ip = "127.0.0.1";
 	host_info->port = NET_SERVER_PORT;
 	self_info->port = NET_CLIENT_PORT;
-	net = new net_t(argc_, argv_, self_info->array.id);
 	for(int i = 0;i < argc_;i++){
 		std::string next_item;
 		if(i+1 < argc_){
@@ -129,15 +152,22 @@ void net_init(){
 				self_info->port = atoi(next_item.c_str());
 			}
 		}
+		if(next_item == ""){
+			printf("There is no next object\n");
+		}
 	}
+	self_info->ip = net_gen_ip_address(host_info->ip);
+	net = new net_t(argc_, argv_, self_info->array.id);
 	net_connect(host_info_id);
 }
 
 void net_engine(){
-	loop_run(&net_loop_mt, 1); // the first bit is the only one that is changed
+	loop_run(&net_loop_mt, 0); // 0: no multithreading, 1: multithreading
 }
 
 void net_close(){
+	delete net;
+	net = nullptr;
 	loop_del(&net_loop_mt, net_module_loop);
 	loop_del(&net_loop_mt, net_send_engine);
 	loop_del(&net_loop_mt, net_receive_engine);

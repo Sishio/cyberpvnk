@@ -83,10 +83,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void blank();
 		render_t(int,char**);
 		int loop(coord_t*);
-		int write_to_buffer(render_buffer_t*);
 		void close();
 	};
 	extern render_rules_t *render_rules_blank;
-	extern render_buffer_t *render_buffer_blank;
 	extern int render_generate_shape(int);
 #endif

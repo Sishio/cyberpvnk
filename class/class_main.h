@@ -51,7 +51,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define INPUT_TYPE_MOUSE_SCROLL 3
 		#define INPUT_TYPE_MOUSE_SCROLL_UP 0
 		#define INPUT_TYPE_MOUSE_SCROLL_DOWN 1
-
 	#define INPUT_MOTION_FORWARD 0
 	#define INPUT_MOTION_BACKWARD 1
 	#define INPUT_MOTION_LEFT 2
@@ -99,7 +98,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	class input_buffer_t{
 	public:
 		array_t array;
-		int client_id;
+		array_id_t client_id;
 		int type;
 		int int_data[8];
 		input_buffer_t(bool add_to_array_vector = true);
@@ -142,6 +141,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	private:
 		void load_parse_vector(std::string);
 	public:
+		std::string entire_object_file; // useful since we cannot network vectors yet
+		std::vector<std::string> entire_material_file;
 		array_t array;
 		std::vector<std::string*> coord;
 		std::vector<coordinate*> vertex;
@@ -163,7 +164,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	public:
 		array_t array;
 		long double x,y,z,x_angle,y_angle;
-		long double x_vel,y_vel,z_vel;
+		long double x_vel,y_vel,z_vel,x_angle_vel,y_angle_vel;
 		long double physics_time;
 		long double old_time;
 		bool mobile;
@@ -174,27 +175,27 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void set_y_angle(bool,long double);
 		~coord_t();
 		std::vector<unsigned long int> nearby_coord;
-		int model_id;
+		array_id_t model_id;
 	};
 	class client_t{
 	public:
 		array_t array;
-		int coord_id;
-		int model_id;
-		int connection_info_id;
+		array_id_t coord_id;
+		array_id_t model_id;
+		array_id_t connection_info_id;
 		client_t(bool add_to_array_vector = true);
 		~client_t();
 		void update_array();
 	};
-	class render_buffer_t{
-	public:
-		render_buffer_t(bool add_to_array_vector = true);
-		~render_buffer_t();
-		array_t array;
-		int model_id;
-		int coord_id;
-	};
-	#include "../input/input_main.h"
+//class render_buffer_t{
+//	public:
+//		render_buffer_t(bool add_to_array_vector = true);
+//		~render_buffer_t();
+//		array_t array;
+//		array_id_t model_id;
+//		array_id_t coord_id;
+//	};
+//#include "../input/input_main.h"
 	class client_extra_t{
 	public:
 		std::vector<input_buffer_t> input_buffer;

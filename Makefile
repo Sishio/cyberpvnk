@@ -13,13 +13,13 @@ client_delete:
 	touch bin/client.$(shell uname -m)
 	rm -r bin/client.$(shell uname -m)
 
-server: server_delete class net thread math util render loop server_delete
+server: server_delete class net input thread math util render loop server_delete
 	$(CC) -c $(CFLAGS) server/server_main.cpp -o server/obj/server_main.o
 	$(CC) -c $(CFLAGS) server/server_physics.cpp -o server/obj/server_physics.o
 	$(CC) -c $(CFLAGS) server/server_net.cpp -o server/obj/server_net.o
-	$(CC) -c $(CFLAGS) server/server_render.cpp -o server/obj/server_render.o
-	ld -r server/obj/server_main.o server/obj/server_render.o  server/obj/server_physics.o server/obj/server_net.o -o server/obj/server.o
-	$(CC) $(CFLAGS) loop/obj/loop.o render/obj/render.o math/obj/math.o class/obj/class.o net/obj/net.o thread/obj/thread.o util/obj/util.o server/obj/server.o -o bin/server.$(shell uname -m) $(LINKER)
+	$(CC) -c $(CFLAGS) server/server_console.cpp -o server/obj/server_console.o
+	ld -r server/obj/server_console.o server/obj/server_main.o server/obj/server_physics.o server/obj/server_net.o -o server/obj/server.o
+	$(CC) $(CFLAGS) loop/obj/loop.o input/obj/input.o render/obj/render.o math/obj/math.o class/obj/class.o net/obj/net.o thread/obj/thread.o util/obj/util.o server/obj/server.o -o bin/server.$(shell uname -m) $(LINKER)
 
 loop:
 	$(CC) -c $(CFLAGS) loop/loop_main.cpp -o loop/obj/loop.o

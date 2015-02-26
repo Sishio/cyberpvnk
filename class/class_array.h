@@ -39,8 +39,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		#define ARRAY_ID_END				(char*)"\x0c"
 		#define ARRAY_STARTING_START			(char*)"\x0d"
 		#define ARRAY_STARTING_END			(char*)"\x0e"
+		#define ARRAY_FUNCTION_START			(char*)"\x0f"
+		#define ARRAY_FUNCTION_END			(char*)"\x10"
 	#else
-		// don't use this unless you can debug without using strings
 		#define ARRAY_ITEM_SEPERATOR_START		(char*)"A"
 		#define ARRAY_ITEM_SEPERATOR_END		(char*)"B"
 		#define ARRAY_TYPE_SEPERATOR_START		(char*)"C"
@@ -55,12 +56,15 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		#define ARRAY_ID_END				(char*)"L"
 		#define ARRAY_STARTING_START			(char*)"M"
 		#define ARRAY_STARTING_END			(char*)"N"
+		#define ARRAY_FUNCTION_START			(char*)"O"
+		#define ARRAY_FUNCTION_END			(char*)"P"
 	#endif
 	#define ARRAY_STRING_HASH_BIT		0
 	#define ARRAY_LONG_DOUBLE_HASH_BIT	1
 	#define ARRAY_INT_HASH_BIT		2
 	// used by the server to tell it what data it is allowed to modify because the clients can send fraud packets and allowing all of the packets would allow cheating
 	// the networking code reserves 24-32 (packet seperators for serial connections among other things)
+	typedef int array_id_t;
 	class array_t{
 	private:
 		void parse_int_from_string(std::string);
@@ -72,11 +76,12 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		long int string_hash;
 		long int long_double_hash;
 	public:
+		std::mutex int_lock, long_double_lock, string_lock;
 		void update_pointers();
 		void* pointer;
 		std::string data_type;
 		long double last_update;
-		int id;
+		array_id_t id;
 		std::vector<int*> int_array;
 		std::vector<long double*> long_double_array;
 		std::vector<std::string*> string_array;
@@ -86,20 +91,25 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::string gen_string_string();
 		array_t(void*, bool add); // TODO: put data_type in the initializer
 		~array_t();
-		bool id_match(int);
+		bool id_match(array_id_t);
 		void parse_string_entry(std::string);
 		bool updated(int*);
+		std::string print();
 	};
 	//extern std::vector<array_t*> array_vector;
-	extern long int array_scan_for_id(long int);
+	extern array_id_t array_scan_for_id(array_id_t);
 	extern void add_two_arrays(array_t*, array_t*);
 	extern void update_class_data(std::string, int);
 	extern void add_array_to_vector(array_t*);
 	extern void delete_array_from_vector(array_t*);
-	extern void delete_array_id(int);
-	extern void* find_pointer(int, std::string type = "");
+	extern void delete_array_id(array_id_t);
+	extern void* find_pointer(array_id_t, std::string type = "");
+	extern array_t* find_array_pointer(int);
 	extern void delete_all_data();
+	extern void delete_array_and_pointer(array_t*);
+	extern array_id_t array_highest_id();
 	extern std::vector<array_t*> array_vector;
 	extern std::vector<void*> all_entries_of_type(std::string);
 	extern std::vector<void*> all_pointers_of_type(std::string);
+	extern std::mutex array_lock;
 #endif

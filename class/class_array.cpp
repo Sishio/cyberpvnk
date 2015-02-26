@@ -19,24 +19,22 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 
 //#define CLASS_DEBUG_OUTPUT 1
 
-long int array_scan_for_id(int); // IDs cannot be sent over the internet if they are any type other than long double, string, or int
-
 std::vector<array_t*> array_vector;
+std::mutex array_lock;
 
-long int array_scan_for_id(long int id){
-	const unsigned int array_vector_size = array_vector.size();
-	for(unsigned int i = 0;i < array_vector_size;i++){
-		if(unlikely(array_vector[i]->id == id)){
-			return i;
-		}
-	}
-	return -1;
+static array_id_t pull_id(std::string a){
+	int return_value;
+	const unsigned long int start = a.find_first_of(ARRAY_ID_START);
+	const unsigned long int end = a.find_first_of(ARRAY_ID_END);
+	std::string id_string = a.substr(start+1, end-start-1).c_str();
+	return_value = atoi(id_string.c_str());
+	return return_value;
 }
 
-long int array_highest_id(){
-	long int id = 0;
-	const unsigned int array_vector_size = array_vector.size();
-	for(unsigned int i = 0;i < array_vector_size;i++){
+array_id_t array_highest_id(){
+	array_id_t id = 0;
+	const unsigned long int array_vector_size = array_vector.size();
+	for(unsigned long int i = 0;i < array_vector_size;i++){
 		if(likely(array_vector[i]->id > id)){
 			id = array_vector[i]->id;
 		}
@@ -46,18 +44,20 @@ long int array_highest_id(){
 
 array_t::array_t(void* tmp_pointer, bool add_array_to_vector){
 	pointer = tmp_pointer;
-	id = gen_rand();
-	if(id == -1){
-		id = gen_rand();
+	id = (array_id_t)gen_rand();
+	if(id == 0){
+		id = (array_id_t)gen_rand();
 	}
 	update_pointers();
 	if(add_array_to_vector){
+		array_lock.lock();
 		array_vector.push_back(this);
+		array_lock.unlock();
 	}
 	last_update = get_time();
 }
 
-bool array_t::id_match(int a){
+bool array_t::id_match(array_id_t a){
 	return id == a;
 }
 
@@ -88,16 +88,16 @@ void array_t::parse_string_entry(std::string tmp_string){
 
 std::string array_t::gen_updated_string(int what_to_update){
 	std::string return_value = wrap(ARRAY_TYPE_SEPERATOR_START, data_type, ARRAY_TYPE_SEPERATOR_END) + wrap(ARRAY_ID_START, std::to_string(id), ARRAY_ID_END);
-	SET_BIT(&what_to_update, ARRAY_STRING_HASH_BIT, 1);
-	SET_BIT(&what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 1);
-	SET_BIT(&what_to_update, ARRAY_INT_HASH_BIT, 1);
-	if(CHECK_BIT(what_to_update, ARRAY_STRING_HASH_BIT, 1)){
+	SET_BIT(what_to_update, ARRAY_STRING_HASH_BIT, 1);
+	SET_BIT(what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 1);
+	SET_BIT(what_to_update, ARRAY_INT_HASH_BIT, 1);
+	if(CHECK_BIT(what_to_update, ARRAY_STRING_HASH_BIT) == 1){
 		return_value += gen_string_string();
 	}
-	if(CHECK_BIT(what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 1)){
+	if(CHECK_BIT(what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT) == 1){
 		return_value += gen_long_double_string();
 	}
-	if(CHECK_BIT(what_to_update, ARRAY_INT_HASH_BIT, 1)){
+	if(CHECK_BIT(what_to_update, ARRAY_INT_HASH_BIT) == 1){
 		return_value += gen_int_string();
 	}
 	return return_value;
@@ -143,7 +143,7 @@ std::vector<std::string> array_t::pull_items(char *x, std::string a, char *y, st
 		#endif
 		const std::vector<std::string> tmp_vector = pull_items_data(ARRAY_ITEM_SEPERATOR_START, tmp_string_whole, ARRAY_ITEM_SEPERATOR_END);
 		for(unsigned long int i = 0;i < tmp_vector.size();i++){
-			entries_for_data->push_back(i+start_number);
+			entries_for_data->push_back((int)i+(int)start_number);
 		}
 		b.insert(b.end(), tmp_vector.begin(), tmp_vector.end());
 		a = a.substr(a.find_first_of(y)+1, a.size());
@@ -154,40 +154,44 @@ std::vector<std::string> array_t::pull_items(char *x, std::string a, char *y, st
 void array_t::parse_int_from_string(std::string a){
 	std::vector<int> entries_for_data;
 	const std::vector<std::string> int_data = pull_items(ARRAY_INT_SEPERATOR_START, a, ARRAY_INT_SEPERATOR_END, &entries_for_data);
-	const unsigned int int_data_size = int_data.size();
-	for(unsigned int i = 0;i < int_data_size;i++){
+	const unsigned long int int_data_size = int_data.size();
+	int_lock.lock();
+	for(unsigned long int i = 0;i < int_data_size;i++){
 		#ifdef CLASS_DEBUG_OUTPUT
 		printf("int_data[%d]: %s\n", entries_for_data[i], int_data[i].c_str());
 		#endif
 		*int_array[entries_for_data[i]] = atoi(int_data[i].c_str());
 	}
+	int_lock.unlock();
 }
 
 void array_t::parse_long_double_from_string(std::string a){
 	std::vector<int> entries_for_data;
 	const std::vector<std::string> long_double_data = pull_items(ARRAY_LONG_DOUBLE_SEPERATOR_START, a, ARRAY_LONG_DOUBLE_SEPERATOR_END, &entries_for_data);
-	const unsigned int long_double_data_size = long_double_data.size();
-	assert(long_double_data_size == entries_for_data.size());
-	for(unsigned int i = 0;i < long_double_data_size;i++){
-		*long_double_array[entries_for_data[i]] = atof(long_double_data[i].c_str());
+	const unsigned long int long_double_data_size = long_double_data.size();
+	long_double_lock.lock();
+	for(unsigned long int i = 0;i < long_double_data_size;i++){
+          *long_double_array[entries_for_data[i]] = strtold(long_double_data[i].c_str(), nullptr);
 	}
+	long_double_lock.unlock();
 }
 
 void array_t::parse_string_from_string(std::string a){
 	std::vector<int> entries_for_data;
 	const std::vector<std::string> string_data = pull_items(ARRAY_STRING_SEPERATOR_START, a, ARRAY_STRING_SEPERATOR_END, &entries_for_data);
-	const unsigned int string_data_size = string_data.size();
-	assert(string_data_size == entries_for_data.size());
-	for(unsigned int i = 0;i < string_data_size;i++){
+	const unsigned long int string_data_size = string_data.size();
+	string_lock.lock();
+	for(unsigned long int i = 0;i < string_data_size;i++){
 		#ifdef CLASS_DEBUG_OUTPUT
 		printf("string_array[%d]: %s\n",entries_for_data[i], string_data[i].c_str());
 		#endif
 		*string_array[entries_for_data[i]] = string_data[i];
 	}
+	string_lock.unlock();
 }
 
 static std::string array_gen_data_vector_entry(std::string data, unsigned int start){
-	return wrap(ARRAY_STARTING_START, std::to_string(start), ARRAY_STARTING_END) + wrap(ARRAY_ITEM_SEPERATOR_START,data,ARRAY_ITEM_SEPERATOR_END);
+	return wrap(ARRAY_STARTING_START, std::to_string(start), ARRAY_STARTING_END) + wrap(ARRAY_ITEM_SEPERATOR_START, data, ARRAY_ITEM_SEPERATOR_END);
 }
 
 bool array_t::updated(int *what_to_update){
@@ -197,19 +201,22 @@ bool array_t::updated(int *what_to_update){
 	long int tmp_long_double_hash = hash_function(gen_long_double_string());
 	long int tmp_int_hash = hash_function(gen_int_string());
 	bool update = false;
+	/*
+	Chunking this up into smaller groups would make bigger arrays run faster.
+	*/
 	if(tmp_string_hash != string_hash){
 		update = true;
-		SET_BIT(what_to_update, ARRAY_STRING_HASH_BIT, 1);
+		SET_BIT(*what_to_update, ARRAY_STRING_HASH_BIT, 1);
 		string_hash = tmp_string_hash;
 	}
 	if(tmp_long_double_hash != long_double_hash){
 		update = true;
-		SET_BIT(what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 1);
+		SET_BIT(*what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 1);
 		long_double_hash = tmp_long_double_hash;
 	}
 	if(tmp_int_hash != int_hash){
 		update = true;
-		SET_BIT(what_to_update, ARRAY_INT_HASH_BIT, 1);
+		SET_BIT(*what_to_update, ARRAY_INT_HASH_BIT, 1);
 		int_hash = tmp_int_hash;
 	}
 	return update;
@@ -219,7 +226,7 @@ std::string array_t::gen_string_string(){
 	std::string return_value;
 	const unsigned long int string_size = string_array.size();
 	for(unsigned long int i = 0;i < string_size;i++){
-		return_value += array_gen_data_vector_entry(*string_array[i], i);
+		return_value += array_gen_data_vector_entry((std::string)*string_array[i], (unsigned int)i);
 	}
 	return_value = wrap(ARRAY_STRING_SEPERATOR_START, return_value, ARRAY_STRING_SEPERATOR_END);
 	return return_value;
@@ -229,7 +236,7 @@ std::string array_t::gen_int_string(){
 	std::string return_value;
 	const unsigned long int int_size = int_array.size();
 	for(unsigned long int i = 0;i < int_size;i++){
-		return_value += array_gen_data_vector_entry(std::to_string(*int_array[i]), i);
+		return_value += array_gen_data_vector_entry(std::to_string((int)*int_array[i]), (unsigned int)i);
 	}
 	return_value = wrap(ARRAY_INT_SEPERATOR_START, return_value, ARRAY_INT_SEPERATOR_END);
 	return return_value;
@@ -239,45 +246,30 @@ std::string array_t::gen_long_double_string(){
 	std::string return_value;
 	const unsigned long int long_double_size = long_double_array.size();
 	for(unsigned long int i = 0;i < long_double_size;i++){
-		return_value += array_gen_data_vector_entry(std::to_string(*long_double_array[i]), i);
+		return_value += array_gen_data_vector_entry(std::to_string((long double)*long_double_array[i]), (unsigned int)i);
 	}
 	return_value = wrap(ARRAY_LONG_DOUBLE_SEPERATOR_START, return_value, ARRAY_LONG_DOUBLE_SEPERATOR_END);
 	return return_value;
 }
 
-int pull_id(std::string a){
-	int return_value;
-	const unsigned long int start = a.find_first_of(ARRAY_ID_START);
-	const unsigned long int end = a.find_first_of(ARRAY_ID_END);
-	std::string id_string = a.substr(start+1, end-start-1).c_str();
-	return_value = atoi(id_string.c_str());
-	return return_value;
-}
-
 void update_class_data(std::string a, int what_to_update){
 	array_t *tmp = nullptr;
-	int id = pull_id(a);
+	array_id_t id = pull_id(a);
 	const unsigned long int array_vector_size = array_vector.size();
-	//printf("Generated an ID of %d\n", id);
-	//printf("data to parse: %s\n", a.c_str());
 	for(unsigned long int i = 0;i < array_vector_size;i++){
 		if(unlikely(array_vector[i]->id == id)){
-	//		printf("FOUND AN EXISTING COPY AND UPDATING IT\n");
 			tmp = array_vector[i];
 			break;
 		}
 	}
 	if(tmp == nullptr){
 		std::string type = a.substr(a.find_first_of(ARRAY_TYPE_SEPERATOR_START)+1, a.find_first_of(ARRAY_TYPE_SEPERATOR_END)-a.find_first_of(ARRAY_TYPE_SEPERATOR_START)-1);
-		printf("Writing a new variable since the one being referred to doesn't exist yet (type: %s) (ID of data: %d)\n", type.c_str(), id);
 		if(type == "coord_t"){
 			tmp = &((new coord_t)->array);
 		}else if(type == "model_t"){
 			tmp = &((new model_t)->array);
 		}else if(type == "input_buffer_t"){
 			tmp = &((new input_buffer_t)->array);
-		}else if(type == "render_buffer_t"){
-			tmp = &((new render_buffer_t)->array);
 		}else if(type == "client_t"){
 			tmp = &((new client_t)->array);
 		}else if(type == "net_ip_connection_info_t"){
@@ -289,13 +281,6 @@ void update_class_data(std::string a, int what_to_update){
 		}
 	}
 	tmp->parse_string_entry(a);
-	if(tmp->id != id){
-		printf("tmp->id (%d) != id (%d)\n", tmp->id, id);
-		printf("data: %s\n", a.c_str());
-		ms_sleep(10);
-	}else{
-		tmp->id = id;
-	}
 }
 
 void add_two_arrays(array_t *a, array_t *b){
@@ -307,20 +292,21 @@ void add_two_arrays(array_t *a, array_t *b){
 array_t::~array_t(){
 	std::vector<array_t*>::iterator array_pos_in_vector = std::find_if(array_vector.begin(), array_vector.end(), pointer_device_t(this));
 	if(likely(array_pos_in_vector != array_vector.end())){
-		*array_pos_in_vector = nullptr;
+		array_lock.lock();
 		array_vector.erase(array_pos_in_vector);
+		array_lock.unlock();
 	}else{
 		printf("Could not find array in vector\n");
 	}
 }
 
-bool alphabetical_order(const array_t *a, const array_t *b){return a->data_type < b->data_type;}
+static bool alphabetical_order(const array_t *a, const array_t *b){return a->data_type < b->data_type;}
 
-bool order_by_id(const array_t *a, const array_t *b){
+static bool order_by_id(const array_t *a, const array_t *b){
 	return a->id < b->id;
 }
 
-bool array_is_sorted_by_type(){
+static bool array_is_sorted_by_type(){
 	for(unsigned long int i = 0;i < array_vector.size()-1;i++){
 		if(array_vector[i]->data_type > array_vector[i+1]->data_type){
 			return false;
@@ -329,10 +315,10 @@ bool array_is_sorted_by_type(){
 	return true;
 }
 
-bool array_is_sorted_by_id(){
+static bool array_is_sorted_by_id(){
 	for(unsigned long int i = 1;i < array_vector.size();i++){
 		const std::string old_type = array_vector[i-1]->data_type;
-		const long int old_id = array_vector[i-1]->id;
+		const array_id_t old_id = array_vector[i-1]->id;
 		if(unlikely(old_id > array_vector[i]->id && old_type == array_vector[i]->data_type)){
 			return false;
 		}
@@ -340,7 +326,8 @@ bool array_is_sorted_by_id(){
 	return true;
 }
 
-/*static void optimal_array_sort(){
+static void optimal_array_sort(){
+	array_lock.lock();
 	if(unlikely(!array_is_sorted_by_type())){
 		std::sort(array_vector.begin(), array_vector.end(), alphabetical_order); // sort by the value of the data_type
 	}
@@ -348,41 +335,41 @@ bool array_is_sorted_by_id(){
 		const unsigned long int array_size = array_vector.size();
 		for(unsigned long int i = 0;i < array_size;i++){ // sort all of the data_types (in groups) by their ID
 			const std::string old_type = array_vector[i]->data_type;
-			const int old_entry = i;
+			const unsigned long int old_entry = i;
 			while(likely(old_type == array_vector[i]->data_type && i < array_size-1)){
 				i++;
 			}
 			std::sort(array_vector.begin()+old_entry, array_vector.begin()+i, order_by_id);
 		}
 	}
-}*/
+	array_lock.unlock();
+}
 
-void* find_pointer(int id, std::string type){
-	/*optimal_array_sort();
+void *find_pointer(array_id_t id, std::string type){
+	optimal_array_sort();
+	void* return_value = nullptr;
 	std::vector<void*> *array;
 	if(type != ""){
 		array = new std::vector<void*>;
 		*array = all_entries_of_type(type);
 	}else{
 		array = (std::vector<void*>*)&array_vector;
+		array_lock.lock();
 	}
 	const unsigned long int array_size = array_vector.size();
 	for(unsigned long int i = 0;i < array_size;i++){
 		if(unlikely(((array_t*)(*array)[i])->id == id)){
-			return ((array_t*)(*array)[i])->pointer;
+			return_value = ((array_t*)(*array)[i])->pointer;
+			break;
 		}
 	}
 	if(type != ""){
 		delete array;
 		array = nullptr;
-	}*/
-	for(unsigned long int i = 0;i < array_vector.size();i++){
-		if(array_vector[i]->id == id){
-			return array_vector[i]->pointer;
-		}
+	}else{
+		array_lock.unlock();
 	}
-	printf("could not find the pointer to the array with an ID of '%d'\n", id);
-	return nullptr;
+	return return_value;
 }
 
 std::vector<void*> all_entries_of_type(std::string type){
@@ -405,25 +392,76 @@ std::vector<void*> all_pointers_of_type(std::string type){
 	return return_value;
 }
 
-void delete_all_data(){
-	std::vector<array_t*> array_vector_ = array_vector;
-	for(unsigned long int i = 0;i < array_vector_.size();i++){
-		const std::string type = array_vector_[i]->data_type;
-		void* void_ptr = array_vector_[i]->pointer;
-		printf("deleting excess %s with an ID of %d\n", type.c_str(), array_vector_[i]->id);
-		if(type == "coord_t"){
-			delete (coord_t*)void_ptr;
-		}else if(type == "model_t"){
-			delete (model_t*)void_ptr;
-		}else if(type == "render_buffer_t"){
-			delete (render_buffer_t*)void_ptr;
-		}else if(type == "input_buffer_t"){
-			delete (input_buffer_t*)void_ptr;
-		}else if(type == "input_setings_t"){
-			delete (input_settings_t*)void_ptr;
-		}else if(type == "client_t"){
-			delete (client_t*)void_ptr;
+array_t* find_array_pointer(int id){
+	const unsigned long int array_vector_size = array_vector.size();
+	for(unsigned long int i = 0;i < array_vector_size;i++){
+		if(array_vector[i]->id == id){
+			return array_vector[i];
 		}
-		void_ptr = nullptr;
+	}
+	return nullptr;
+}
+
+void delete_array_and_pointer(array_t *array){
+	void *ptr = array->pointer;
+	const std::string type = array->data_type;
+	if(type == "coord_t"){
+		delete (coord_t*)ptr;
+	}else if(type == "model_t"){
+		delete (model_t*)ptr;
+	}else if(type == "input_buffer_t"){
+		delete (input_buffer_t*)ptr;
+	}else if(type == "input_setings_t"){
+		delete (input_settings_t*)ptr;
+	}else if(type == "client_t"){
+		delete (client_t*)ptr;
+	}else if(type == "gametype_t"){
+		delete (gametype_t*)ptr;
+	}else if(type == "net_ip_connection_info_t"){
+		delete (net_ip_connection_info_t*)ptr;
+	}else{
+		printf("cannot delete the unknown data type %s\n", type.c_str());
 	}
 }
+
+void delete_all_data(){
+	std::vector<array_t*> array_vector_ = array_vector; // make a copy of it, something breaks when I don't make a copy
+	const unsigned long int array_vector__size = array_vector_.size();
+	for(unsigned long int i = 0;i < array_vector__size;i++){
+		delete_array_and_pointer(array_vector_[i]);
+	}
+}
+
+std::string array_t::print(){
+	std::string output;
+	output += "Type: " + data_type + "\t";
+	output += "ID: " + std::to_string(id) + "\n";
+	int_lock.lock();
+	const unsigned long int int_array_size = int_array.size();
+	for(unsigned long int i = 0;i < int_array_size;i++){
+		output += "\tint_array[" + std::to_string(i) + "]: " + std::to_string(*int_array[i]) + "\n";
+	}
+	int_lock.unlock();
+	string_lock.lock();
+	const unsigned long int max_print_string_length = 8192;
+	const unsigned long int string_array_size = string_array.size();
+	for(unsigned long int i = 0;i < string_array_size;i++){
+		if(string_array[i]->size() < max_print_string_length){
+			output += "\tstring_array[" + std::to_string(i) + "]: " + *string_array[i] + "\n";
+		}else{
+			output += "\tstring_array[" + std::to_string(i) + "] is too large to print\n";
+		}
+	}
+	string_lock.unlock();
+	long_double_lock.lock();
+	const unsigned long int long_double_array_size = long_double_array.size();
+	for(unsigned long int i = 0;i < long_double_array_size;i++){
+		output += "\tlong_double_array[" + std::to_string(i) + "]: " + std::to_string(*long_double_array[i]) + "\n";
+	}
+	long_double_lock.unlock();
+	output += "\n";
+	printf("%s", output.c_str());
+	return output;
+}
+
+

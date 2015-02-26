@@ -20,4 +20,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define PI_360 0.00872664625
 	#define RADIAN 57.2957795131
 	#define ROOT_2 1.41421356237
+
+	#define MEGABYTES_TO_BYTES 1048576
 #endif

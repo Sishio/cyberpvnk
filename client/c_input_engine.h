@@ -22,6 +22,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "c_render_engine.h"
 #ifndef C_INPUT_ENGINE
 	#define C_INPUT_ENGINE	
+	extern input_t *input;
 	void input_init();
 	void input_engine();
 	void input_close();

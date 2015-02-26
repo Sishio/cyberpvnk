@@ -32,7 +32,7 @@ void coord_t::update_array_pointers(){
 }
 
 coord_t::coord_t(bool add) : array(this, add){
-	x = y = z = x_angle = y_angle = x_vel = y_vel = z_vel = 0;
+	x = y = z = x_angle = y_angle = x_vel = y_vel = x_angle_vel = y_angle_vel;
 	physics_time = 0;
 	old_time = get_time();
 	model_id = -1;
@@ -140,14 +140,14 @@ client_t::client_t(bool add) : array(this, add){
 
 client_t::~client_t(){}
 
-render_buffer_t::render_buffer_t(bool add) : array(this, add){
+/*render_buffer_t::render_buffer_t(bool add) : array(this, add){
 	array.int_array.push_back(&coord_id);
 	array.int_array.push_back(&model_id);
 	array.data_type = "render_buffer_t";
 }
 
 render_buffer_t::~render_buffer_t(){}
-
+*/
 input_buffer_t::input_buffer_t(bool add) : array(this, add){
 	array.id = 0; // reserve zero for input_buffers because ID collisions could happen and these aren't referred to outside of the main input function in the server.
 	array.data_type = "input_buffer_t";

@@ -92,7 +92,7 @@ void render_t::init_generate_window(){
 		printf("Could not open the window, must be running this as a dev test over SSH or in a terminal without X11 access. Terminating render module\n");
 		printf("Re-run with --render-disable\n");
 	}
-	SDL_ShowCursor(SDL_DISABLE);
+	//SDL_ShowCursor(SDL_DISABLE);
 
 	glMatrixMode(GL_MODELVIEW);
 	glClearColor(1,1,1,1);
@@ -129,22 +129,21 @@ render_t::render_t(int argc, char** argv){
 }
 
 void render_t::loop_render_buffer(){
-	glRotatef(coord->x_angle, 1.0f, 0.0f, 0.0f);
-	glRotatef(coord->y_angle, 0.0f, 1.0f, 0.0f);
-	glTranslatef(-coord->x,-coord->y,-coord->z);
-	const unsigned int array_size = array_vector.size();
-	for(unsigned int i = 0;i < array_size;i++){
-		if(array_vector[i] != nullptr && array_vector[i]->data_type == "render_buffer_t"){
-		  coord_t *local_coord = (coord_t*)find_pointer(((render_buffer_t*)(array_vector[i]))->coord_id);
+	glRotatef((GLfloat)coord->x_angle, (GLfloat)1.0, (GLfloat)0.0, (GLfloat)0.0);
+	glRotatef((GLfloat)coord->y_angle, (GLfloat)0.0, (GLfloat)1.0, (GLfloat)0.0);
+	glTranslatef((GLfloat)-coord->x,(GLfloat)-coord->y,(GLfloat)-coord->z);
+        std::vector<void*> coord_vector = all_pointers_of_type("coord_t");
+	const unsigned long int coord_size = coord_vector.size();
+	for(unsigned long int i = 0;i < coord_size;i++){
+		coord_t *local_coord = (coord_t*)coord_vector[i];
+		if(local_coord->model_id != 0){
 			glPushMatrix();
-			glTranslatef(local_coord->x, local_coord->y, local_coord->z);
-			glRotatef(local_coord->x_angle,1.0f,0.0f,0.0f);
-			printf("local_coord->model_id: %d\n",local_coord->model_id);
+			glTranslatef((GLfloat)local_coord->x, (GLfloat)local_coord->y, (GLfloat)local_coord->z);
+			glRotatef((GLfloat)local_coord->x_angle, (GLfloat)1.0, (GLfloat)0.0, (GLfloat)0.0);
 			model_t *model = (model_t*)find_pointer(local_coord->model_id);
-			if(model == nullptr){
-			  model = (model_t*)find_pointer(((render_buffer_t*)(array_vector[i]))->model_id);
+			if(model != nullptr){
+				model_render(model);
 			}
-			model_render(model);
 			glPopMatrix();
 		}
 	}
@@ -164,8 +163,8 @@ void render_t::loop_init(){
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	assert(rules.x_res > rules.y_res);
-	GLfloat aspectRatio = rules.x_res/rules.y_res;;
-	GLfloat fH = tan(float(rules.far_fov/PI_360))*rules.near_fov;
+	GLfloat aspectRatio = (GLfloat)(rules.x_res/rules.y_res);
+	GLfloat fH = (GLfloat)tan(float(rules.far_fov/PI_360))*rules.near_fov;
 	GLfloat fW = fH * aspectRatio;
 	glFrustum(-fW, fW, -fH, fH, rules.near_fov, rules.far_fov);
 	glMatrixMode(GL_MODELVIEW);
@@ -178,13 +177,14 @@ void render_t::loop_render_screen(){
 }
 
 int render_t::loop(coord_t *a){ // TODO: Divide this up into smaller chunks
-	coord = a;
-	assert(a != nullptr || a != NULL);
 	int return_value = 0;
-	loop_init();
-	loop_update();
-	loop_render_buffer();
-	loop_render_screen();
+	if(a != nullptr || a != NULL){
+		coord = a;
+		loop_init();
+		loop_update();
+		loop_render_buffer();
+	}
+	loop_render_screen(); // updates the screen
 	return return_value;
 }
 
@@ -213,8 +213,8 @@ void model_render(model_t *model){
 	assert(model != nullptr || model != NULL);	
 	const unsigned long int model_faces_size = model->faces.size();
 	if(unlikely(model_faces_size == 0)){
-		printf("Attempted to render an empty model\n");
-		return;
+		// only works if the entire_object_file has been loaded (sent from server)
+		model_load(model);
 	}
 	std::vector<std::string*> coord	= model->coord;
 	std::vector<coordinate*> vertex	= model->vertex;

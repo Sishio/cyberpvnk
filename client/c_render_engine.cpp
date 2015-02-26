@@ -17,10 +17,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "c_render_engine.h"
 
 render_t *render = nullptr;
-extern int self_id;
+extern array_id_t self_id;
 
-static int old_self_id = 0;
-static int old_coord_id = 0;
+static array_id_t old_self_id = 0;
+static array_id_t old_coord_id = 0;
 static client_t *self = nullptr;
 static coord_t *coord = nullptr;
 
@@ -43,6 +43,7 @@ static void update_pointers(){
 void render_init(){
 	update_pointers();
 	render = new render_t(argc_, argv_);
+	loop_add(&loop, "render_engine", render_engine);
 }
 
 void render_engine(){
@@ -50,12 +51,10 @@ void render_engine(){
 		render_init();
 	}
 	update_pointers();
-	/*
-	The server will send over all of the render_buffer entries. We will not do anything to them.
-	*/
 	render->loop(coord);
 }
 
 void render_close(){
+	loop_del(&loop, render_engine);
 	update_pointers(); // why not?
 }

@@ -8,6 +8,7 @@
 // class_array.h gets 1-0e
 // net_const.h (this) gets 17-1d
 // net_ip.h gets 1e-1f
+typedef unsigned long int net_packet_id;
 #ifdef DEBUG_SYMBOLS
 	#define NET_PACKET_ID_START	(char*)"X"
 	#define NET_PACKET_ID_END	(char*)"W"

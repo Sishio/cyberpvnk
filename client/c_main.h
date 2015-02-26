@@ -26,5 +26,11 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef C_MAIN_H
 	#define C_MAIN_H
 	extern loop_t loop;
+	extern unsigned long int tick;
+	extern bool terminate;
+	extern bool once_per_second;
+	extern array_id_t self_id;
+	extern int argc_;
+	extern char** argv_;
 	extern int menu_loop();
 #endif

@@ -19,12 +19,22 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "../render/render_main.h"
 #include "../util/util_main.h"
 
+struct key_device_t{
+	key_device_t(input_buffer_t tmp):input_buffer(tmp){}
+	bool operator()(array_t *tmp){
+		if(tmp->data_type == "input_buffer_t"){
+			return ((input_buffer_t*)tmp->pointer)->int_data == input_buffer.int_data;
+		}else{
+			return false;
+		}
+	}
+	input_buffer_t input_buffer;
+};
+
 char *event_key_to_key(SDL_Keycode);
 
 extern render_t *render;
 extern client_t *self;
-
-extern void delete_array(array_t*);
 
 #ifdef __linux
 void signal_handler(int signal){
@@ -46,37 +56,14 @@ void signal_handler(int signal){
 }
 #endif
 
-void input_t::input_find_key(long int *a, const input_buffer_t *b){
-	if(b == nullptr || b == NULL){
-		const long int input_buffer_vector_size = input_buffer_vector.size();
-		for(*a = 0;*a < input_buffer_vector_size;(*a)+=1){
-			if(input_buffer_vector[*a] == b){
-				return;
-			}
-		}
-	}else{
-		const long int input_buffer_vector_size = input_buffer_vector.size();
-		for(*a = 0;*a < input_buffer_vector_size;(*a)+=1){
-			if(input_buffer_vector[*a] != nullptr){
-				if(input_buffer_vector[*a]->type == b->type){
-					if(memcmp(&input_buffer_vector[*a]->int_data, &b->int_data, sizeof(int)*8) == 0){
-						return;
-					}
-				}
-			}
-		}
-	}
-	*a = -1;
-}
-
 void input_t::input_update_key(input_buffer_t *b){
-	long int a = 0;
-	input_find_key(&a,b);
-	if(a < 0){
-		input_buffer_t *tmp = new_input_buffer();
+	std::vector<array_t*>::iterator a = std::find_if(array_vector.begin(), array_vector.end(), key_device_t(*b));
+	if(a == array_vector.end()){
+		input_buffer_t *tmp = new input_buffer_t;
 		*tmp = *b;
 	}else{
-		*input_buffer_vector[a] = *b;
+		input_buffer_t *tmp = (input_buffer_t*)((*a)->pointer);
+		*tmp = *b;
 	}
 }
 
@@ -85,10 +72,9 @@ void input_t::input_parse_key_up(SDL_Event a){
 	tmp.type = INPUT_TYPE_KEYBOARD;
 	tmp.int_data[INPUT_TYPE_KEYBOARD_KEY] = (int)a.key.keysym.sym;
 	//tmp.int_data[INPUT_TYPE_KEYBOARD_CHAR] = (int)SDL_GetKeyName(a.key.keysym.sym[0]);
-	long int c;
-	input_find_key(&c,&tmp);
-	if(c > -1){
-		delete_input_buffer_id(input_buffer_vector[c]->array.id);
+	auto c = std::find_if(array_vector.begin(), array_vector.end(), key_device_t(tmp));
+	if(c != array_vector.end()){
+		delete (*c);
 	}
 }
 
@@ -112,6 +98,7 @@ input_t::input_t(int argc,char** argv){
 int input_t::loop(){
 	int return_value = 0;
 	SDL_PumpEvents();
+	SDL_Event event;
 	while(SDL_PollEvent(&event)){ // the only input that works without a screen would be SDL_QUIT (Ctrl-C).
 		switch(event.type){
 		case SDL_KEYUP:
@@ -140,10 +127,7 @@ bool input_t::query_key(input_buffer_t *buffer,int sdl_key,char key){
 		buffer->int_data[INPUT_TYPE_KEYBOARD_KEY] = sdl_key;
 	}
 	if(buffer != nullptr){
-		long int a;
-		input_find_key(&a,buffer);
-		return_value = !(a == -1);
-		return !(a == -1);
+		return std::find_if(array_vector.begin(), array_vector.end(), key_device_t(*buffer)) != array_vector.end();
 	}
 	if(sdl_key != -1){
 		delete buffer;

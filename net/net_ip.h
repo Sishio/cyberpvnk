@@ -47,20 +47,26 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		bool sent;
 		unsigned long int position;
 		int connection_info_id;
-		net_ip_write_buffer_t(std::string, unsigned long int, int);
+		net_ip_write_buffer_t(std::string, net_packet_id, int);
 		std::vector<std::string> gen_string_vector();
 		unsigned long int packet_id;
 		std::string data;
 	};
 	class net_ip_read_buffer_t{
 	public:
-		net_ip_read_buffer_t(int);
+		net_ip_read_buffer_t(net_packet_id);
 		~net_ip_read_buffer_t();
 		void parse_packet_segment(std::string);
 		bool finished();
 		std::string gen_string();
 		unsigned long int packet_id;
 		std::vector<std::string> data_vector;
+	};
+	struct udp_socket_t{
+		array_id_t connection_info_id;
+		UDPsocket socket;
+		udp_socket_t(array_id_t);
+		~udp_socket_t();
 	};
 	class net_ip_t{
 	private:
@@ -69,15 +75,14 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		unsigned long int total_sent_bytes;
 		std::vector<net_ip_read_buffer_t> read_buffer;
 		std::vector<net_ip_write_buffer_t> write_buffer;
-		UDPsocket outbound;
 		UDPpacket *outbound_packet;
-		UDPsocket inbound; // no TCP yet
+		udp_socket_t *outbound; // no TCP yet
 		UDPpacket *inbound_packet;
+		udp_socket_t *inbound; // switching on the spot without losing data
 		bool receive_check_read_array(std::string, unsigned long int);
-		int connection_info_id;
+		void update_outbound_port(array_id_t);
+		void update_inbound_port(array_id_t);
 	public:
-		int loop_send_mt();
-		int loop_receive_mt();
 		net_ip_connection_info_t self_info;
 		int init(int,char**, int);
 		std::string read(std::string);
@@ -90,4 +95,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void loop_receive();
 		void close();
 	};
+	extern std::string pull_global_ip_address();
+	extern std::string pull_local_ip_address(std::string local_ip = "");
+	extern std::string net_gen_ip_address(std::string);// gen local if local, global if global, and loopback if loopback
 #endif

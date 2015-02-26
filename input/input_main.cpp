@@ -20,24 +20,21 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "../util/util_main.h"
 
 struct key_device_t{
-	key_device_t(input_buffer_t tmp):input_buffer(tmp){}
+	key_device_t(input_buffer_t *tmp):input_buffer(tmp){}
 	bool operator()(array_t *tmp){
 		if(tmp->data_type == "input_buffer_t"){
-			return ((input_buffer_t*)tmp->pointer)->int_data == input_buffer.int_data;
+			return ((input_buffer_t*)tmp->pointer)->int_data == input_buffer->int_data;
 		}else{
 			return false;
 		}
 	}
-	input_buffer_t input_buffer;
+	input_buffer_t *input_buffer;
 };
 
 char *event_key_to_key(SDL_Keycode);
 
-extern render_t *render;
-extern client_t *self;
-
 #ifdef __linux
-void signal_handler(int signal){
+void basic_signal_handler(int signal){
 	switch(signal){
 	case SIGINT:
 		printf("Received SIGINT\n");
@@ -49,45 +46,34 @@ void signal_handler(int signal){
 	case SIGKILL:
 		printf("Received SIGKILL\n");
 		exit(0);
-		break;
 	default:
 		break;
 	}
 }
 #endif
 
-void input_t::input_update_key(input_buffer_t *b){
-	std::vector<array_t*>::iterator a = std::find_if(array_vector.begin(), array_vector.end(), key_device_t(*b));
-	if(a == array_vector.end()){
-		input_buffer_t *tmp = new input_buffer_t;
-		*tmp = *b;
-	}else{
-		input_buffer_t *tmp = (input_buffer_t*)((*a)->pointer);
-		*tmp = *b;
-	}
-}
-
 void input_t::input_parse_key_up(SDL_Event a){
 	input_buffer_t tmp;
 	tmp.type = INPUT_TYPE_KEYBOARD;
 	tmp.int_data[INPUT_TYPE_KEYBOARD_KEY] = (int)a.key.keysym.sym;
 	//tmp.int_data[INPUT_TYPE_KEYBOARD_CHAR] = (int)SDL_GetKeyName(a.key.keysym.sym[0]);
-	auto c = std::find_if(array_vector.begin(), array_vector.end(), key_device_t(tmp));
+	auto c = std::find_if(array_vector.begin(), array_vector.end(), key_device_t(&tmp));
 	if(c != array_vector.end()){
 		delete (*c);
 	}
 }
 
 void input_t::input_parse_key_down(SDL_Event a){
-	input_buffer_t tmp;
-	tmp.type = INPUT_TYPE_KEYBOARD;
-	tmp.int_data[INPUT_TYPE_KEYBOARD_KEY] = (int)a.key.keysym.sym;
+	input_buffer_t *tmp = new input_buffer_t;
+	tmp->type = INPUT_TYPE_KEYBOARD;
+	tmp->int_data[INPUT_TYPE_KEYBOARD_KEY] = (int)a.key.keysym.sym;
 	//tmp.int_data[INPUT_TYPE_KEYBOARD_CHAR] = (int)SDL_GetKeyName(a.key.keysym.sym[0]);
-	input_update_key(&tmp);
 }
 
 void input_t::blank(){
 	is_used = false;
+	render = nullptr;
+	self = nullptr;
 }
 
 input_t::input_t(int argc,char** argv){
@@ -119,7 +105,7 @@ int input_t::loop(){
 	return return_value;
 }
 
-bool input_t::query_key(input_buffer_t *buffer,int sdl_key,char key){
+bool input_t::query_key(input_buffer_t *buffer, int sdl_key, char key){
 	bool return_value = false;
 	if(sdl_key != -1){
 		buffer = new input_buffer_t;
@@ -127,7 +113,7 @@ bool input_t::query_key(input_buffer_t *buffer,int sdl_key,char key){
 		buffer->int_data[INPUT_TYPE_KEYBOARD_KEY] = sdl_key;
 	}
 	if(buffer != nullptr){
-		return std::find_if(array_vector.begin(), array_vector.end(), key_device_t(*buffer)) != array_vector.end();
+		return std::find_if(array_vector.begin(), array_vector.end(), key_device_t(buffer)) != array_vector.end();
 	}
 	if(sdl_key != -1){
 		delete buffer;
@@ -140,10 +126,10 @@ void input_t::close(){
 	blank();
 }
 
-void cursor::set_location(unsigned int x, unsigned int y){
+void cursor::set_location(input_t *input, unsigned int x, unsigned int y){
 	#ifdef USE_SDL
-	if(render != nullptr){
-		SDL_WarpMouseInWindow(render->render_screen, x, y);
+	if(input->render != nullptr){
+		SDL_WarpMouseInWindow(input->render->render_screen, x, y);
 	}
 	#endif
 }

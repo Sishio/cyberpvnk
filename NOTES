@@ -8,3 +8,7 @@ These vectors will have a constant size and they will not change after initializ
 	This will at least let me network with them.
 
 I believe all of the engines can be ran in their own thread, which is nice.
+
+IDEA:
+	Allow patching the map in real time through the server console.
+	The entire obj file will be loaded into one string. This gets put back into a file, the patch gets applied, and the object is reloaded

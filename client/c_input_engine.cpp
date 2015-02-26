@@ -20,7 +20,6 @@ extern int host_info_id;
 extern render_t *render;
 extern net_t *net;
 input_t *input = nullptr;
-extern int self_id;
 
 extern int argc_;
 extern char **argv_;
@@ -28,7 +27,7 @@ extern char **argv_;
 extern net_t *net;
 extern input_t *input;
 
-void input_mouse_motion_engine(input_buffer_t *a){
+static void input_mouse_motion_engine(input_buffer_t *a){
 	assert(render != nullptr);
 	client_t *self_tmp = (client_t*)find_pointer(self_id);
 	coord_t *coord = nullptr;
@@ -49,10 +48,13 @@ void input_mouse_motion_engine(input_buffer_t *a){
 		}
 		coord->print();
 	}
-	cursor::set_location(screen_x_size_half, screen_y_size_half);
+	cursor::set_location(input, screen_x_size_half, screen_y_size_half);
 }
 
 void input_init(){
+	input = new input_t(argc_, argv_);
+	input->render = render;
+	loop_add(&loop, "input_engine", input_engine);
 }
 
 void input_engine(){
@@ -73,4 +75,8 @@ void input_engine(){
 	}
 }
 
-void input_close(){}
+void input_close(){
+	delete input;
+	input = nullptr;
+	loop_del(&loop, input_engine);
+}

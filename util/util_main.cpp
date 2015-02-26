@@ -1,26 +1,40 @@
+/*
+Czech_mate by Daniel
+This file is part of Czech_mate.
+
+Czech_mate is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License Version 2 as published by
+the Free Software Foundation, 
+
+Czech_mate is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #include "util_main.h"
 
-int util_shell(int function,char* parameter){ // Keeps most of the OS pre-processor code isolated from the rest of the program
+bool once_per_second = false;
+
+int util_shell(int function, std::string parameter){ // Keeps most of the OS pre-processor code isolated from the rest of the program
 	int return_value = 0;
 	std::string command = "";
 	switch(function){
 	case UTIL_SHELL_DELETE:
 		#ifdef __linux
-			command = "rm -r " + (std::string)parameter;
+			command = "rm -r " + parameter;
 		#elif _WIN32
-			command = "del " + (char*)parameter;
+			command = "del " + parameter;
 		#endif
-		return_value = system((char*)command.c_str());
+                return_value = system(command.c_str());
 		break;
 	default:
 		return_value = -1;
 		break;
 	}
 	return return_value;
-}
-
-void s_sleep(long double s){
-	ms_sleep(1000*s);
 }
 
 void ms_sleep(long double ms){
@@ -37,7 +51,7 @@ void ms_sleep(long double ms){
 static unsigned long int old_rand = 2;
 
 unsigned long int gen_rand(unsigned int a){ // range, from 0 to a
-	srand(time(NULL)*old_rand);
+	srand((unsigned int)time(NULL)*(unsigned int)old_rand);
 	unsigned long int return_value = rand()%a;
 	if(return_value == 0){
 		return_value++;
@@ -66,15 +80,6 @@ short int warn_if_true(bool a, char* details = NULL){
 	return 0;
 }
 
-bool double_cmp(long double a,long double b,long double degree_of_error){
-	if(a-degree_of_error < b){
-		if(a+degree_of_error > b){
-			return true;
-		}
-	}
-	return false;
-}
-
 long double get_time(){
 	#ifdef _WIN32
 		return SDL_GetTicks()/1000; // piece of crap timer
@@ -100,84 +105,6 @@ int encrypt(int *a, int size){
 	return average;
 }
 
-int encrypt(std::vector<int> a){
-	const unsigned int a_size = a.size();
-	int average = 0;
-	for(unsigned int i = 0;i < a_size;i++){
-		average = (average+a[i])/2;
-	}
-	return average;
-}
-
-int encrypt(std::vector<int*> a){
-	const unsigned int a_size = a.size();
-	int average = 0;
-	for(unsigned int i = 0;i < a_size;i++){
-		average = (average+*(a[i]))/2;
-	}
-	return average;
-}
-
-int encrypt(std::vector<double> a){
-	const unsigned int a_size = a.size();
-	int average = 0;
-	for(unsigned int i = 0;i < a_size;i++){
-		average = (average+a[i])/2;
-	}
-	return average;
-}
-
-int encrypt(std::vector<double*> a){
-	const unsigned int a_size = a.size();
-	long double average = 0;
-	for(unsigned int i = 0;i < a_size;i++){
-		average = (average+*(a[i]))/2;
-	}
-	return average;
-}
-
-int encrypt(std::vector<long double> a){
-	const unsigned int a_size = a.size();
-	int average = 0;
-	for(unsigned int i = 0;i < a_size;i++){
-		average = (average+a[i])/2;
-	}
-	return average;
-}
-
-int encrypt(std::vector<long double*> a){
-	const unsigned int a_size = a.size();
-	int average = 0;
-	for(unsigned int i = 0;i < a_size;i++){
-		average = (average+*(a[i]))/2;
-	}
-	return average;
-}
-
-int encrypt(std::vector<std::string> a){
-	const unsigned int a_size = a.size();
-	int average = 0;
-	for(unsigned int i = 0;i < a_size;i++){
-		const unsigned int a_i_size = a[i].size();
-		for(unsigned int n = 0;n < a_i_size;n++){
-			average = (average+a[i][n])/2;
-		}
-	}
-	return average;
-}
-
-int encrypt(std::vector<std::string*> a){
-	const unsigned int a_size = a.size();
-	int average = 0;
-	for(unsigned int i = 0;i < a_size;i++){
-		const unsigned int a_i_size = a[i]->size();
-		for(unsigned int n = 0;n < a_i_size;n++){
-			average = (average+(*a[i])[n])/2;
-		}
-	}
-	return average;
-}
-
 std::string wrap(char *start, std::string data, char *end){
 	return (std::string)start + data + (std::string)end;
 }
@@ -191,7 +118,7 @@ bool check_for_parameter(const std::string a, int argc_, char **argv_){
 	return false;
 }
 
-void switcH_values(void *a, void *b){
+void switch_values(void *a, void *b){
 	void *c = a;
 	a = b;
 	b = c;
@@ -202,76 +129,46 @@ void switch_values(void **a, void **b){
 	a = b;
 	b = c;
 }
-/*
-// tgmath from stackexchange contributed this little bit:
 
-// should I optimize for nearly sorted vectors?
+static long double old_time = 0;
+static long double once_per_second_time = 0;
 
-int quick_sort_partition(std::vector<sort_t>& A, int p,int q){
-	int x= A[p].value;
-	int i=p;
-	int j;
-	for(j=p+1; j<q; j++){
-		if(A[j].value <= x){ // unlikely()?
-			i=i+1;
-			std::swap(A[i],A[j]);
-		}
-	}
-	std::swap(A[i],A[p]);
-	return i;
-}
-
-void quick_sort(std::vector<sort_t>& A, int p,int q){
-	int r;
-	if(p < q){
-		r=quick_sort_partition(A, p ,q);
-		quick_sort(A,p,r);  
-		quick_sort(A,r+1,q);
+void once_per_second_update(){
+	const long double curr_time = get_time();
+	once_per_second_time += curr_time-old_time;
+	old_time = curr_time;
+	if(once_per_second_time >= 1){
+		once_per_second_time = 0;
+		once_per_second = true;
+	}else{
+		once_per_second = false;
 	}
 }
 
-// I hope this can run faster than std::sort().
-void sorting_algorithm(std::vector<void*> *pointer, int mem_offset_bytes){
-	const unsigned long int pointer_size = pointer->size();
-	std::vector<sort_t> tmp_sort;
-	for(unsigned long int i = 0;i < pointer_size;i++){
-		sort_t sort_;
-		sort_.pointer = (*pointer)[i];
-		bool* bool_pointer = (bool*)(*pointer)[i];
-		sort_.value = *(bool_pointer + mem_offset_bytes); // don't use void* since void* has no set size, bool has a size of one
-		tmp_sort.push_back(sort_);
-	}
-	quick_sort(tmp_sort, 0, tmp_sort.size()+1);
-	for(unsigned long int i = 0;i < pointer_size;i++){
-		(*pointer)[i] = tmp_sort[i].pointer;
-	}
-}
-
-
-// quick_vector_search(std::vector<void*>, int, int): searches the vector for a value (at the offset).
-// this takes advantage of the quick sort algorithm and searches for the value pretty fast
-// this only provides a speedup if the vector is sorted with quick sort
-// this only works when a vector is of a pointer type (although a non-pointer type shouldn't be that hard to implement).
-
-int quick_vector_search(std::vector<void*> vector_, int search_offset, int value){
-	long int split_point = vector.size()/2;
-	while(true){
-		const int tmp_value = *(vector_[split_point]+search_offset);
-		if(tmp_value > value){
-			split_point *= -0.5*split_point;
-		}else if(tmp_value < value){
-			split_point *= 0.5*split_point;
-		}else if(tmp_value == value){
-			return split_point;
-		}
-		if(split_point <= 0 || split_point >= vector_size()-1){
-			break;
-		}
-	}
-	for(unsigned long int i = 0;i < vector_.size();i++){
-		if(*(vector_[i]+search_offset) == value){
-			return i;
+void sanatize_input(std::string *tmp){
+	for(int i = 0;i < 31;i++){ // reserved for networking and data parsing
+		unsigned long int position;
+		if(unlikely((position = tmp->find_first_of(std::to_string((char)i))) != std::string::npos)){
+			tmp->erase(i, 1);
 		}
 	}
 }
-*/
+
+void update_progress_bar(long double percent_complete){
+	const unsigned long int maximum_size_of_bar = 20;
+	const unsigned long int number_of_item = percent_complete/(100/maximum_size_of_bar);
+	printf("\r");
+	std::string output = "[";
+	for(unsigned long int i = 0;i < maximum_size_of_bar;i++){
+		if(i <= number_of_item){
+			output += "-";
+		}else{
+			output += " ";
+		}
+	}
+	if(output != "\r"){
+		output[output.size()-1] = '>';
+	}
+	output += "]";
+	printf("%s %Lf\%%", output.c_str(), percent_complete);
+}

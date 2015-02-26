@@ -1,9 +1,9 @@
 #include "server_main.h"
+#include "server_console.h"
 #include "server_physics.h"
 #include "server_net.h"
-#include "server_render.h"
 
-std::vector<void(*)()> loop_code;
+int loop_settings;
 
 server_info_t *server_info = nullptr;
 net_ip_connection_info_t *self_info = nullptr; // TODO: rename this to prevent confusion with server_info
@@ -16,8 +16,6 @@ int argc_;
 char **argv_;
 
 coord_t *map = nullptr;
-int sleep_time = 1;
-bool fixed_sleep_time = false;
 
 server_info_t::server_info_t(){}
 
@@ -53,34 +51,76 @@ void server_info_init(){
 	}
 }
 
-void test_logic_init(){}
-void test_logic_engine(){}
-void test_logic_close(){}
+void test_logic_engine();
+
+void test_logic_init(){
+	loop_add(&server_loop_code, "test_logic_engine", test_logic_engine);
+	model_t *tmp_model = new model_t;
+	model_load(tmp_model, "test.obj");
+	coord_t *tmp_coord = new coord_t;
+	tmp_coord->model_id = tmp_model->array.id;
+}
+
+void test_logic_engine(){
+	// this doesn't do anything
+}
+
+void test_logic_close(){
+	loop_del(&server_loop_code, test_logic_engine);
+}
 
 void simple_signal_handler(int signum){
 	terminate = true;
 }
 
-void init(int choice){
-	signal(SIGINT, simple_signal_handler);
-	for(int i = 0;i < argc_;i++){
-		char *next_item;
-		if(i+i == argc_){
-			next_item = (char*)"";
-		}else{
-			next_item = argv_[i+1];
+static void load_previous_server_state(){
+	std::ifstream in("server_state.save");
+	std::vector<std::string> save;
+	if(in.is_open()){
+		char data[65536];
+		while(in.getline(data, 65536)){
+			save.push_back(data);
 		}
-		if(strcmp(argv_[i], "--fix-ms-sleep") == 0){
-			sleep_time = atoi(next_item);
-			fixed_sleep_time = true;
+		const unsigned long int save_size = save.size();
+		for(unsigned long int i = 0;i < save_size;i++){
+			update_class_data(save[i], UINT_MAX);
+			update_progress_bar(i/save_size);
+		}
+	}else{
+		printf("There doesn't appear to be a server_save file to use\n");
+	}
+}
+
+static void load_initial_values(){
+	std::ifstream in("server_settings.save");
+	if(in.is_open()){
+		char data[512];
+		while(in.getline(data, 512)){
+			std::stringstream ss(data);
+			std::string data_[2];
+			ss >> data_[0] >> data_[1];
+			long long int data_num = atoi(data_[1].c_str());
+			if(data_[0] == "loop_settings"){
+				loop_settings = data_num;
+			}else if(data_[0] == "net_loop_settings"){
+				net_loop_settings = data_num;
+			}
 		}
 	}
+	in.close();
+}
+
+void init(int choice){
+	load_previous_server_state();
+	server_loop_code.name = "server loop code";
+	signal(SIGINT, simple_signal_handler);
+	load_initial_values();
 	switch(choice){
 	case 1:
 		server_info_init();
 		net_init();
 		physics_init("gametype/default");
-		render_init();
+		console_init();
 		break;
 	case 2:
 		test_logic_init();
@@ -98,7 +138,7 @@ void init(int choice){
 void close(){
 	net_close();
 	physics_close();
-	render_close();
+	console_close();
 	test_logic_close();
 	delete_all_data();
 	// the functions are smart enough to not close if they never initialized
@@ -118,11 +158,10 @@ int main(int argc, char **argv){
 	argv_ = argv;
 	init(menu());
 	printf("Starting the main loop\n");
-	int loop_code = INT_MIN;
-	SET_BIT(&loop_code, LOOP_CODE_MT, 0);
+	SET_BIT(loop_settings, LOOP_CODE_MT, 0);
 	while(terminate == false){
-		loop_run(&server_loop_code, loop_code);
-		ms_sleep(sleep_time);
+		loop_run(&server_loop_code, &loop_settings);
+		once_per_second_update();
 	}
 	close();
 	return 0;
