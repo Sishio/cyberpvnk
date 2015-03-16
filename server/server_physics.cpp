@@ -25,6 +25,7 @@ extern bool once_per_second;
 extern loop_t server_loop_code;
 
 static void apply_input(coord_t *a, int event){
+	a->array.data_lock.lock();
 	const long double sin_y_rot = sin(a->y_angle);
 	//const long double sin_x_rot = sin(a->x_angle);
 	const long double cos_y_rot = cos(a->y_angle);
@@ -49,9 +50,17 @@ static void apply_input(coord_t *a, int event){
 	default:
 		break;
 	}
+	a->array.data_lock.unlock();
 }
 
+static input_settings_t *default_input_settings_pointer = nullptr;
+
 static void coord_physics_apply_input(coord_t *a, input_buffer_t *b, input_settings_t *input_settings = nullptr){
+	if(b == nullptr || a == nullptr){
+		return;
+	}
+	b->array.data_lock.lock();
+	a->array.data_lock.lock();
 	int search_integer = 0;
 	switch(b->type){
 	case INPUT_TYPE_KEYBOARD:
@@ -63,36 +72,39 @@ static void coord_physics_apply_input(coord_t *a, input_buffer_t *b, input_setti
 	bool no_input_settings = false;
 	if(input_settings == nullptr){
 		no_input_settings = true;
-		input_settings = new input_settings_t;
-		printf("Warning: no input_settings provided, using the default values\n");
-		input_settings->int_data[0][0] = 'w';
-		input_settings->int_data[0][1] = INPUT_MOTION_FORWARD;
-		input_settings->int_data[1][0] = 'a';
-		input_settings->int_data[1][1] = INPUT_MOTION_LEFT;
-		input_settings->int_data[2][0] = 's';
-		input_settings->int_data[2][1] = INPUT_MOTION_BACKWARD;
-		input_settings->int_data[3][0] = 'd';
-		input_settings->int_data[3][1] = INPUT_MOTION_RIGHT;
+		if(default_input_settings_pointer == nullptr){
+			default_input_settings_pointer = new input_settings_t;
+			printf("Warning: no input_settings provided, using the default values\n");
+			default_input_settings_pointer->int_data[0][0] = 'w';
+			default_input_settings_pointer->int_data[0][1] = INPUT_MOTION_FORWARD;
+			default_input_settings_pointer->int_data[1][0] = 'a';
+			default_input_settings_pointer->int_data[1][1] = INPUT_MOTION_LEFT;
+			default_input_settings_pointer->int_data[2][0] = 's';
+			default_input_settings_pointer->int_data[2][1] = INPUT_MOTION_BACKWARD;
+			default_input_settings_pointer->int_data[3][0] = 'd';
+			default_input_settings_pointer->int_data[3][1] = INPUT_MOTION_RIGHT;
+		}
+		input_settings = default_input_settings_pointer;
 	}
 	for(unsigned long int i = 0;i < 64;i++){
 		if(input_settings->int_data[i][0] == search_integer){
+			a->array.data_lock.unlock();
 			apply_input(a, input_settings->int_data[i][1]);
+			a->array.data_lock.lock();
 			break;
 		}
 	}
-	if(no_input_settings){
-		delete input_settings;
-		input_settings = nullptr;
-	}
+	b->array.data_lock.unlock();
+	a->array.data_lock.unlock();
 }
 
 static void apply_all_input(){
 	std::vector<void*> tmp_input_buffer = all_pointers_of_type("input_buffer_t");
 	const unsigned long int tmp_input_buffer_size = tmp_input_buffer.size();
 	for(unsigned long int i = 0;i < tmp_input_buffer_size;i++){
-		client_t *tmp_client = (client_t*)find_pointer(((input_buffer_t*)tmp_input_buffer[i])->client_id);
+		client_t *tmp_client = (client_t*)find_pointer(((input_buffer_t*)tmp_input_buffer[i])->client_id, "client_t");
 		if(tmp_client != nullptr){
-			coord_physics_apply_input((coord_t*)find_pointer(tmp_client->coord_id), (input_buffer_t*)tmp_input_buffer[i]);
+			coord_physics_apply_input((coord_t*)find_pointer(tmp_client->coord_id, "coord_t"), (input_buffer_t*)tmp_input_buffer[i]);
 			delete (input_buffer_t*)tmp_input_buffer[i];
 		}
 		tmp_client = nullptr;
@@ -120,6 +132,7 @@ void physics_engine(){
 
 static void coord_physics_iteration(coord_t *a){
 	term_if_true(a == nullptr,(char*)"coord_physics_iteration a is NULL/nullptr\n");
+	a->array.data_lock.lock();
 	const long double time = get_time();
 	a->physics_time = time-(a->old_time);
 	a->old_time = time;
@@ -132,12 +145,11 @@ static void coord_physics_iteration(coord_t *a){
 		a->x_vel *= pos_mul;
 		a->y_vel *= pos_mul;
 		a->z_vel *= pos_mul;
-		a->x_angle += a->x_angle_vel*a->physics_time;
-		a->y_angle += a->y_angle_vel*a->physics_time;
-		const long double angle_mul = 1/(1+(.1*a->physics_time));
-		a->x_angle_vel *= angle_mul;
-		a->y_angle_vel *= angle_mul;
-	}else{
-		a->x_vel = a->y_vel = a->z_vel = 0;
 	}
+	a->x_angle += a->x_angle_vel*a->physics_time;
+	a->y_angle += a->y_angle_vel*a->physics_time;
+	const long double angle_mul = 1/(1+(.1*a->physics_time));
+	a->x_angle_vel *= angle_mul;
+	a->y_angle_vel *= angle_mul;
+	a->array.data_lock.unlock();
 }

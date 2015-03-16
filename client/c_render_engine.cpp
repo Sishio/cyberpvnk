@@ -29,11 +29,11 @@ extern char **argv_;
 
 static void update_pointers(){
 	if(unlikely(self_id != old_self_id)){
-		self = (client_t*)find_pointer(self_id);
+		self = (client_t*)find_pointer(self_id, "client_t");
 		if(self != nullptr){
 			old_self_id = self_id;
 			if(likely(self->coord_id != old_coord_id)){
-				coord = (coord_t*)find_pointer(self->coord_id);
+				coord = (coord_t*)find_pointer(self->coord_id, "coord_t");
 				old_coord_id = self->coord_id;
 			}
 		}

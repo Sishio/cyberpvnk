@@ -17,6 +17,14 @@ typedef unsigned long int net_packet_id;
 	#define NET_PACKET_START	(char*)"T"
 	#define NET_PACKET_END		(char*)"S"
 	#define NET_JOIN		(char*)"R"
+#elif ALPHA_NEGATIVE_SEPERATOR
+	#define NET_PACKET_ID_START	-23
+	#define NET_PACKET_ID_END	-24
+	#define NET_PACKET_POS_START	-25
+	#define NET_PACKET_POS_END	-26
+	#define NET_PACKET_START	-27
+	#define NET_PACKET_END		-28
+	#define NET_JOIN		-29
 #else
 	#define NET_PACKET_ID_START	(char*)"\x17"
 	#define NET_PACKET_ID_END	(char*)"\x18"

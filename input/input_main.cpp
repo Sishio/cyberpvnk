@@ -1,143 +1,89 @@
-/*
-Czech_mate by Daniel
-This file is part of Czech_mate.
-
-Czech_mate is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License Version 2 as published by
-the Free Software Foundation, 
-
-Czech_mate is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 #include "input_main.h"
-#include "../render/render_main.h"
-#include "../util/util_main.h"
 
-struct key_device_t{
-	key_device_t(input_buffer_t *tmp):input_buffer(tmp){}
-	bool operator()(array_t *tmp){
-		if(tmp->data_type == "input_buffer_t"){
-			return ((input_buffer_t*)tmp->pointer)->int_data == input_buffer->int_data;
+static bool signal_array[SIGNAL_ARRAY_SIZE]; // +16 for my own signals
+
+static inline int entry_from_scancode(long long int a){
+	return a;
+}
+
+static inline void set_signal(int signal, bool value){
+	signal_array[signal-1] = value;
+}
+
+static inline bool pull_signal(int signal){
+	return signal_array[signal-1];
+}
+
+static inline void signal_function(int signal){
+	set_signal(signal, true);
+}
+
+bool check_signal(int signal){
+	const bool return_value = pull_signal(signal);
+	set_signal(signal, false);
+	return return_value;
+}
+
+void input_t::keyboard_to_signal(){
+	const bool alt_key = query_key(SDL_SCANCODE_LALT) || query_key(SDL_SCANCODE_RALT);
+	if(unlikely(alt_key)){
+		if(query_key(SDL_SCANCODE_1)){
+			set_signal(SIGNAL_QUIT_LOOP, true);
 		}else{
-			return false;
+			set_signal(SIGNAL_QUIT_LOOP, false);
 		}
 	}
-	input_buffer_t *input_buffer;
-};
+}
 
-char *event_key_to_key(SDL_Keycode);
-
-#ifdef __linux
-void basic_signal_handler(int signal){
-	switch(signal){
-	case SIGINT:
-		printf("Received SIGINT\n");
-		if(terminate){
-			 exit(0);
-		}
-		terminate = true;
-		break;
-	case SIGKILL:
-		printf("Received SIGKILL\n");
-		exit(0);
-	default:
-		break;
+input_t::input_t(int argc, char** argv){
+	for(int i = 0;i < 32;i++){
+		signal(i, signal_function);
 	}
-}
-#endif
-
-void input_t::input_parse_key_up(SDL_Event a){
-	input_buffer_t tmp;
-	tmp.type = INPUT_TYPE_KEYBOARD;
-	tmp.int_data[INPUT_TYPE_KEYBOARD_KEY] = (int)a.key.keysym.sym;
-	//tmp.int_data[INPUT_TYPE_KEYBOARD_CHAR] = (int)SDL_GetKeyName(a.key.keysym.sym[0]);
-	auto c = std::find_if(array_vector.begin(), array_vector.end(), key_device_t(&tmp));
-	if(c != array_vector.end()){
-		delete (*c);
-	}
+	//signal(SIGKILL, signal_function);
+	//signal(SIGTERM, signal_function);
+	//signal(SIGINT, signal_function);
 }
 
-void input_t::input_parse_key_down(SDL_Event a){
-	input_buffer_t *tmp = new input_buffer_t;
-	tmp->type = INPUT_TYPE_KEYBOARD;
-	tmp->int_data[INPUT_TYPE_KEYBOARD_KEY] = (int)a.key.keysym.sym;
-	//tmp.int_data[INPUT_TYPE_KEYBOARD_CHAR] = (int)SDL_GetKeyName(a.key.keysym.sym[0]);
-}
+input_t::~input_t(){}
 
-void input_t::blank(){
-	is_used = false;
-	render = nullptr;
-	self = nullptr;
-}
-
-input_t::input_t(int argc,char** argv){
-	SDL_Init(SDL_INIT_EVENTS);
-	blank();
-}
-
-int input_t::loop(){
-	int return_value = 0;
+void input_t::loop(){
 	SDL_PumpEvents();
 	SDL_Event event;
-	while(SDL_PollEvent(&event)){ // the only input that works without a screen would be SDL_QUIT (Ctrl-C).
+	while(SDL_PollEvent(&event)){
 		switch(event.type){
 		case SDL_KEYUP:
-			input_parse_key_up(event);
+			keyboard_map.keyboard_map[entry_from_scancode(event.key.keysym.scancode)] = false;
 			break;
 		case SDL_KEYDOWN:
-			input_parse_key_down(event);
-			break;
-		case SDL_QUIT:
-			printf("Terminating per request via input layer\n");
-			return_value = TERMINATE;
+			keyboard_map.keyboard_map[entry_from_scancode(event.key.keysym.scancode)] = true;
 			break;
 		default:
-			//printf("The event you are creating is not supported (SDL ID:%d)\n",event.type);
+			// not supported yet, but this should be enough for simple control
 			break;
 		}
 	}
-	return return_value;
+	keyboard_to_signal();
 }
 
-bool input_t::query_key(input_buffer_t *buffer, int sdl_key, char key){
+bool input_t::query_key(int scancode){
 	bool return_value = false;
-	if(sdl_key != -1){
-		buffer = new input_buffer_t;
-		buffer->type = INPUT_TYPE_KEYBOARD;
-		buffer->int_data[INPUT_TYPE_KEYBOARD_KEY] = sdl_key;
-	}
-	if(buffer != nullptr){
-		return std::find_if(array_vector.begin(), array_vector.end(), key_device_t(buffer)) != array_vector.end();
-	}
-	if(sdl_key != -1){
-		delete buffer;
-		buffer = nullptr;
+	if(likely(scancode > 0 && scancode < 256)){
+		return_value = keyboard_map.keyboard_map[scancode];
+	}else{
+		printf("The scancode is outside of the keyboard bounds\n");
+		return_value = false;
 	}
 	return return_value;
 }
 
-void input_t::close(){
-	blank();
-}
-
-void cursor::set_location(input_t *input, unsigned int x, unsigned int y){
-	#ifdef USE_SDL
-	if(input->render != nullptr){
-		SDL_WarpMouseInWindow(input->render->render_screen, x, y);
+input_keyboard_map_t::input_keyboard_map_t() : array(this, true){
+	client_id = -1;
+	array.int_array.push_back(&client_id);
+	for(unsigned long int i = 0;i < INPUT_MAP_SIZE;i++){
+		array.int_array.push_back(&keyboard_map[i]);
+		keyboard_map[i] = false;
 	}
-	#endif
 }
 
-void cursor::get_location(unsigned int *x, unsigned int *y){
-	#ifdef USE_SDL
-	int *x_ = (int*)x;
-	int *y_ = (int*)y;
-	SDL_GetRelativeMouseState(x_, y_);
-	#endif
+input_keyboard_map_t::~input_keyboard_map_t(){
 }

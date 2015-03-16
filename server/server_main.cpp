@@ -7,9 +7,7 @@ int loop_settings;
 
 server_info_t *server_info = nullptr;
 net_ip_connection_info_t *self_info = nullptr; // TODO: rename this to prevent confusion with server_info
-thread_t *thread = nullptr;
 
-bool terminate = false;
 loop_t server_loop_code;
 
 int argc_;
@@ -55,18 +53,40 @@ void test_logic_engine();
 
 void test_logic_init(){
 	loop_add(&server_loop_code, "test_logic_engine", test_logic_engine);
-	model_t *tmp_model = new model_t;
-	model_load(tmp_model, "test.obj");
-	coord_t *tmp_coord = new coord_t;
-	tmp_coord->model_id = tmp_model->array.id;
+	net_ip_connection_info_t *tmp_conn_info = new net_ip_connection_info_t;
+	tmp_conn_info->ip = "127.0.0.1";
+	tmp_conn_info->port = NET_IP_SERVER_RECEIVE_PORT;
+	net = new net_t(argc_, argv_, tmp_conn_info->array.id);
 }
 
 void test_logic_engine(){
-	// this doesn't do anything
+	coord_t tmp_coord[2];
+	tmp_coord[0].array.data_lock.lock();
+	tmp_coord[0].array.long_double_lock.lock();
+	for(unsigned long int i = 1;i < tmp_coord[0].array.long_double_array.size();i++){
+		*tmp_coord[0].array.long_double_array[i] = (long double)gen_rand();
+	}
+	tmp_coord[0].array.long_double_lock.unlock();
+	tmp_coord[0].array.data_lock.unlock();
+	net_ip_connection_info_t tmp_net_conn_info;
+	tmp_net_conn_info.ip = "127.0.0.1";
+	tmp_net_conn_info.port = NET_IP_SERVER_RECEIVE_PORT;
+	net->write(tmp_coord[0].array.gen_updated_string(UINT_MAX), tmp_net_conn_info.array.id);
+	tmp_coord[1].array.id = tmp_coord[0].array.id;
+	tmp_coord[0].array.id++;
+	std::string incoming_packet;
+	while((incoming_packet = net->read()) == ""){
+		net->loop();
+	}
+	update_class_data(incoming_packet, CLASS_DATA_UPDATE_EVERYTHING);
+	tmp_coord[0].print();
+	tmp_coord[1].print();
 }
 
 void test_logic_close(){
 	loop_del(&server_loop_code, test_logic_engine);
+	delete net;
+	net = nullptr;
 }
 
 void simple_signal_handler(int signum){
@@ -75,8 +95,8 @@ void simple_signal_handler(int signum){
 
 static void load_previous_server_state(){
 	std::ifstream in("server_state.save");
-	std::vector<std::string> save;
 	if(in.is_open()){
+		std::vector<std::string> save;
 		char data[65536];
 		while(in.getline(data, 65536)){
 			save.push_back(data);
@@ -106,14 +126,14 @@ static void load_initial_values(){
 				net_loop_settings = data_num;
 			}
 		}
+		in.close();
 	}
-	in.close();
 }
 
 void init(int choice){
 	load_previous_server_state();
 	server_loop_code.name = "server loop code";
-	signal(SIGINT, simple_signal_handler);
+	//signal(SIGINT, simple_signal_handler);
 	load_initial_values();
 	switch(choice){
 	case 1:

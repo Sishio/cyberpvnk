@@ -1,0 +1,10 @@
+#ifndef SERVER_PRINT_H
+	#define SERVER_PRINT_H
+	#include "cstdio"
+	#include "vector"
+	class output_t{
+	public:
+		void
+	};
+	extern std::vector<output_t> output;
+#endif

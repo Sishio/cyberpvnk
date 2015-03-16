@@ -1,0 +1,48 @@
+IDLE for about five seconds:
+	No special flags:
+		server loop code
+			net_engine		0.000791
+			physics_engine		0.000006
+		current frame rate: 1197.272135
+		average framerate: 1240.510642
+		loop_settings: 0
+	
+		net loop code
+			net_read_data		0.000006
+			net_pingout		0.000004
+			net_send_data		0.000003
+		current frame rate: 24772.096710
+		average framerate: 77415.423142
+	
+	-O2
+		server loop code
+			net_engine		0.000736
+			physics_engine		0.000005
+		current frame rate: 1291.555808
+		average framerate: 1343.011867
+		loop_settings: 0
+	
+		net loop code
+			net_read_data		0.000004
+			net_pingout		0.000003
+			net_send_data		0.000003
+		current frame rate: 29706.205626
+		average framerate: 89872.258700
+		loop_settings: 0
+	
+	-Ofast (--net-ip):
+		server loop code
+			net_engine		0.000736
+			physics_engine		0.000005
+		current frame rate: 1291.555808
+		average framerate: 1343.011867
+		loop_settings: 0
+	
+		net loop code
+			net_read_data		0.000004
+			net_pingout		0.000003
+			net_send_data		0.000003
+		current frame rate: 29706.205626
+		average framerate: 89872.258700
+		loop_settings: 0
+

@@ -48,8 +48,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	class render_rules_t{
 	public:
 		void blank();
-		void init();
-		void close();
+		render_rules_t();
+		~render_rules_t();
 		bool fullscreen;
 		bool vsync;
 		unsigned int x_res;
@@ -64,26 +64,33 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		bool enable_view;
 		bool enable_grid;
 	};
+	struct render_data_t{
+		render_rules_t *rules;
+		SDL_GLContext context;
+		coord_t *coord;
+		SDL_Window *screen;
+		render_data_t();
+	  	~render_data_t();
+	};
+	#include "render_opengl_dep.h"
 	class render_t{
 	private:
-		SDL_GLContext render_context;
 		void init_generate_window();
 		void init_subsystems();
 		void init_parse_parameters(int,char**);
-		void init_configure_buffer();
 		void init_load_models();
 		void loop_init();
 		void loop_update();
 		void loop_render_buffer();
 		void loop_render_screen();
+		render_opengl_dep_t *render_opengl_dep;
 	public:
-		coord_t *coord;
+		render_rules_t *rules; // backwards compatibility
 		SDL_Window *render_screen;
-		render_rules_t rules;
-		void blank();
+		render_data_t *data;
 		render_t(int,char**);
+		~render_t();
 		int loop(coord_t*);
-		void close();
 	};
 	extern render_rules_t *render_rules_blank;
 	extern int render_generate_shape(int);

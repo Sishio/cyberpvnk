@@ -1,0 +1,4 @@
+#ifndef INPUT_MAIN_H
+	#define INPUT_MAIN_H
+	#include "SDL2/SDL_input.h"
+#endif

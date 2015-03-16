@@ -17,6 +17,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "loop_main.h"
 
+bool terminate = false;
+
+unsigned long long int iteration_count = 0;
+
 loop_t::loop_t(){
 	target_rate = 60;
 	average_rate = 0;
@@ -69,6 +73,7 @@ void loop_run(loop_t *a, int *settings){
 		summary += "current frame rate: " + std::to_string(current_rate) + "\naverage framerate: " + std::to_string(a->average_rate) + "\nloop_settings: " + std::to_string(*settings) + "\n";
 		printf("%s", summary.c_str());
 	}
+	++iteration_count;
 }
 
 void loop_del(loop_t *a, void(*b)()){
@@ -79,4 +84,8 @@ void loop_del(loop_t *a, void(*b)()){
 			break;
 		}
 	}
+}
+
+bool infinite_loop(){
+	return terminate == false && check_signal(SIGNAL_QUIT_LOOP) == false;
 }

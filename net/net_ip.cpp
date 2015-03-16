@@ -131,15 +131,19 @@ void net_ip_t::write(std::string data, int b, unsigned long int packet_id){
 }
 
 std::string net_ip_t::receive_now(){
-	if(SDLNet_UDP_Recv(inbound->socket,inbound_packet)){
-		return (char*)inbound_packet->data;
+	inbound_packet->data[0] = '\0';
+	inbound_packet->len = 0;
+	SDLNet_UDP_Recv(inbound->socket,inbound_packet);
+	if(inbound_packet->len != 0){
+		positive_to_negative_trick(&inbound_packet->data, inbound_packet->len);
 	}
-	return "";
+	return (char*)inbound_packet->data;
+	//return reinterpret_cast<std::string>(inbound_packet->data);
 }
 
 int net_ip_t::send_now(net_ip_write_buffer_t *data){
 	int return_value = 0;
-	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_pointer(data->connection_info_id);
+	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_pointer(data->connection_info_id, "net_ip_connection_info_t");
 	if(outbound == NULL){
 		printf("Cannot use outbound port. Check to see if you have proper permissions to use raw sockets\n");
 		return_value = -1;
@@ -178,6 +182,7 @@ int net_ip_t::send_now(net_ip_write_buffer_t *data){
 		unsigned long int total_byte_size = 0;
 		const unsigned long int max_total_sent_byte = 8*KILOBYTE_TO_BYTE;
 		for(unsigned long int i = 0;i < raw_packets_size;i++){
+			negative_to_positive_trick(&raw_packets[i]);
 			unsigned char* outbound_data = (unsigned char *)raw_packets[i].c_str();
 			outbound_packet->len = (int)(raw_packets[i].size()+1);
 			outbound_packet->data = outbound_data;
@@ -229,14 +234,14 @@ bool net_ip_t::receive_check_read_array(std::string a, unsigned long int packet_
 
 void net_ip_t::loop_receive(){
 	std::string inbound_packet_string;
-	for(unsigned long int i = 0;i < 512;i++){
-		if((inbound_packet_string = receive_now()) != ""){
-			const unsigned long int start = inbound_packet_string.find_first_of(NET_PACKET_ID_START);
-			const unsigned long int end = inbound_packet_string.find_first_of(NET_PACKET_ID_END);
-			const std::string tmp_packet_id = inbound_packet_string.substr(start+1,end-start-1);
-			const unsigned long int packet_id = atoi(tmp_packet_id.c_str());
-			receive_check_read_array(inbound_packet_string, packet_id);
-		}
+	int curr_item = 0, max_item = 512;
+	while((inbound_packet_string = receive_now()) != "" && curr_item != max_item){
+		const unsigned long int start = inbound_packet_string.find_first_of(NET_PACKET_ID_START);
+		const unsigned long int end = inbound_packet_string.find_first_of(NET_PACKET_ID_END);
+		const std::string tmp_packet_id = inbound_packet_string.substr(start+1,end-start-1);
+		const unsigned long int packet_id = atoi(tmp_packet_id.c_str());
+		receive_check_read_array(inbound_packet_string, packet_id);
+		curr_item++;
 	}
 }
 
@@ -327,7 +332,7 @@ std::string net_ip_read_buffer_t::gen_string(){
 
 udp_socket_t::udp_socket_t(int tmp_connection_info_id){
 	connection_info_id = tmp_connection_info_id;
-	socket = SDLNet_UDP_Open(((net_ip_connection_info_t*)find_pointer(connection_info_id))->port);
+	socket = SDLNet_UDP_Open(((net_ip_connection_info_t*)find_pointer(connection_info_id, "net_ip_connection_info_t"))->port);
 	if(unlikely(!socket)){
 		printf("Socket will not open\n");
 	}

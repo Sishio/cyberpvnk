@@ -23,6 +23,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "../class/class_main.h"
 #include "../math/math_main.h"
 #include "cstdio"
+#ifdef __linux
+	#include "signal.h"
+#endif
 #ifndef C_MAIN_H
 	#define C_MAIN_H
 	extern loop_t loop;

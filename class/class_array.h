@@ -19,10 +19,14 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define CLASS_ARRAY_H
 	#include "../util/util_main.h"
 	#include "cstdio"
+	#include "iostream"
 	#include "string"
 	#include "cstdio"
 	#include "cstdlib"
 	#include "vector"
+	#define DEFAULT_INT_VALUE	-1
+	#define DEFAULT_STRING_VALUE	""
+	#define DEFAULT_LONG_DOUBLE_VALUE	0.0
 	#define DEBUG_SEPERATOR 1
 	#ifndef DEBUG_SEPERATOR
 		#define ARRAY_ITEM_SEPERATOR_START		(char*)"\x01"
@@ -65,6 +69,22 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	// used by the server to tell it what data it is allowed to modify because the clients can send fraud packets and allowing all of the packets would allow cheating
 	// the networking code reserves 24-32 (packet seperators for serial connections among other things)
 	typedef int array_id_t;
+	/*class array_id_t {
+	private:
+		int id;
+	public:
+		operator const int() {
+			return this->id;
+		}
+		array_id_t& operator=(array_id_t& tmp){
+			this->id = tmp.id;
+			return *this;
+		}
+		array_id_t& operator=(int& tmp){
+			this->id = tmp;
+			return *this;
+		}
+	};*/
 	class array_t{
 	private:
 		void parse_int_from_string(std::string);
@@ -76,8 +96,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		long int string_hash;
 		long int long_double_hash;
 	public:
+		std::mutex data_lock;
 		std::mutex int_lock, long_double_lock, string_lock;
 		void update_pointers();
+		void reset_values();
 		void* pointer;
 		std::string data_type;
 		long double last_update;
@@ -103,7 +125,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern void add_array_to_vector(array_t*);
 	extern void delete_array_from_vector(array_t*);
 	extern void delete_array_id(array_id_t);
-	extern void* find_pointer(array_id_t, std::string type = "");
+	extern void* find_pointer(array_id_t, std::string);
 	extern array_t* find_array_pointer(int);
 	extern void delete_all_data();
 	extern void delete_array_and_pointer(array_t*);

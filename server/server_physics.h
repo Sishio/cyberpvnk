@@ -21,8 +21,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../main.h"
 	#include "../util/util_main.h"
 	#include "../class/class_main.h"
-	#include "../thread/thread_main.h"
-	#include "server_thread.h"
 	#include "thread"
 	#include "cstring"
 	extern std::vector<client_t*> client;

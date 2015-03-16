@@ -33,22 +33,7 @@ static loop_t net_loop_mt;
 static void net_execute_function(std::string a){
 	if(a == "reset_vector"){
 		printf("resetting the vector\n");
-		for(unsigned long int i = 0;i < array_vector.size();i++){
-			const std::string type = array_vector[i]->data_type;
-			void* void_ptr = array_vector[i]->pointer;
-			if(type == "coord_t"){
-				delete (coord_t*)void_ptr;
-			}else if(type == "model_t"){
-				delete (model_t*)void_ptr;
-			}else if(type == "input_buffer_t"){
-				delete (input_buffer_t*)void_ptr;
-			}else if(type == "input_setings_t"){
-				delete (input_settings_t*)void_ptr;
-			}else if(type == "client_t" && self_id != array_vector[i]->id){
-				delete (client_t*)void_ptr;
-			}
-			void_ptr = nullptr;
-		}
+		delete_all_data();
 	}else{
 		printf("unknown net_execute_funciton was received: %s\n", a.c_str());
 	}
@@ -74,7 +59,7 @@ static void net_module_loop(){
 }
 
 static void net_connect(int host_info_id_){
-	std::string packet = ((net_ip_connection_info_t*)find_pointer(self_info_id))->array.gen_updated_string(INT_MAX) + NET_JOIN;
+	std::string packet = ((net_ip_connection_info_t*)find_pointer(self_info_id, "net_ip_connection_info_t"))->array.gen_updated_string(INT_MAX) + NET_JOIN;
 	net->write(packet, host_info_id_);
 	bool connection_established = false;
 	while(connection_established == false){
@@ -102,10 +87,11 @@ static void net_receive_engine(){
 }
 
 static void net_send_engine(){
-	client_t *client_tmp = (client_t*)find_pointer(self_id);
+  client_t *client_tmp = (client_t*)find_pointer(self_id, "client_t");
 	if(client_tmp == nullptr){
 		printf("I don't have a pointer to myself yet, cannot send the server any update packet. This is bad\n");
 	}else{
+		client_tmp->array.data_lock.lock();
 		int what_to_update;
 		if(likely(once_per_second == false)){
 			client_tmp->array.updated(&what_to_update);
@@ -115,6 +101,7 @@ static void net_send_engine(){
 		// guarantees that data will be sent. if no data is sent after a while, the server pings us out.
 		// terrible architecture, I need to fix it
 		std::string data = client_tmp->array.gen_updated_string(what_to_update);
+		client_tmp->array.data_lock.unlock();
 		net->write(data.c_str(), host_info_id);
 	}
 }
@@ -126,12 +113,17 @@ void net_init(){
 	loop_add(&loop, "net_engine", net_engine);
 	net_ip_connection_info_t *self_info = new net_ip_connection_info_t;
 	net_ip_connection_info_t *host_info = new net_ip_connection_info_t;
+	self_info->array.data_lock.lock();
+	host_info->array.data_lock.lock();
 	host_info_id = host_info->array.id;
 	self_info_id = self_info->array.id;
 	host_info->ip = "127.0.0.1"; // don't delete the host
 	self_info->ip = "127.0.0.1";
 	host_info->port = NET_SERVER_PORT;
 	self_info->port = NET_CLIENT_PORT;
+	self_info->array.data_lock.unlock();
+	host_info->array.data_lock.unlock();
+	bool force_ip = false;
 	for(int i = 0;i < argc_;i++){
 		std::string next_item;
 		if(i+1 < argc_){
@@ -145,6 +137,7 @@ void net_init(){
 			host_info->port = atoi((char*)argv_[i+1]);
 		}else if(strcmp(argv_[i], (char*)"--net-ip-client-ip") == 0){
 			if(next_item != ""){
+				force_ip = true;
 				self_info->ip = next_item.c_str();
 			}
 		}else if(strcmp(argv_[i], (char*)"--net-ip-client-port") == 0){
@@ -156,7 +149,11 @@ void net_init(){
 			printf("There is no next object\n");
 		}
 	}
-	self_info->ip = net_gen_ip_address(host_info->ip);
+	if(force_ip == false){
+		self_info->array.data_lock.lock();
+		self_info->ip = net_gen_ip_address(host_info->ip);
+		self_info->array.data_lock.unlock();
+	}
 	net = new net_t(argc_, argv_, self_info->array.id);
 	net_connect(host_info_id);
 }

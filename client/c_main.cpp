@@ -29,7 +29,6 @@ int argc_;
 char **argv_;
 
 unsigned long int tick = 0;
-bool terminate = false;
 
 loop_t loop;
 
@@ -42,8 +41,8 @@ static void test_logic_loop(){
 	model_t *model = new model_t;
 	coord->model_id = model->array.id;
 	model_load(model, "test.obj");
-	client_t *tmp_client = (client_t*)find_pointer(self_id);
-	render->loop((coord_t*)(find_pointer(tmp_client->coord_id)));
+	client_t *tmp_client = (client_t*)find_pointer(self_id, "client_t");
+	render->loop((coord_t*)(find_pointer(tmp_client->coord_id, "coord_t")));
 	delete model;
 	delete coord;
 
@@ -116,6 +115,10 @@ static void close(){
 		break;
 	}
 	delete_all_data();
+}
+
+void basic_signal_handler(int a){
+	terminate = true;
 }
 
 int main(int argc, char **argv){

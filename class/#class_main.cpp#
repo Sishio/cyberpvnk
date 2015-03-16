@@ -40,10 +40,10 @@ void coord_t::update_array_pointers(){
 coord_t::coord_t(bool add) : array(this, add){
 	update_array_pointers();
 	array.reset_values();
-	array.data_lock.lock();
+	data_lock.lock();
 	old_time = get_time();
 	mobile = true;
-	array.data_lock.unlock();
+	data_lock.unlock();
 }
 
 void coord_t::print(){
@@ -77,12 +77,14 @@ void coord_t::set_y_angle(bool add, long double a){
 }
 
 coord_t::~coord_t(){
-  delete (model_t*)find_pointer(model_id, "model_t");
+
+	delete (model_t*)find_pointer(model_id);
 }
 
 void model_t::update_array(){
 	array.data_type = "model_t";
 	array.update_pointers();
+	
 }
 
 model_t::model_t(bool add) : array(this, add){
@@ -156,9 +158,9 @@ client_t::client_t(bool add) : array(this, add){
 }
 
 client_t::~client_t(){
-	delete (coord_t*)find_pointer(coord_id, "coord_t");
-	delete (model_t*)find_pointer(model_id, "model_t");
-	delete (net_ip_connection_info_t*)find_pointer(connection_info_id, "net_ip_connection_info_t");
+	delete (coord_t*)find_pointer(coord_id);
+	delete (model_t*)find_pointer(model_id);
+	delete (net_ip_connection_info_t*)find_pointer(connection_info_id);
 }
 
 /*render_buffer_t::render_buffer_t(bool add) : array(this, add){

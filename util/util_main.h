@@ -28,6 +28,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "fstream"
 	#include "SDL2/SDL.h"
 	#include "util_conversion.h"
+	#include "chrono"
+	#include "thread"
 	#ifdef __linux
 		#include "fcntl.h"
 		#include "sys/types.h"
@@ -76,4 +78,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern void switch_values(void**, void**);
 	extern void sorting_algorithm(std::vector<void*>, int);
 	extern void sanatize_input(std::string*);
+	extern void load_file_to_string(std::string*, std::string);
+	extern void positive_to_negative_trick(unsigned char **, int);
+	extern void negative_to_positive_trick(std::string*);
 #endif

@@ -1,6 +1,6 @@
 CC=clang++
-MACROS=
-CFLAGS=-std=c++11 -g -Wall -Werror -Wextra -Wno-error=unused-parameter $(MACROS)
+ADD=-g -fno-omit-frame-pointer
+CFLAGS=-std=c++11 -Wall -Werror -Wextra -Wpedantic -Wno-error=unused-parameter $(ADD)
 LINKER=-lSDL2 -lm -lGL -lSDL2_net -pthread
 
 all: client server
@@ -13,13 +13,19 @@ client_delete:
 	touch bin/client.$(shell uname -m)
 	rm -r bin/client.$(shell uname -m)
 
-server: server_delete class net input thread math util render loop server_delete
+server_main:
 	$(CC) -c $(CFLAGS) server/server_main.cpp -o server/obj/server_main.o
+server_physics:
 	$(CC) -c $(CFLAGS) server/server_physics.cpp -o server/obj/server_physics.o
+server_net:
 	$(CC) -c $(CFLAGS) server/server_net.cpp -o server/obj/server_net.o
+server_console:
 	$(CC) -c $(CFLAGS) server/server_console.cpp -o server/obj/server_console.o
+
+
+server: server_delete server_main server_physics server_net server_console class net input math util render loop server_delete
 	ld -r server/obj/server_console.o server/obj/server_main.o server/obj/server_physics.o server/obj/server_net.o -o server/obj/server.o
-	$(CC) $(CFLAGS) loop/obj/loop.o input/obj/input.o render/obj/render.o math/obj/math.o class/obj/class.o net/obj/net.o thread/obj/thread.o util/obj/util.o server/obj/server.o -o bin/server.$(shell uname -m) $(LINKER)
+	$(CC) $(CFLAGS) loop/obj/loop.o input/obj/input.o render/obj/render.o math/obj/math.o class/obj/class.o net/obj/net.o util/obj/util.o server/obj/server.o -o bin/server.$(shell uname -m) $(LINKER)
 
 loop:
 	$(CC) -c $(CFLAGS) loop/loop_main.cpp -o loop/obj/loop.o
@@ -38,13 +44,10 @@ c_engine: c_input_engine c_net_engine c_render_engine
 	ld -r client/obj/c_net_engine.o client/obj/c_menu_engine.o client/obj/c_render_engine.o client/obj/c_input_engine.o -o client/obj/c_engine.o
 
 
-client: loop client_delete class net render input util math thread c_engine client_delete
+client: loop client_delete class net render input util math c_engine client_delete
 	$(CC) -c $(CFLAGS) client/c_main.cpp -o client/obj/c_main.o
 	ld -r client/obj/c_main.o client/obj/c_engine.o -o client/obj/c.o
-	$(CC) $(CFLAGS) util/obj/util.o math/obj/math.o class/obj/class.o net/obj/net.o render/obj/render.o input/obj/input.o thread/obj/thread.o loop/obj/loop.o client/obj/c.o -o bin/client.$(shell uname -m) $(LINKER)
-
-thread: loop util
-	$(CC) -c $(CFLAGS) thread/thread_main.cpp -o thread/obj/thread.o 
+	$(CC) $(CFLAGS) util/obj/util.o math/obj/math.o class/obj/class.o net/obj/net.o render/obj/render.o input/obj/input.o loop/obj/loop.o client/obj/c.o -o bin/client.$(shell uname -m) $(LINKER)
 
 console: util net
 	$(CC) $(CFLAGS) net/obj/net.o console/console_main.cpp util/obj/util_main.o -o bin/console.$(shell uname -m) $(LINKER)
@@ -66,8 +69,10 @@ net: loop util
 
 render:
 	$(CC) -c $(CFLAGS) render/render_main.cpp -o render/obj/render_main.o
+	$(CC) -c $(CFLAGS) render/render_opengl_dep.cpp -o render/obj/render_opengl_dep.o
+	$(CC) -c $(CFLAGS) render/render_data.cpp -o render/obj/render_data.o
 	$(CC) -c $(CFLAGS) render/render_obj_loader.cpp -o render/obj/render_obj_loader.o
-	ld -r render/obj/render_obj_loader.o render/obj/render_main.o -o render/obj/render.o
+	ld -r render/obj/render_obj_loader.o render/obj/render_main.o render/obj/render_data.o render/obj/render_opengl_dep.o -o render/obj/render.o
 
 util:
 	$(CC) -c $(CFLAGS) util/util_main.cpp -o util/obj/util.o

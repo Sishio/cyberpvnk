@@ -174,7 +174,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void set_x_angle(bool,long double);
 		void set_y_angle(bool,long double);
 		~coord_t();
-		std::vector<unsigned long int> nearby_coord;
 		array_id_t model_id;
 	};
 	class client_t{

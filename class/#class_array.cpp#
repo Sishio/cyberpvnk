@@ -363,29 +363,12 @@ array_t::~array_t(){
 
 void *find_pointer(array_id_t id, std::string type){
 	void* return_value = nullptr;
-	std::vector<void*> *array;
-	bool lock_vector = type == "";
-	if(!lock_vector){
-		array = new std::vector<void*>;
-		*array = all_entries_of_type(type);
-	}else{
-		array = (std::vector<void*>*)&array_vector;
-		array_lock.lock();
-	}
+	std::vector<array_t*> tmp = all_entries_of_type(type);
 	array_lock.lock();
-	const unsigned long int array_size = array_vector.size();
-	for(unsigned long int i = 0;i < array_size;i++){
-		if(array_vector[i] != nullptr && unlikely(array_vector[i]->id == id)){
-			return_value = ((array_t*)(*array)[i])->pointer;
-			break;
-		}
+	for(unsigned long int i = 0;i < tmp.size();i++){
+		
 	}
-	if(type != ""){
-		delete array;
-		array = nullptr;
-	}else{
-		array_lock.unlock();
-	}
+	array_lock.unlock();
 	return return_value;
 }
 

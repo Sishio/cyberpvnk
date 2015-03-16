@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
+//#define ALPHA_NEGATIVE_SEPERATOR 1
 #include "../class/class_main.h"
 #include "../util/util_main.h"
 #include "net_const.h"
@@ -38,9 +39,12 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#ifdef DEBUG_SEPERATOR
 		#define NET_IP_RETURN_ADDRESS_START	(char*)"Z"
 		#define NET_IP_RETURN_ADDRESS_END	(char*)"Y"
+	#elif ALPHA_NEGATIVE_SEPERATOR
+		#define NET_IP_RETURN_ADDRESS_START		-30
+		#define NET_IP_RETURN_ADDRESS_END		-31
 	#else
-		#define NET_IP_RETURN_ADDRESS_START		(char*)"\1e"
-		#define NET_IP_RETURN_ADDRESS_END		(char*)"\1f"
+		#define NET_IP_RETURN_ADDRESS_START		(char*)"\x1e"
+		#define NET_IP_RETURN_ADDRESS_END		(char*)"\x1f"
 	#endif
 	class net_ip_write_buffer_t{
 	public:

@@ -24,17 +24,10 @@ static loop_t net_loop_code;
 extern loop_t server_loop_code;
 extern std::vector<array_t*> array_vector;
 
-static void net_check_and_apply_pingout(client_t *tmp){
+static bool net_check_pingout(client_t *tmp){
 	const long double current_time = get_time();
 	const long double pingout = 3; // timer is always in seconds
-	if(unlikely(tmp->array.last_update + pingout < current_time)){
-		delete (coord_t*)find_pointer(tmp->coord_id);
-		delete (model_t*)find_pointer(tmp->model_id);
-		delete (net_ip_connection_info_t*)find_pointer(tmp->connection_info_id);
-		delete tmp;
-		tmp = nullptr;
-		printf("client has pinged out\n");
-	}
+	return tmp->array.last_update + pingout < current_time;
 }
 
 static double last_client_net_run = 0;
@@ -93,6 +86,9 @@ static void net_send_data(){
 	int what_to_update = INT_MAX;
         std::vector<void*> client_vector = all_pointers_of_type("client_t");
 	const unsigned long int client_vector_size = client_vector.size();
+	if(client_vector_size == 0){
+		return;
+	}
 	if(once_per_second){
 		const std::string reset_vector = wrap(ARRAY_FUNCTION_START, "reset_vector", ARRAY_FUNCTION_END);
 		for(unsigned long int i = 0;i < client_vector_size;i++){
@@ -101,21 +97,29 @@ static void net_send_data(){
 	}
 	const unsigned long int array_vector_size = array_vector.size();
 	for(unsigned long int c = 0;c < array_vector_size;c++){
-		if(once_per_second == true){
-			SET_BIT(what_to_update, ARRAY_INT_HASH_BIT, 1);
-			SET_BIT(what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 1);
-			SET_BIT(what_to_update, ARRAY_STRING_HASH_BIT, 1);
-		}else{
-			array_vector[c]->updated(&what_to_update);
-		}
-		const std::string gen_string = array_vector[c]->gen_updated_string(what_to_update);
-		for(unsigned long int i = 0;i < client_vector_size;i++){
-			client_t *tmp_client = (client_t*)client_vector[i];
-			if(find_pointer(tmp_client->connection_info_id) == nullptr){
-				printf("Could not find the client net_ip_connection_info class, not sending to said client\n");
+		if(array_vector[c] != nullptr){
+			array_vector[c]->data_lock.lock();
+			if(once_per_second){
+				SET_BIT(what_to_update, ARRAY_INT_HASH_BIT, 1);
+				SET_BIT(what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 1);
+				SET_BIT(what_to_update, ARRAY_STRING_HASH_BIT, 1);
 			}else{
-				net->write(gen_string, tmp_client->connection_info_id);
+				array_vector[c]->data_lock.unlock();
+				array_vector[c]->updated(&what_to_update);
+				array_vector[c]->data_lock.lock();
 			}
+			array_vector[c]->data_lock.unlock();
+			const std::string gen_string = array_vector[c]->gen_updated_string(what_to_update);
+			array_vector[c]->data_lock.lock();
+			for(unsigned long int i = 0;i < client_vector_size;i++){
+				client_t *tmp_client = (client_t*)client_vector[i];
+				if(find_pointer(tmp_client->connection_info_id, "net_ip_connection_info_t") == nullptr){
+					printf("Could not find the client net_ip_connection_info class, not sending to said client\n");
+				}else{
+					net->write(gen_string, tmp_client->connection_info_id);
+				}
+			}
+			array_vector[c]->data_lock.unlock();
 		}
 	}
 }
@@ -140,7 +144,13 @@ static void net_pingout(){
 	std::vector<void*> client_vector = all_pointers_of_type("client_t");
 	const unsigned long int client_vector_size = client_vector.size();
 	for(unsigned long int i = 0;i < client_vector_size;i++){
-		net_check_and_apply_pingout((client_t*)client_vector[i]);
+		((client_t*)client_vector[i])->array.data_lock.lock();
+		if(net_check_pingout((client_t*)client_vector[i]) == true){
+			((client_t*)client_vector[i])->array.data_lock.unlock();
+			delete (client_t*)client_vector[i];
+		}else{
+			((client_t*)client_vector[i])->array.data_lock.unlock();
+		}
 	}
 }
 
@@ -148,7 +158,7 @@ int net_loop_settings = 0;
 
 void net_engine(){
 	net->loop();
-	SET_BIT(net_loop_settings, LOOP_CODE_MT, 1);
+	//SET_BIT(net_loop_settings, LOOP_CODE_MT, 1);
 	loop_run(&net_loop_code, &net_loop_settings);
 }
 

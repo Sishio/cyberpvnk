@@ -19,6 +19,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define LOOP_MAIN_H
 	#define LOOP_CODE_MT 0
 	#include "../util/util_main.h"
+	#include "../input/input_main.h"
 	#include "vector"
 	#include "thread"
 	#define LOOP_PRINT_THIS_TIME 1
@@ -37,4 +38,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern void loop_add(loop_t*, std::string, void(*)());
 	extern void loop_run(loop_t*, int*);
 	extern void loop_del(loop_t*, void(*)());
+	extern bool infinite_loop();
+	extern bool terminate;
 #endif

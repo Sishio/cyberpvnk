@@ -37,14 +37,17 @@ int util_shell(int function, std::string parameter){ // Keeps most of the OS pre
 	return return_value;
 }
 
-void ms_sleep(long double ms){
+void ms_sleep(long double ms_){
 	#ifdef __linux
-		usleep((unsigned int)(1000*ms));
-	#elif USE_SDL
-		SDL_Delay(ms);
-	#elif _WIN32
-		ms += .5;
-		Sleep((int)ms); // I think this is correct
+		timespec time;
+		if(unlikely(ms_ > 999999999)){
+			time.tv_sec = ms_/1000000000;
+		}else{
+			time.tv_nsec = ms_*1000000;
+		}
+		nanosleep(&time, nullptr);
+	#else
+		SDL_Delay(ms_);
 	#endif
 }
 
@@ -170,5 +173,24 @@ void update_progress_bar(long double percent_complete){
 		output[output.size()-1] = '>';
 	}
 	output += "]";
-	printf("%s %Lf\%%", output.c_str(), percent_complete);
+	printf("%s %Lf %%", output.c_str(), percent_complete);
+}
+
+void positive_to_negative_trick(unsigned char** tmp_char, int size){
+	for(int i = 0;i < size;i++){
+		if((*tmp_char)[i] >= 128){
+			(*tmp_char)[i] *= -1;
+			(*tmp_char)[i] -= 128;
+		}
+	}
+}
+
+void negative_to_positive_trick(std::string *tmp){
+	const unsigned long int size = tmp->size();
+	for(unsigned long int i = 0;i < size;i++){
+		if((*tmp)[i] < 0){
+			(*tmp)[i] *= -1;
+			(*tmp)[i] += 128;
+		}
+	}
 }

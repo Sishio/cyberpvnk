@@ -1,3 +1,4 @@
+// I need to convert this to OpenGL 3 since I want nice graphics without having to deal with the old OpenGL API
 //This example program is created by thecplusplusuy for demonstration purposes. It's a simple 3D model loader (wavefront (.obj)), which is capable to load materials and UV textures:
 //http://www.youtube.com/user/thecplusplusguy
 //Free source, modify if you want, LGPL licence (I guess), I would be happy, if you would not delete the link
@@ -62,25 +63,22 @@ texcoord::texcoord(float a,float b){
 
 static std::vector<std::string*> parse_model_file(model_t *model){
 	std::vector<std::string*> tmp;
-	unsigned long int last_place = 0;
-	const unsigned long int entire_object_file_size = model->entire_object_file.size();
-	while(entire_object_file_size > last_place){
-		const unsigned long int new_place = model->entire_object_file.find_first_of("\n");
-		const char *buf = model->entire_object_file.substr(last_place, new_place-last_place).c_str();
-		last_place = new_place;
-		tmp.push_back(new std::string(buf));
+	std::string tmp_string = model->entire_object_file;
+	while(tmp_string.size() > 1){
+		tmp.push_back(new std::string(tmp_string.substr(0, tmp_string.find_first_of("\n"))));
+		tmp_string = tmp_string.substr(tmp_string.find_first_of("\n")+1, tmp_string.size());
+		printf("tmp[%d]: %s\n", tmp.size()-1, tmp[tmp.size()-1]->c_str());
+		printf("remaining string to process: '%s'\n", tmp_string.c_str());
 	}
 	return tmp;
 }
 static std::vector<std::string> parse_material_file(model_t *model, int current_one){
 	std::vector<std::string> tmp;
-	unsigned long int last_place = 0;
-	const unsigned long int entire_object_file_size = model->entire_material_file[current_one].size();
-	while(entire_object_file_size > last_place){
-		const unsigned long int new_place = model->entire_material_file[current_one].find_first_of("\n");
-		const char *buf = model->entire_material_file[current_one].substr(last_place, new_place-last_place).c_str();
-		last_place = new_place;
-		tmp.push_back(buf);
+	std::string tmp_string = model->entire_material_file[current_one];
+	while(tmp_string.size() > 1){
+		tmp.push_back((tmp_string.substr(0, tmp_string.find_first_of("\n"))));
+		tmp_string = tmp_string.substr(tmp_string.find_first_of("\n")+1, tmp_string.size());
+		printf("tmp[%d]: %s\n", tmp.size()-1, tmp[tmp.size()-1].c_str());
 	}
 	return tmp;
 }
@@ -90,6 +88,7 @@ int objloader_t::load(model_t *model){
 	int curmat;
 	coord = parse_model_file(model);
 	for(unsigned long int i=0;i<(unsigned long int)coord.size();i++){	//and then go through all line and decide what kind of line it is
+		printf("Parsing '%s'\n", coord[i]->c_str());
 		if((*coord[i])[0]=='#'){	//if it's a comment
 			continue;	//we don't have to do anything with it
 		}else if((*coord[i])[0]=='v' && (*coord[i])[1]==' '){	//if a vertex
@@ -274,6 +273,7 @@ void model_load(model_t *a, std::string file){
 					ss << data;
 					ss >> data >> data_2;
 					if((std::string)data == (std::string)"mtllib"){
+						printf("Processing a material file\n");
 						std::ifstream in_(data_2);
 						a->entire_material_file.push_back("");
 						const unsigned long int material_pos = a->entire_material_file.size()-1;

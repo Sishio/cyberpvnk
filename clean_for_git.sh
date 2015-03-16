@@ -2,8 +2,6 @@ rm -r client/obj
 mkdir client/obj
 rm -r class/obj
 mkdir class/obj
-rm -r thread/obj
-mkdir thread/obj
 rm -r render/obj
 mkdir render/obj
 rm -r input/obj
@@ -18,3 +16,5 @@ rm -r net/obj
 mkdir net/obj
 rm -r bin
 mkdir bin
+rm -r loop/obj
+mkdir loop/obj
