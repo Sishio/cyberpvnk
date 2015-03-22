@@ -2,6 +2,7 @@
 #include "server_console.h"
 #include "server_physics.h"
 #include "server_net.h"
+#include "server_gametype.h"
 
 int loop_settings;
 
@@ -139,7 +140,8 @@ void init(int choice){
 	case 1:
 		server_info_init();
 		net_init();
-		physics_init("gametype/default");
+		physics_init();
+		gametype_init();
 		console_init();
 		break;
 	case 2:
@@ -178,7 +180,7 @@ int main(int argc, char **argv){
 	argv_ = argv;
 	init(menu());
 	printf("Starting the main loop\n");
-	SET_BIT(loop_settings, LOOP_CODE_MT, 0);
+	SET_BIT(loop_settings, LOOP_CODE_PARTIAL_MT, 0);
 	while(terminate == false){
 		loop_run(&server_loop_code, &loop_settings);
 		once_per_second_update();

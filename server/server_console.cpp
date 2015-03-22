@@ -17,12 +17,14 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "../render/render_main.h"
 #include "server_console.h"
 #include "server_net.h"
+#include "server_gametype.h"
 
 /*
 TODO:
 	Make a singlethreaded version. The only thread running will be running scanf and putting that information into an std::string.
 */
 
+#define CONSOLE_INPUT_ARRAY_SIZE 65536
 
 static void settings_engine();
 static void class_engine();
@@ -33,7 +35,7 @@ static void int_modifier_engine(int*);
 static void double_modifier_engine(long double*);
 static void string_modifier_engine(std::string*);
 static std::thread *console_thread;
-static char console_input_array[1024];
+static char console_input_array[CONSOLE_INPUT_ARRAY_SIZE];
 static std::string user_input;
 static std::mutex user_input_lock;
 extern net_t *net;
@@ -42,10 +44,11 @@ static array_id_t last_gen_id = -1;
 static void update_last_gen_id(array_id_t);
 static array_id_t pull_user_input_id(array_t*, std::string);
 static array_id_t pull_last_gen_id(array_t*);
+static void loop_code_engine();
 
 inline static void prompt_for_item(std::string prompt){
 	std::cout << prompt;
-	scanf("%1023s", console_input_array);
+	scanf("%65535s", console_input_array);
 }
 
 static void update_last_gen_id(array_id_t id){
@@ -66,6 +69,7 @@ static array_id_t pull_user_input_id(array_t *tmp_array, std::string print_strin
 static array_id_t pull_last_gen_id(array_t *tmp){
 	if(likely(last_gen_id != -1)){
 		if(likely((tmp = find_array_pointer(last_gen_id)) != nullptr)){
+			tmp->data_lock.unlock();
 			return last_gen_id;
 		}else{
 			printf("ID is no longer valid\n");
@@ -93,6 +97,8 @@ void console_engine(){
 			terminate_engine();
 		}else if((std::string)console_input_array == "render" || (std::string)console_input_array == "render_object"){
 			render_object_engine();
+		}else if((std::string)console_input_array == "loop"){
+			loop_code_engine();
 		}
 	}
 }
@@ -102,6 +108,16 @@ void console_close(){}
 #define INFO_INT_BIT 0
 #define INFO_STRING_BIT 1
 #define INFO_DOUBLE_BIT 2
+
+static void loop_code_engine(){
+	prompt_for_item("Code to run: ");
+	std::string code = console_input_array;
+	prompt_for_item("Times to loop the code: ");
+	int iterations = std::stoi(console_input_array);
+	if(code == "spawn_coord"){
+		new coord_t[iterations];
+	}
+}
 
 static void input_render_object_engine(input_t *input, coord_t *coord, float time){
 	if(input == nullptr){
@@ -212,28 +228,13 @@ static void terminate_engine(){
 
 static void new_class_engine(){
 	array_t *array_of_new_item = nullptr;
-	prompt_for_item("'coord_t' or 'model_t' (other types will be supported soon)\n");
+	prompt_for_item("Type: ");
 	if((std::string)console_input_array == "coord_t"){
-		double a[5];
-		int b[1];
-		printf("X Y Z Angle_X Angle_Y Model_ID");
-		scanf("%lf %lf %lf %lf %lf", &a[0], &a[1], &a[2], &a[3], &a[4]);
-		array_t *model_array = nullptr;
-		b[0] = pull_user_input_id(model_array, ""); // this works
-		coord_t *coord = new coord_t;
-		coord->x = a[0];
-		coord->y = a[1];
-		coord->z = a[2];
-		coord->x_angle = a[3];
-		coord->y_angle = a[4];
-		coord->model_id = b[0];
-		array_of_new_item = &coord->array;
+		array_of_new_item = &((new coord_t)->array);
 	}else if((std::string)console_input_array == "model_t"){
-		prompt_for_item("OBJ_path\n");
-		model_t *tmp = new model_t;
-		model_load(tmp, console_input_array);
-		printf("Loaded a model\n");
-		array_of_new_item = &tmp->array;
+		array_of_new_item = &((new model_t)->array);
+	}else if((std::string)console_input_array == "gametype_t"){
+		array_of_new_item = &((new gametype_t)->array);
 	}
 	printf("Generated a %s with an ID of %d\n", array_of_new_item->data_type.c_str(), array_of_new_item->id);
 	update_last_gen_id(array_of_new_item->id);
@@ -273,34 +274,39 @@ static void del_class_engine(){
 }
 
 static void list_ext_class_engine(){
-	prompt_for_item("'type', 'id', or 'all' search\n");
-	std::vector<array_t*> *tmp_array_vector = nullptr;
+	prompt_for_item("'type', 'id', or 'all' search: ");
+	std::vector<void*> *tmp_array_vector = nullptr;
 	bool allocated_memory = false;
 	if((std::string)console_input_array == "type"){
-		//allocated_memory = true;
-		//tmp_array_vector = new std::vector<array_t*>;
-		//*tmp_array_vector = (std::vector<array_t*>)all_entries_of_type(console_input_array);
+		allocated_memory = true;
+		tmp_array_vector = new std::vector<void*>;
+		prompt_for_item("Type: ");
+		*tmp_array_vector = all_entries_of_type(console_input_array);
 	}else if((std::string)console_input_array == "id"){
 		allocated_memory = true;
-		tmp_array_vector = new std::vector<array_t*>;
+		tmp_array_vector = new std::vector<void*>;
 		array_t *new_array = nullptr;
 		pull_user_input_id(new_array);
-		(*tmp_array_vector).push_back(new_array);
+		tmp_array_vector->push_back(new_array);
 	}else if((std::string)console_input_array == "all"){
-		tmp_array_vector = &array_vector;
+		tmp_array_vector = (std::vector<void*>*)&array_vector;
 	}else return;
 	const unsigned long int tmp_array_vector_size = tmp_array_vector->size();
 	for(unsigned long int i = 0;i < tmp_array_vector_size;i++){
-		(*tmp_array_vector)[i]->print();
+		((array_t*)(*tmp_array_vector)[i])->print();
+	}
+	if(allocated_memory){
+		delete tmp_array_vector;
+		tmp_array_vector = nullptr;
 	}
 }
 
 static void patch_ext_class_engine(){
-	prompt_for_item("PATCH_PATH\n");
+	prompt_for_item("Filename: ");
 	std::ifstream in((std::string)console_input_array);
 	std::vector<std::string> tmp_vector;
 	if(in.is_open()){
-		while(in.getline(console_input_array, 1023)){
+		while(in.getline(console_input_array, CONSOLE_INPUT_ARRAY_SIZE)){
 			tmp_vector.push_back(console_input_array);
 		}
 		const unsigned long int tmp_vector_size = tmp_vector.size();
@@ -314,6 +320,20 @@ static void patch_ext_class_engine(){
 	}
 }
 
+static void export_class_engine(){
+	array_id_t export_id = pull_user_input_id(nullptr, "ID to export: ");
+	prompt_for_item("Filename: ");
+	std::ofstream out(console_input_array);
+	if(out.is_open()){
+		array_t *tmp = find_array_pointer(export_id);
+		out << tmp->gen_updated_string(UINT_MAX);
+		tmp->data_lock.unlock();
+		out.close();
+	}else{
+		printf("Could not open the file\n");
+	}
+}
+
 static void class_engine(){
 	prompt_for_item("'new', 'mod', 'del', 'list', or 'patch'?\n");
 	if((std::string)console_input_array == "new"){
@@ -324,8 +344,10 @@ static void class_engine(){
 		del_class_engine();
 	}else if((std::string)console_input_array == "list"){
 		list_ext_class_engine();
-	}else if((std::string)console_input_array == "patch"){
+	}else if((std::string)console_input_array == "patch" || (std::string)console_input_array == "import"){
 		patch_ext_class_engine();
+	}else if((std::string)console_input_array == "export"){
+		export_class_engine();
 	}
 }
 

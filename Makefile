@@ -21,10 +21,11 @@ server_net:
 	$(CC) -c $(CFLAGS) server/server_net.cpp -o server/obj/server_net.o
 server_console:
 	$(CC) -c $(CFLAGS) server/server_console.cpp -o server/obj/server_console.o
+server_gametype:
+	$(CC) -c $(CFLAGS) server/server_gametype.cpp -o server/obj/server_gametype.o
 
-
-server: server_delete server_main server_physics server_net server_console class net input math util render loop server_delete
-	ld -r server/obj/server_console.o server/obj/server_main.o server/obj/server_physics.o server/obj/server_net.o -o server/obj/server.o
+server: server_gametype server_delete server_main server_physics server_net server_console class net input math util render loop server_delete
+	ld -r server/obj/server_gametype.o server/obj/server_console.o server/obj/server_main.o server/obj/server_physics.o server/obj/server_net.o -o server/obj/server.o
 	$(CC) $(CFLAGS) loop/obj/loop.o input/obj/input.o render/obj/render.o math/obj/math.o class/obj/class.o net/obj/net.o util/obj/util.o server/obj/server.o -o bin/server.$(shell uname -m) $(LINKER)
 
 loop:

@@ -1,4 +1,0 @@
-Hey, let's not use the headers for the types anymore because I have a better idea:
-	Let's make one array of all of the arrays
-	The client will search through all of the arrays to find a matching ID
-	It feeds the data into that ID

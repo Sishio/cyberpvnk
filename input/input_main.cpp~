@@ -1,8 +1,0 @@
-#include "input_main.h"
-
-input_t::input_t(int argc, char** argv){
-}
-
-void input_t::loop(){
-  SDL_PumpEvents(0;
-}

@@ -59,6 +59,7 @@ static void net_module_loop(){
 }
 
 static void net_connect(int host_info_id_){
+	((net_ip_connection_info_t*)find_pointer(host_info_id_, "net_ip_connection_info_t"))->array.print();
 	std::string packet = ((net_ip_connection_info_t*)find_pointer(self_info_id, "net_ip_connection_info_t"))->array.gen_updated_string(INT_MAX) + NET_JOIN;
 	net->write(packet, host_info_id_);
 	bool connection_established = false;
@@ -87,7 +88,7 @@ static void net_receive_engine(){
 }
 
 static void net_send_engine(){
-  client_t *client_tmp = (client_t*)find_pointer(self_id, "client_t");
+	client_t *client_tmp = (client_t*)find_pointer(self_id, "client_t");
 	if(client_tmp == nullptr){
 		printf("I don't have a pointer to myself yet, cannot send the server any update packet. This is bad\n");
 	}else{
@@ -118,7 +119,7 @@ void net_init(){
 	host_info_id = host_info->array.id;
 	self_info_id = self_info->array.id;
 	host_info->ip = "127.0.0.1"; // don't delete the host
-	self_info->ip = "127.0.0.1";
+	self_info->ip = "127.0.0.1"; // the IP address that the server should be sending data to
 	host_info->port = NET_SERVER_PORT;
 	self_info->port = NET_CLIENT_PORT;
 	self_info->array.data_lock.unlock();

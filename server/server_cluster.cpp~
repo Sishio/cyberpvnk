@@ -1,6 +1,0 @@
-#include "server_cluster.cpp"
-
-extern net_t *net;
-
-void cluster_loop(){
-}

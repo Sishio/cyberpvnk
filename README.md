@@ -17,7 +17,6 @@ math | The standard math constants and other math functions are defined here. Th
 net | The networking code. This also uses SDL2 for IP networking. Serial networking is something that I would like to do but setting it up is not a main priority of mine.
 render | The rendering code. This uses OpenGL and SDL, it works well.
 server | The server code.
-thread | The (unused) thread library. This has been superseded by C++11 threads. If there is a reason to not use C++11, this is an option and will be there in case someone needs it.
 util | Nice little utilities library I decided to make. Its main uses are for it's millisecond sleep (ms_sleep(double)) and pseudo-random numbers (gen_rand(max_value)).
 
 

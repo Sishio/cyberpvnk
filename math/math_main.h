@@ -18,7 +18,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define MATH_MAIN_H
 	#define PI 3.141592654
 	#define PI_360 0.00872664625
-	#define RADIAN 57.2957795131
+	#define DEG_TO_RAD 57.2957795131
 	#define ROOT_2 1.41421356237
 	#define ROOT_3 1.73205080757
+	#
 #endif

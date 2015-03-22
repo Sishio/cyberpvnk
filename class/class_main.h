@@ -60,25 +60,11 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define GAMETYPE_FREE 3
 	#define GAMETYPE_WIN_POINT_COUNT 1
 	#define GAMETYPE_POINT_KILL 1
-	class gametype_t{
-	private:
-		std::string gametype_file;
-		int base_gametype;
-		int win;
-		int win_degree;
-		int point;
-		int point_degree;
-		int team_max_count;
-		int team_max_size;
-		int round_max_count;
-		int round_max_size;
-	public:
-		array_t array;
-		void reload_gametype();
-		void apply_core_gametype();
-		gametype_t(std::string, bool add_to_array_vector = true);
-		~gametype_t();
-	};
+	/*
+	Only the client and server classes are here
+	gametype_t and all of the other server-centric classes are
+	declared in their corresponding server file
+	*/
 	class net_ip_connection_info_t{
 	public:
 		array_t array;
@@ -94,15 +80,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		~input_settings_t();
 		array_t array;
 		int int_data[64][2];
-	};
-	class input_buffer_t{
-	public:
-		array_t array;
-		array_id_t client_id;
-		int type;
-		int int_data[8];
-		input_buffer_t(bool add_to_array_vector = true);
-		~input_buffer_t();
 	};
 	struct face{
 		int facenum;
@@ -195,9 +172,4 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 //		array_id_t coord_id;
 //	};
 //#include "../input/input_main.h"
-	class client_extra_t{
-	public:
-		std::vector<input_buffer_t> input_buffer;
-		client_extra_t();
-	};
 #endif

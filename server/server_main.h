@@ -38,11 +38,11 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	};
 	extern int argc_;
 	extern char** argv_;
-	extern std::vector<client_extra_t> client_extra;
 	extern std::vector<client_t*> client;
 	extern std::vector<coord_extra_t> coord_extra;
 	extern std::vector<coord_t*> coord;
 	extern std::vector<model_extra_t> model_extra;
 	extern std::vector<model_t*> model;
 	extern int loop_settings;
+	extern loop_t server_loop_code;
 #endif

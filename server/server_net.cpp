@@ -42,6 +42,7 @@ static void net_client_join(std::string data){
 		accept_client = true;
 	}
 	if(likely(accept_client)){
+		printf("Accepted the client\n");
 		last_client_net_run = get_time();
 		client_t *client_tmp = new client_t;
 		net_ip_connection_info_t *tmp_net_ip = new net_ip_connection_info_t;
@@ -126,16 +127,11 @@ static void net_send_data(){
 
 static void net_read_data(){
 	std::string data = "";
-        std::vector<std::string> packets_gathered;
 	while((data = net->read()) != ""){
-		packets_gathered.push_back(data);
-	}
-	const unsigned long int packets_gathered_size = packets_gathered.size();
-	for(unsigned long int i = 0;i < packets_gathered_size;i++){
-		if(packets_gathered[i].find_first_of(NET_JOIN) != std::string::npos){
-			net_client_join(packets_gathered[i]);
-		}else if(packets_gathered[i].find_first_of(ARRAY_ITEM_SEPERATOR_START) != std::string::npos){
-			update_class_data(packets_gathered[i], class_data_settings);
+		if(data.find_first_of(NET_JOIN) != std::string::npos){
+			net_client_join(data);
+		}else if(data.find_first_of(ARRAY_ITEM_SEPERATOR_START) != std::string::npos){
+			update_class_data(data, class_data_settings);
 		}
 	}
 }

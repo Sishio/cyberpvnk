@@ -77,7 +77,7 @@ void coord_t::set_y_angle(bool add, long double a){
 }
 
 coord_t::~coord_t(){
-  delete (model_t*)find_pointer(model_id, "model_t");
+	delete (model_t*)find_pointer(model_id, "model_t");
 }
 
 void model_t::update_array(){
@@ -169,22 +169,6 @@ client_t::~client_t(){
 
 render_buffer_t::~render_buffer_t(){}
 */
-input_buffer_t::input_buffer_t(bool add) : array(this, add){
-	array.id = 0; // reserve zero for input_buffers because ID collisions could happen and these aren't referred to outside of the main input function in the server.
-	array.data_type = "input_buffer_t";
-	array.int_array.push_back(&type);
-	array.int_array.push_back(&client_id);
-	for(unsigned int i = 0;i < 8;i++){
-		array.int_array.push_back(&int_data[i]);
-	}
-	type = 0;
-	for(unsigned int i = 0;i < 8;i++){
-		int_data[i] = 0;
-	}
-	//TODO: make the array bigger and split it in half. one half has to be filled out verbatium for the key to match and the other doesn't have to be (perhaps a timestamp or something like that).
-}
-
-input_buffer_t::~input_buffer_t(){}
 
 net_ip_connection_info_t::net_ip_connection_info_t(bool add) : array(this, add){
 	array.data_type = "net_ip_connection_info_t";
@@ -204,92 +188,3 @@ input_settings_t::input_settings_t(bool add) : array(this, add){
 }
 
 input_settings_t::~input_settings_t(){}
-
-gametype_t::gametype_t(std::string gametype_file_, bool add) : array(this, add){
-	if(gametype_file_ == ""){
-		printf("assuming this is a client and the server data has not been loaded yet\n");
-	}else{
-		gametype_file = gametype_file_;
-		reload_gametype();
-	}
-	array.int_array.push_back(&base_gametype);
-	array.int_array.push_back(&win);
-	array.int_array.push_back(&win_degree);
-	array.int_array.push_back(&point);
-	array.int_array.push_back(&point_degree);
-	array.int_array.push_back(&team_max_count);
-	array.int_array.push_back(&team_max_size);
-	array.int_array.push_back(&round_max_count);
-	array.int_array.push_back(&round_max_size);
-	array.data_type = "gametype_t";
-}
-
-void gametype_t::apply_core_gametype(){
-	switch(base_gametype){
-	case GAMETYPE_FFA:
-		win = GAMETYPE_WIN_POINT_COUNT;
-		win_degree = 50;
-		point = GAMETYPE_POINT_KILL;
-		point_degree = 1;
-		team_max_count = 512;
-		team_max_size = 1;
-		round_max_count = 32;
-		round_max_size = 60*60;
-		break;
-	case GAMETYPE_TDM:
-		win = GAMETYPE_WIN_POINT_COUNT;
-		win_degree = 50;
-		point = GAMETYPE_POINT_KILL;
-		point_degree = 1;
-		team_max_count = 4;
-		team_max_size = 128;
-		round_max_count = 32;
-		round_max_size = 60*60;
-		break;
-	case GAMETYPE_FREE:
-		win = GAMETYPE_WIN_POINT_COUNT;
-		win_degree = 50;
-		point = GAMETYPE_POINT_KILL;
-		point_degree = 1;
-		team_max_count = 512;
-		team_max_size = 1;
-		round_max_count = 32;
-		round_max_size = 60*6000;
-		break;
-	}
-}
-
-void gametype_t::reload_gametype(){
-	if(gametype_file != ""){
-		std::ifstream in(gametype_file);
-		if(in.is_open()){
-			char line[512];
-			while(in.getline(line, 512)){
-				std::string tmp_gametype_array[8];
-				std::stringstream ss;
-				ss << line;
-				ss >> tmp_gametype_array[0] >>
-					tmp_gametype_array[1] >> 
-					tmp_gametype_array[2] >> 
-					tmp_gametype_array[3] >> 
-					tmp_gametype_array[4] >> 
-					tmp_gametype_array[5] >> 
-					tmp_gametype_array[6] >> 
-					tmp_gametype_array[7];
-				if(tmp_gametype_array[0] == "gametype"){
-					if(tmp_gametype_array[1] == "ffa"){
-						base_gametype = GAMETYPE_FFA;
-					}else if(tmp_gametype_array[2] == "tdm"){
-						base_gametype = GAMETYPE_TDM;
-					}else if(tmp_gametype_array[3] == "free"){
-						base_gametype = GAMETYPE_FREE;
-					}
-					apply_core_gametype();
-				}
-			}
-		}
-	}
-}
-
-gametype_t::~gametype_t(){
-}

@@ -1,8 +1,0 @@
-#ifndef NET_STORE_H
-	#define NET_STORE_H
-	#include "../class/class_main.h"
-	#include "vector"
-	extern void store_coord_t(coord_t, std::vector<coord_t*>, std::vector<coord_extra_t> *c);
-	extern void store_model_t(model_t, std::vector<model_t*>, std::vector<model_extra_t> *c);
-#endif
-

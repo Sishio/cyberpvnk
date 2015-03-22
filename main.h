@@ -19,10 +19,5 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "cstdio"
 	#define TERMINATE -127
 	#define DEBUG_SEPERATOR 1
-	#define MULTITHREAD 1
-	/*
-	Multithreading isn't safe in the slightest, at least not in the current state. Forcing no multithreading would
-	lower the data overhead since there are no locks to set and is the safest choice for stability. If you don't
-	absolutely need more than one thread, please leave this off.
-	*/
+	#define MULTITHREAD 1 // disable on a single core machine to get rid of all locking. forcing one core would still use locks
 #endif

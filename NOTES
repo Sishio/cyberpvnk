@@ -1,14 +1,5 @@
-Since the array system is very minimal, I would like to make multiple ports to send the data over since I am too lazy to write some packet ID code:
-	50000 will be for the class data
-	50002 will be for the connection data along with everything else
+Instead of having a start and an end, I should instead have a start and a size.
+	Although this won't make much of a difference security wise (some simple checks for data >127 should be enough for data sent), this could simplify the code by a bit
 
-Most of what I removed was common sense.
-There is no vector networking.
-These vectors will have a constant size and they will not change after initialization. 
-	This will at least let me network with them.
 
-I believe all of the engines can be ran in their own thread, which is nice.
-
-IDEA:
-	Allow patching the map in real time through the server console.
-	The entire obj file will be loaded into one string. This gets put back into a file, the patch gets applied, and the object is reloaded
+Instead 

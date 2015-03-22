@@ -17,14 +17,18 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef LOOP_MAIN_H
 	#define LOOP_MAIN_H
-	#define LOOP_CODE_MT 0
+	#define LOOP_CODE_PARTIAL_MT 0 // this runs the code once and stops
+	#define LOOP_PRINT_THIS_TIME 1
+	#define LOOP_CODE_NEVEREND_MT 2 // threads are stored across iterations
 	#include "../util/util_main.h"
 	#include "../input/input_main.h"
 	#include "vector"
 	#include "thread"
-	#define LOOP_PRINT_THIS_TIME 1
 	struct loop_entry_t{
+		loop_entry_t();
 		void(*code)();
+		int iteration_skip;
+		bool term;
 		std::string name;
 	};
 	struct loop_t{
@@ -33,6 +37,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		long double average_rate;
 		std::string name;
 		std::vector<loop_entry_t> code;
+		std::vector<std::thread*> neverend_threads;
 		int settings;
 	};
 	extern void loop_add(loop_t*, std::string, void(*)());

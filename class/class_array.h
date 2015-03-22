@@ -68,6 +68,15 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define ARRAY_INT_HASH_BIT		2
 	// used by the server to tell it what data it is allowed to modify because the clients can send fraud packets and allowing all of the packets would allow cheating
 	// the networking code reserves 24-32 (packet seperators for serial connections among other things)
+	#ifdef MULTITHREAD
+		typedef std::mutex lock_t;
+	#else
+		class lock_t{
+		public:
+			void lock(){}
+			void unlock(){}
+		};
+	#endif
 	typedef int array_id_t;
 	/*class array_id_t {
 	private:
@@ -131,7 +140,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern void delete_array_and_pointer(array_t*);
 	extern array_id_t array_highest_id();
 	extern std::vector<array_t*> array_vector;
-	extern std::vector<void*> all_entries_of_type(std::string);
-	extern std::vector<void*> all_pointers_of_type(std::string);
+	extern std::vector<void*> all_entries_of_type(std::string, bool lock = false);
+	extern std::vector<void*> all_pointers_of_type(std::string, bool lock = false);
 	extern std::mutex array_lock;
+	extern void lock_array_of_data_type(std::vector<void*>, std::string);
+	extern std::vector<array_id_t> all_ids_of_type(std::string);
 #endif
