@@ -30,30 +30,6 @@ net_t *net = nullptr;
 
 static loop_t net_loop_mt;
 
-static void net_execute_function(std::string a){
-	if(a == "reset_vector"){
-		printf("resetting the vector\n");
-		delete_all_data();
-	}else{
-		printf("unknown net_execute_funciton was received: %s\n", a.c_str());
-	}
-}
-
-static void net_engine_parse(std::string a){
-	if(a.find_first_of(ARRAY_TYPE_SEPERATOR_START) != std::string::npos){
-		update_class_data(a, CLASS_DATA_UPDATE_EVERYTHING);
-	}else if(a.find_first_of(ARRAY_FUNCTION_START) != std::string::npos){
-		net_execute_function(a.substr(a.find_first_of(ARRAY_FUNCTION_START)+1, a.find_first_of(ARRAY_FUNCTION_END)-a.find_first_of(ARRAY_FUNCTION_START)-1));
-	}
-}
-
-//static net_ip_connection_info_t net_generate_self_info(){
-//	net_ip_connection_info_t tmp;
-//	tmp.ip = "127.0.0.1";
-//	tmp.port = net_client_port;
-//	return tmp;
-//}
-
 static void net_module_loop(){
 	net->loop();
 }
@@ -64,7 +40,7 @@ static void net_connect(){
 	net->write(packet, host_info_id);
 	bool connection_established = false;
 	long double start_time = get_time();
-	while(connection_established == false && infinite_loop() && get_time()-5 < start_time){
+	while(connection_established == false && infinite_loop()){
 		net->loop();
 		std::string connecting_packet;
 		if((connecting_packet = net->read(NET_JOIN)) != ""){
@@ -84,7 +60,7 @@ static void net_receive_engine(){
 	std::string a;
 	for(int_ i = 0;i < 512;i++){
 		if((a = net->read()) != ""){
-			net_engine_parse(a);
+			update_class_data(a, CLASS_DATA_UPDATE_EVERYTHING);
 		}else{
 			break;
 		}

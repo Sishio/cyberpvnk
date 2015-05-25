@@ -340,6 +340,7 @@ udp_socket_t::udp_socket_t(array_id_t tmp_connection_info_id){
 		socket = SDLNet_UDP_Open(tmp->port);
 		if(unlikely(!socket)){
 			printf_("Socket will not open (port: " + std::to_string(tmp->port) + ")\n", PRINTF_VITAL);
+			assert(false);
 		}
 	}
 }

@@ -83,6 +83,9 @@ void physics_close(){
 
 void coord_loop(array_id_t a){
 	coord_t *a_ = (coord_t*)find_pointer(a, "coord_t");
+	if(a_ == nullptr){
+		return;
+	}
 	a_->array.data_lock.lock();
 	coord_physics_iteration(a_);
 	a_->array.data_lock.unlock();

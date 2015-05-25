@@ -270,6 +270,9 @@ void array_t::parse_int_from_string(std::string a){
 	std::vector<int> entries_for_data;
 	const std::vector<std::string> int_data = pull_items(ARRAY_INT_SEPERATOR_START, a, ARRAY_INT_SEPERATOR_END, &entries_for_data);
 	const int_ int_data_size = int_data.size();
+	while(int_array.size() < int_data.size()){
+		int_array.push_back(new int_);
+	}
 	int_lock.lock();
 	for(int_ i = 0;i < int_data_size;i++){
 		#ifdef CLASS_DEBUG_OUTPUT
@@ -285,6 +288,9 @@ void array_t::parse_long_double_from_string(std::string a){
 	const std::vector<std::string> long_double_data = pull_items(ARRAY_LONG_DOUBLE_SEPERATOR_START, a, ARRAY_LONG_DOUBLE_SEPERATOR_END, &entries_for_data);
 	const int_ long_double_data_size = long_double_data.size();
 	long_double_lock.lock();
+	while(long_double_array.size() < long_double_data_size){
+		long_double_array.push_back(new long double);
+	}
 	for(int_ i = 0;i < long_double_data_size;i++){
 		*long_double_array[entries_for_data[i]] = strtold(long_double_data[i].c_str(), nullptr);
 	}
@@ -296,6 +302,9 @@ void array_t::parse_string_from_string(std::string a){
 	const std::vector<std::string> string_data = pull_items(ARRAY_STRING_SEPERATOR_START, a, ARRAY_STRING_SEPERATOR_END, &entries_for_data);
 	const int_ string_data_size = string_data.size();
 	string_lock.lock();
+	while(string_array.size() < string_data_size){
+		string_array.push_back(new std::string);
+	}
 	for(int_ i = 0;i < string_data_size;i++){
 		#ifdef CLASS_DEBUG_OUTPUT
 		printf("string_array[%d]: %s\n",entries_for_data[i], string_data[i].c_str());
@@ -377,7 +386,7 @@ std::string array_t::gen_long_double_string(){
 
 void update_class_data(std::string a, int_ what_to_update){
 	array_id_t id = pull_id(a);
-	array_t *tmp = (array_t*)find_pointer(id);
+	array_t *tmp = (array_t*)find_array_pointer(id);
 	if(tmp == nullptr){
 		std::string type = a.substr(a.find_first_of(ARRAY_TYPE_SEPERATOR_START)+1, a.find_first_of(ARRAY_TYPE_SEPERATOR_END)-a.find_first_of(ARRAY_TYPE_SEPERATOR_START)-1);
 		try{
@@ -391,9 +400,9 @@ void update_class_data(std::string a, int_ what_to_update){
 				tmp = &((new net_ip_connection_info_t)->array);
 			}else{
 				printf("TODO: make a special allocator for '%s'\n", type.c_str());
+				tmp = new array_t(nullptr, true);
 			}
-		}
-		catch(std::bad_alloc &a){
+		}catch(std::bad_alloc &a){
 			printf_("update_class_data: couldn't allocate data for a new item\n", PRINTF_VITAL);
 			free_ram();
 		}
