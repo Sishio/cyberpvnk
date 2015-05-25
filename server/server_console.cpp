@@ -56,14 +56,14 @@ std::string string_to_decimal_string(std::string a){
 }
 
 std::string get_target_value(std::string target_value, void* thing, std::string type){
-	/*	std::cout << "get_target_value: target_value = '" << target_value << "'" << std::endl;
+	std::cout << "get_target_value: target_value = '" << target_value << "'" << std::endl;
 	const bool psi_ = target_value.find_first_of("PSI") != std::string::npos;
 	const bool pss_ = target_value.find_first_of("PSS") != std::string::npos;
 	const bool psld_ = target_value.find_first_of("PSLD") != std::string::npos;
 	const bool nil_ = target_value == "NIL";
 	last_used_pointer = thing;
 	if(!psi_ && !pss_ && !psld_ && !nil_){
-		return target_value;
+		return target_value; // no special conditions have been met
 	}
 	std::string return_value;
 	if(type == "string"){
@@ -74,7 +74,7 @@ std::string get_target_value(std::string target_value, void* thing, std::string 
 		return_value = std::to_string(*((int_*)thing)); //you can convert down, I think
 	}
 	if(nil_){
-		return return_value;
+		return return_value; // worst case scenario: nothing changes
 	}
 	int_ position_in_stack;
 	try{
@@ -83,7 +83,7 @@ std::string get_target_value(std::string target_value, void* thing, std::string 
 		printf_(STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
 		return return_value;
 	}
-	if(position_in_stack >= 8 && position_in_stack < 0){
+	if(position_in_stack > 7 && position_in_stack < 0){
 		printf_(OUT_OF_BOUNDS_ERROR, PRINTF_ERROR);
 		return return_value;
 	}
@@ -107,8 +107,6 @@ std::string get_target_value(std::string target_value, void* thing, std::string 
 		return std::to_string(*pointer_stack_int[position_in_stack]);
 	}
 	return return_value;
-	*/
-	return target_value;
 }
 
 int run_command(){
@@ -273,13 +271,13 @@ int run_command(){
 			}
 		}
 	}else if(command[0] == "print"){
-		if(in_stack[0] == "last_used_pointer"){
+		if(command[1] == "last_used_pointer"){
 			if(last_used_pointer == nullptr){
 				std::cout << "last_used_pointer: nullptr" << std::endl;
 			}else{
 				std::cout << "last_used_pointer: " << last_used_pointer << std::endl;
 			}
-		}else if(in_stack[0] == "stacks"){
+		}else if(command[1] == "stacks"){
 			std::string output;
 			for(unsigned long int i = 0;i < 8;i++){
 				output += "in_stack[" + std::to_string(i) + "]: " + in_stack[i] + "\n";
@@ -297,7 +295,7 @@ int run_command(){
 				output += "pointer_stack_string[" + std::to_string(i) + "]: " + ((pointer_stack_string[i] == nullptr) ? "nullptr" : *pointer_stack_string[i]) + "\n";
 			}
 			std::cout << output << std::endl;
-		}else if(in_stack[0] == "array_vector"){
+		}else if(command[1] == "array_vector"){
 			for(uint_ i = 0;i < ARRAY_VECTOR_SIZE;i++){
 				if(array_vector[i] != nullptr){
 					std::cout << array_vector[i]->print() << std::endl;
