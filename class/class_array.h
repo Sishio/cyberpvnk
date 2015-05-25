@@ -17,17 +17,27 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef CLASS_ARRAY_H
 	#define CLASS_ARRAY_H
+	#include "../main.h"
+	#include "cstdint"
+	typedef int_ array_id_t;
 	#include "../util/util_main.h"
+	#ifdef __linux
+		#include "signal.h"
+	#endif
 	#include "cstdio"
 	#include "iostream"
+	#include "cstdint"
 	#include "string"
 	#include "cstdio"
 	#include "cstdlib"
 	#include "vector"
-	#define DEFAULT_INT_VALUE	-1
-	#define DEFAULT_STRING_VALUE	""
-	#define DEFAULT_LONG_DOUBLE_VALUE	0.0
-	#define DEBUG_SEPERATOR 1
+	#define ARRAY_RESERVE_INT_SIZE 2 // spawn iteration and ID
+	#define ARRAY_RESERVE_STRING_SIZE 1 // data_type
+	#define ARRAY_RESERVE_LONG_DOUBLE_SIZE 0 // nothing needed here yet (spawn_time?)
+	#define ARRAY_VECTOR_SIZE 65536
+	#define RESERVE_ID_SIZE 64
+	#define RESERVE_ID_ITERATOR 0xB00B0000 // hehehe
+	//#define DEBUG_SEPERATOR 1
 	#ifndef DEBUG_SEPERATOR
 		#define ARRAY_ITEM_SEPERATOR_START		(char*)"\x01"
 		#define ARRAY_ITEM_SEPERATOR_END		(char*)"\x02"
@@ -77,34 +87,23 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 			void unlock(){}
 		};
 	#endif
-	typedef int array_id_t;
-	/*class array_id_t {
-	private:
-		int id;
-	public:
-		operator const int() {
-			return this->id;
-		}
-		array_id_t& operator=(array_id_t& tmp){
-			this->id = tmp.id;
-			return *this;
-		}
-		array_id_t& operator=(int& tmp){
-			this->id = tmp;
-			return *this;
-		}
-	};*/
+	#define ID_BIT_LENGTH 16
 	class array_t{
 	private:
 		void parse_int_from_string(std::string);
 		void parse_long_double_from_string(std::string);
 		void parse_string_from_string(std::string);
-		unsigned int pull_starting_number(std::string);
+		uint_ pull_starting_number(std::string);
 		std::vector<std::string> pull_items(char*, std::string, char*, std::vector<int>*);
-		long int int_hash;
-		long int string_hash;
-		long int long_double_hash;
+		int_ int_hash;
+		int_ string_hash;
+		int_ long_double_hash;
+		std::vector<int> int_new;
+		std::vector<int> double_new;
+		std::vector<int> string_new;
 	public:
+		std::string gen_print_prefix(); // don't store this as a value since copies would not change the initial address
+		void new_id(array_id_t);
 		std::mutex data_lock;
 		std::mutex int_lock, long_double_lock, string_lock;
 		void update_pointers();
@@ -113,10 +112,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::string data_type;
 		long double last_update;
 		array_id_t id;
-		std::vector<int*> int_array;
+		std::vector<int_*> int_array;
 		std::vector<long double*> long_double_array;
 		std::vector<std::string*> string_array;
-		std::string gen_updated_string(int);
+		std::string gen_updated_string(int_);
 		std::string gen_long_double_string();
 		std::string gen_int_string();
 		std::string gen_string_string();
@@ -124,25 +123,33 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		~array_t();
 		bool id_match(array_id_t);
 		void parse_string_entry(std::string);
-		bool updated(int*);
+		bool updated(int_*);
 		std::string print();
+		void immunity(bool);
+		int_ new_int();
+		void delete_int(int_);
+		void delete_long_double(int_);
+		void delete_string(int_);
+		int_ new_long_double();
+		int_ new_string();
 	};
 	//extern std::vector<array_t*> array_vector;
 	extern array_id_t array_scan_for_id(array_id_t);
 	extern void add_two_arrays(array_t*, array_t*);
-	extern void update_class_data(std::string, int);
+	extern void update_class_data(std::string, int_);
 	extern void add_array_to_vector(array_t*);
 	extern void delete_array_from_vector(array_t*);
 	extern void delete_array_id(array_id_t);
-	extern void* find_pointer(array_id_t, std::string);
-	extern array_t* find_array_pointer(int);
 	extern void delete_all_data();
 	extern void delete_array_and_pointer(array_t*);
+	extern __attribute__((always_inline)) void* find_pointer(array_id_t, std::string type = "");
+	extern __attribute__((always_inline)) array_t* find_array_pointer(array_id_t);
 	extern array_id_t array_highest_id();
-	extern std::vector<array_t*> array_vector;
-	extern std::vector<void*> all_entries_of_type(std::string, bool lock = false);
-	extern std::vector<void*> all_pointers_of_type(std::string, bool lock = false);
+	extern array_t* array_vector[ARRAY_VECTOR_SIZE];
 	extern std::mutex array_lock;
 	extern void lock_array_of_data_type(std::vector<void*>, std::string);
 	extern std::vector<array_id_t> all_ids_of_type(std::string);
+	extern void delete_thread(std::thread*);
+	extern bool valid_id(array_id_t);
+	#include "../input/input_main.h"
 #endif

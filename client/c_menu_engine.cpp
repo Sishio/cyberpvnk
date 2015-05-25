@@ -1,6 +1,6 @@
 #include "c_menu_engine.h"
 
-int menu_loop(){
+int_ menu_loop(){
 	printf("Czech_mate\n");
 	printf("(1) Connect to server\n");
 	printf("(2) Net module + test logic\n");

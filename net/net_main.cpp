@@ -36,8 +36,8 @@ std::string net_generate_ip_address(std::string prefix){
 void net_t::blank(){
 }
 
-int net_t::init_parse_parameters(int argc, char** argv){
-	for(int i = 0;i < argc;i++){
+int_ net_t::init_parse_parameters(int_ argc, char** argv){
+	for(int_ i = 0;i < argc;i++){
 		if(strcmp(argv[i],(char*)"--net-ip") == 0){
 			ip = new net_ip_t;
 		}
@@ -45,7 +45,7 @@ int net_t::init_parse_parameters(int argc, char** argv){
 	return 0;
 }
 
-int net_t::init_initialize_subsystems(int argc, char** argv, int c){
+int_ net_t::init_initialize_subsystems(int_ argc, char** argv, int_ c){
 	if(ip != nullptr){
 		ip->init(argc,argv,c);
 	}
@@ -60,7 +60,7 @@ static void net_ip_read_mt(net_ip_t *ip){
 	ip->loop_receive_mt();
 }*/
 
-net_t::net_t(int argc, char** argv, int b){
+net_t::net_t(int_ argc, char** argv, int_ b){
 	ip = nullptr;
 	blank();
 	init_parse_parameters(argc,argv);
@@ -68,14 +68,14 @@ net_t::net_t(int argc, char** argv, int b){
 	packet_id_count = 0;
 }
 
-int net_t::loop(){
+int_ net_t::loop(){
 	if(ip != nullptr){
 		ip->loop(); // run this anyways because why not?
-	}else printf("No networking protocol has been selected. Your only option is --net-ip.\n");
+	}//else printf_("No networking protocol has been selected. Your only option is --net-ip.\n", PRINTF_STATUS);
 	return 0;
 }
 
-void net_t::write(std::string data, int a, unsigned long int packet_id){ // the data should be sent to the server regardless
+void net_t::write(std::string data, int_ a, uint_ packet_id){ // the data should be sent to the server regardless
 	term_if_true(ip == nullptr,(char*)"ip write when ip == nullptr\n");
 	if(packet_id == 0){
 		packet_id_count++;

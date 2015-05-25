@@ -18,12 +18,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define SERVER_MAIN_H
 	#include "../main.h"
 	#include "../loop/loop_main.h"
-	#include "../net/net_main.h"
 	#include "../class/class_main.h"
 	#include "../class/class_array.h"
 	#include "../util/util_main.h"
-	#include "../input/input_main.h"
-	#include "../render/render_main.h"
 	#include "sstream"
 	#include "fstream"
 	#include "string"
@@ -36,13 +33,13 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		server_info_t();
 		~server_info_t();
 	};
-	extern int argc_;
+	extern int_ argc_;
 	extern char** argv_;
 	extern std::vector<client_t*> client;
 	extern std::vector<coord_extra_t> coord_extra;
 	extern std::vector<coord_t*> coord;
 	extern std::vector<model_extra_t> model_extra;
 	extern std::vector<model_t*> model;
-	extern int loop_settings;
+	extern int_ loop_settings;
 	extern loop_t server_loop_code;
 #endif

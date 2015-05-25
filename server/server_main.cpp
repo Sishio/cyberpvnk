@@ -1,17 +1,18 @@
 #include "server_main.h"
 #include "server_console.h"
+#include "server_input.h"
 #include "server_physics.h"
 #include "server_net.h"
 #include "server_gametype.h"
 
-int loop_settings;
+int_ loop_settings;
 
 server_info_t *server_info = nullptr;
 net_ip_connection_info_t *self_info = nullptr; // TODO: rename this to prevent confusion with server_info
 
 loop_t server_loop_code;
 
-int argc_;
+int_ argc_;
 char **argv_;
 
 coord_t *map = nullptr;
@@ -35,7 +36,7 @@ server_info_t::~server_info_t(){}
 
 void server_info_init(){
 	server_info = new server_info_t; // nothing special here until I decide to send this over to the client
-	for(int i = 0;i < argc_;i++){
+	for(int_ i = 0;i < argc_;i++){
 		char *next_item;
 		if(i+i == argc_){
 			next_item = (char*)"";
@@ -61,37 +62,14 @@ void test_logic_init(){
 }
 
 void test_logic_engine(){
-	coord_t tmp_coord[2];
-	tmp_coord[0].array.data_lock.lock();
-	tmp_coord[0].array.long_double_lock.lock();
-	for(unsigned long int i = 1;i < tmp_coord[0].array.long_double_array.size();i++){
-		*tmp_coord[0].array.long_double_array[i] = (long double)gen_rand();
+	coord_t tmp[1024];
+	for(int_ i = 0;i < 1024;i++){
+		find_pointer(find_array_pointer(tmp[i].array.id)->id);
 	}
-	tmp_coord[0].array.long_double_lock.unlock();
-	tmp_coord[0].array.data_lock.unlock();
-	net_ip_connection_info_t tmp_net_conn_info;
-	tmp_net_conn_info.ip = "127.0.0.1";
-	tmp_net_conn_info.port = NET_IP_SERVER_RECEIVE_PORT;
-	net->write(tmp_coord[0].array.gen_updated_string(UINT_MAX), tmp_net_conn_info.array.id);
-	tmp_coord[1].array.id = tmp_coord[0].array.id;
-	tmp_coord[0].array.id++;
-	std::string incoming_packet;
-	while((incoming_packet = net->read()) == ""){
-		net->loop();
-	}
-	update_class_data(incoming_packet, CLASS_DATA_UPDATE_EVERYTHING);
-	tmp_coord[0].print();
-	tmp_coord[1].print();
 }
 
 void test_logic_close(){
 	loop_del(&server_loop_code, test_logic_engine);
-	delete net;
-	net = nullptr;
-}
-
-void simple_signal_handler(int signum){
-	terminate = true;
 }
 
 static void load_previous_server_state(){
@@ -102,8 +80,8 @@ static void load_previous_server_state(){
 		while(in.getline(data, 65536)){
 			save.push_back(data);
 		}
-		const unsigned long int save_size = save.size();
-		for(unsigned long int i = 0;i < save_size;i++){
+		const uint_ save_size = save.size();
+		for(uint_ i = 0;i < save_size;i++){
 			update_class_data(save[i], UINT_MAX);
 			update_progress_bar(i/save_size);
 		}
@@ -120,7 +98,7 @@ static void load_initial_values(){
 			std::stringstream ss(data);
 			std::string data_[2];
 			ss >> data_[0] >> data_[1];
-			long long int data_num = atoi(data_[1].c_str());
+			int_ data_num = atoi(data_[1].c_str());
 			if(data_[0] == "loop_settings"){
 				loop_settings = data_num;
 			}else if(data_[0] == "net_loop_settings"){
@@ -131,7 +109,22 @@ static void load_initial_values(){
 	}
 }
 
-void init(int choice){
+void reserve_ids(){
+	array_t *iterator = new array_t(nullptr, false);
+	iterator->data_type = "server_iterator";
+	iterator->int_array.push_back(&server_loop_code.tick);
+	iterator->new_id(RESERVE_ID_ITERATOR);
+	iterator->immunity(true);
+	// the rest aren't reserved, but should follow the same rules
+	array_t *loop_settings_ = new array_t(nullptr, true);
+	loop_settings_->int_array.push_back(&loop_settings);
+	loop_settings_->data_type = "loop_settings";
+	loop_settings_->immunity(true);
+}
+
+void init(int_ choice){
+	reserve_ids();
+	console_init();
 	load_previous_server_state();
 	server_loop_code.name = "server loop code";
 	//signal(SIGINT, simple_signal_handler);
@@ -139,26 +132,27 @@ void init(int choice){
 	switch(choice){
 	case 1:
 		server_info_init();
-		net_init();
-		physics_init();
-		gametype_init();
-		console_init();
+		if(check_for_parameter("--net-disable", argc_, argv_) == false) net_init();
+		if(check_for_parameter("--physics-disable", argc_, argv_) == false) physics_init();
+		if(check_for_parameter("--gametype-disable", argc_, argv_) == false) gametype_init();
+		if(check_for_parameter("--input-disable", argc_, argv_) == false) input_init(); // signals should still work from the console
 		break;
 	case 2:
 		test_logic_init();
 		break;
 	case 3:
-		terminate = true;
+		set_signal(SIGTERM, true);
 		break;
 	default:
 		printf("WARNING: This was NOT one of the options, terminating\n");
-		terminate = true;
+		set_signal(SIGTERM, true);
 		break;
 	}
 }
 
 void close(){
 	net_close();
+	input_close();
 	physics_close();
 	console_close();
 	test_logic_close();
@@ -166,7 +160,7 @@ void close(){
 	// the functions are smart enough to not close if they never initialized
 }
 
-int menu(){
+int_ menu(){
 	int return_value;
 	printf("(1) Start the server normally\n");
 	printf("(2) Start the test_logic\n");
@@ -181,7 +175,7 @@ int main(int argc, char **argv){
 	init(menu());
 	printf("Starting the main loop\n");
 	SET_BIT(loop_settings, LOOP_CODE_PARTIAL_MT, 0);
-	while(terminate == false){
+	while(likely(check_signal(SIGINT) == false && check_signal(SIGKILL) == false && check_signal(SIGTERM) == false)){
 		loop_run(&server_loop_code, &loop_settings);
 		once_per_second_update();
 	}

@@ -2,8 +2,6 @@ rm -r client/obj
 mkdir client/obj
 rm -r class/obj
 mkdir class/obj
-rm -r render/obj
-mkdir render/obj
 rm -r input/obj
 mkdir input/obj
 rm -r math/obj

@@ -19,6 +19,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../math/math_main.h"
 	#include  "../main.h"
 	#include "cstdio"
+	#include "iostream"
 	#include "mutex"
 	#include "vector"
 	#include "climits"
@@ -38,6 +39,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#elif _WIN32
 		#include "windows.h"
 	#endif
+	#include "../class/class_array.h"
 	#define likely(x) __builtin_expect(x,1)
 	#define unlikely(x) __builtin_expect(x,0)
 	#define UTIL_SHELL_DELETE 0
@@ -46,39 +48,54 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define CHECK_BIT(var, pos) ((var & ( 1 << pos )) >> pos)
 	#define SET_BIT(var,pos,val) (var ^= (-val ^ var) & (1 << pos))
 	#define FLIP_BIT(var, pos) (var ^= (1 << pos))	
+	#define PRINTF_VITAL 0
+	#define PRINTF_ERROR 1
+	#define PRINTF_UNLIKELY_WARN 2
+	#define PRINTF_LIKELY_WARN 3
+	#define PRINTF_STATUS 4
+	#define PRINTF_DEBUG 5
 	struct sort_t{
 		void *pointer;
-		int value;
+		int_ value;
 	};
 	class timer_struct_t{
 	private:
 		long double start_time;
 		long double end_time;
-		int type;
+		int_ type;
 	public:
 		void start_timer();
 		void end_timer();
-		long double get_time(int);
+		long double get_time(int_);
 	};
+	extern int_ argc_;
+	extern char** argv_;
 	extern void update_progress_bar(long double);
 	extern bool once_per_second;
 	extern void once_per_second_update();
 	extern std::string wrap(char *start, std::string data, char *end);
 	extern std::vector<std::string> pull_items_data(char*, std::string, char*);
-	extern int util_shell(int, std::string);
+	extern int_ util_shell(int_, std::string);
 	extern void ms_sleep(long double);
-	extern unsigned long int gen_rand(unsigned int a = UINT_MAX);
-	extern short int term_if_true(bool, char*);
-	extern short int warn_if_true(bool, char*);
-	extern bool probably_equal(int,int);
+	extern uint_ gen_rand(uint_ a = 0);
+	extern int_ term_if_true(bool, char*);
+	extern int_ warn_if_true(bool, char*);
+	extern bool probably_equal(int_,int_);
 	extern long double get_time();
 	extern bool sign(long double*);
-	extern bool check_for_parameter(const std::string, int, char**);
+	extern bool check_for_parameter(const std::string, int_, char**);
 	extern void switch_values(void*, void*);
 	extern void switch_values(void**, void**);
-	extern void sorting_algorithm(std::vector<void*>, int);
+	extern void sorting_algorithm(std::vector<void*>, int_);
 	extern void sanatize_input(std::string*);
 	extern void load_file_to_string(std::string*, std::string);
-	extern void positive_to_negative_trick(unsigned char **, int);
+	extern void positive_to_negative_trick(unsigned char **, int_);
 	extern void negative_to_positive_trick(std::string*);
+	extern bool quicksort_search(uint_*, uint*, int_, int_);
+	extern bool valid_int(int_);
+	extern array_id_t strip_id(array_id_t);
+	extern int_ printf_(std::string, int_);
+	extern array_id_t scramble_id(array_id_t);
+	extern void hanging_debug();
+	extern long double get_last_time();
 #endif

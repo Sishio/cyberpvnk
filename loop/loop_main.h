@@ -22,12 +22,28 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define LOOP_CODE_NEVEREND_MT 2 // threads are stored across iterations
 	#include "../util/util_main.h"
 	#include "../input/input_main.h"
+	#include "future"
 	#include "vector"
 	#include "thread"
+	#include "chrono"
+	#include "functional"
+	#include "pthread.h"
+	struct loop_thread_pool_t{
+	private:
+		std::future<typename std::result_of<void (*&())()>::type> thread_vector[1024];
+		int_ core_count;
+		int_ find_empty_thread();
+	public:
+		loop_thread_pool_t(int_ core_count);
+		~loop_thread_pool_t();
+		void add(void(*code)()); // the threads run and delete themselves
+		void add(void(*code)(void*), void*);
+		void wait();
+	};
 	struct loop_entry_t{
 		loop_entry_t();
 		void(*code)();
-		int iteration_skip;
+		int_ iteration_skip;
 		bool term;
 		std::string name;
 	};
@@ -38,11 +54,12 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::string name;
 		std::vector<loop_entry_t> code;
 		std::vector<std::thread*> neverend_threads;
-		int settings;
+		int_ settings;
+		int_ tick;
 	};
 	extern void loop_add(loop_t*, std::string, void(*)());
-	extern void loop_run(loop_t*, int*);
+	extern void loop_run(loop_t*, int_*);
 	extern void loop_del(loop_t*, void(*)());
+	extern void loop_del(loop_t*, std::string);
 	extern bool infinite_loop();
-	extern bool terminate;
 #endif

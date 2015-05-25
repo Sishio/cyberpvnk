@@ -15,6 +15,8 @@ You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef CLASS_MAIN_H
+	#define CLASS_MAIN_H
+	#include "../main.h"
 	#include "class_array.h"
 	#include "class_extra.h"
 	#include "../util/util_main.h"
@@ -24,7 +26,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "string"
 	#include "climits"
 	#include "cstdio"
-	#define CLASS_MAIN_H
 	#define CLASS_DATA_UPDATE_EVERYTHING	UINT_MAX
 	#define CLASS_DATA_COORD_BIT		0
 	#define CLASS_DATA_MODEL_BIT		1
@@ -34,23 +35,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define CLASS_DATA_CLIENT_BIT		5
 	#define COORD_POINTER_SIZE 1024
 	#define MODEL_POINTER_SIZE 1024
-	#define INPUT_TYPE_KEYBOARD 0
-		#define INPUT_TYPE_KEYBOARD_INT_SIZE 2
-		#define INPUT_TYPE_KEYBOARD_KEY 0 // SDLK_*
-		#define INPUT_TYPE_KEYBOARD_CHAR 1
-	#define INPUT_TYPE_MOUSE_MOTION 1
-		#define INPUT_TYPE_MOUSE_MOTION_INT_SIZE 2
-		#define INPUT_TYPE_MOUSE_MOTION_X 0
-		#define INPUT_TYPE_MOUSE_MOTION_Y 1
-	#define INPUT_TYPE_MOUSE_PRESS 2 // type
-		#define INPUT_TYPE_MOUSE_PRESS_INT_SIZE 1
-		#define INPUT_TYPE_MOUSE_PRESS_BUTTON 0; // ID entry
-			#define INPUT_TYPE_MOUSE_PRESS_BUTTON_LEFT 0 // values
-			#define INPUT_TYPE_MOUSE_PRESS_BUTTON_MIDDLE 1
-			#define INPUT_TYPE_MOUSE_PRESS_BUTTON_RIGHT 2
-	#define INPUT_TYPE_MOUSE_SCROLL 3
-		#define INPUT_TYPE_MOUSE_SCROLL_UP 0
-		#define INPUT_TYPE_MOUSE_SCROLL_DOWN 1
 	#define INPUT_MOTION_FORWARD 0
 	#define INPUT_MOTION_BACKWARD 1
 	#define INPUT_MOTION_LEFT 2
@@ -68,9 +52,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	class net_ip_connection_info_t{
 	public:
 		array_t array;
-		int connection_type; // UDP or TCP
+		int_ connection_type; // UDP or TCP
 		std::string ip;
-		int port;
+		int_ port;
 		net_ip_connection_info_t(bool add_to_array_vector = true);
 		~net_ip_connection_info_t();
 	};
@@ -79,16 +63,16 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		input_settings_t(bool add_to_array_vector = true);
 		~input_settings_t();
 		array_t array;
-		int int_data[64][2];
+		int_ int_data[64][2];
 	};
 	struct face{
-		int facenum;
+		int_ facenum;
 		bool four;
-		int faces[4];
-		int texcoord[4];
-		int mat;
-		face(int facen, int f1, int f2, int f3, int f4, int t2, int t3, int m);
-		face(int facen, int f1, int f2, int f3, int f4, int t1, int t2, int t3, int t4, int m);
+		int_ faces[4];
+		int_ texcoord[4];
+		int_ mat;
+		face(int_ facen, int_ f1, int_ f2, int_ f3, int_ f4, int_ t2, int_ t3, int_ m);
+		face(int_ facen, int_ f1, int_ f2, int_ f3, int_ f4, int_ t1, int_ t2, int_ t3, int_ t4, int_ m);
 	}; 
 	struct coordinate{
 		float x,y,z;
@@ -98,9 +82,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::string name;
 		float alpha,ns,ni;
 		float dif[3],amb[3],spec[3];
-		int illum;
-		int texture;
-		material(const char*  na,float al,float n,float ni2,float* d,float* a,float* s,int i,int t);
+		int_ illum;
+		int_ texture;
+		material(const char*  na,float al,float n,float ni2,float* d,float* a,float* s,int_ i,int_ t);
 	};
 	struct texcoord{
 		float u,v;
@@ -125,8 +109,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<coordinate*> vertex;
 		std::vector<face*> faces;
 		std::vector<coordinate*> normals;
-		std::vector<unsigned int> texture;
-		std::vector<unsigned int> lists;
+		std::vector<uint_> texture;
+		std::vector<uint_> lists;
 		std::vector<material*> materials;
 		std::vector<texcoord*> texturecoordinate;
 		bool ismaterial,isnormals,istexture;
@@ -134,8 +118,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		~model_t();
 		void get_size(long double*, long double*, long double*);
 		void close();
-		unsigned long long int collective_size;
-		void update_array();
+		uint_ collective_size;
 	};
 	class coord_t{
 	public:
@@ -146,7 +129,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		long double old_time;
 		bool mobile;
 		coord_t(bool add_to_array_vector = true);
-		void update_array_pointers();
 		void print();
 		void set_x_angle(bool,long double);
 		void set_y_angle(bool,long double);
@@ -159,17 +141,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		array_id_t coord_id;
 		array_id_t model_id;
 		array_id_t connection_info_id;
+		array_id_t keyboard_map_id;
 		client_t(bool add_to_array_vector = true);
 		~client_t();
-		void update_array();
 	};
-//class render_buffer_t{
-//	public:
-//		render_buffer_t(bool add_to_array_vector = true);
-//		~render_buffer_t();
-//		array_t array;
-//		array_id_t model_id;
-//		array_id_t coord_id;
-//	};
-//#include "../input/input_main.h"
+	extern void* class_new(std::string);
 #endif

@@ -49,11 +49,11 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	class net_ip_write_buffer_t{
 	public:
 		bool sent;
-		unsigned long int position;
-		int connection_info_id;
-		net_ip_write_buffer_t(std::string, net_packet_id, int);
+		uint_ position;
+		int_ connection_info_id;
+		net_ip_write_buffer_t(std::string, net_packet_id, int_);
 		std::vector<std::string> gen_string_vector();
-		unsigned long int packet_id;
+		uint_ packet_id;
 		std::string data;
 	};
 	class net_ip_read_buffer_t{
@@ -63,36 +63,37 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void parse_packet_segment(std::string);
 		bool finished();
 		std::string gen_string();
-		unsigned long int packet_id;
+		uint_ packet_id;
 		std::vector<std::string> data_vector;
 	};
 	struct udp_socket_t{
 		array_id_t connection_info_id;
 		UDPsocket socket;
 		udp_socket_t(array_id_t);
+		UDPsocket get_socket();
 		~udp_socket_t();
 	};
 	class net_ip_t{
 	private:
 		std::mutex read_buffer_lock;
 		std::mutex write_buffer_lock;
-		unsigned long int total_sent_bytes;
+		uint_ total_sent_bytes;
 		std::vector<net_ip_read_buffer_t> read_buffer;
 		std::vector<net_ip_write_buffer_t> write_buffer;
 		UDPpacket *outbound_packet;
 		udp_socket_t *outbound; // no TCP yet
 		UDPpacket *inbound_packet;
 		udp_socket_t *inbound; // switching on the spot without losing data
-		bool receive_check_read_array(std::string, unsigned long int);
+		bool receive_check_read_array(std::string, uint_);
 		void update_outbound_port(array_id_t);
 		void update_inbound_port(array_id_t);
 	public:
 		net_ip_connection_info_t self_info;
-		int init(int,char**, int);
+		int_ init(int_,char**, array_id_t);
 		std::string read(std::string);
-		void write(std::string, int, unsigned long int);
-		void write_array_vector(std::vector<std::string>, int); // net_ip_connection_info ID
-		int send_now(net_ip_write_buffer_t*);
+		void write(std::string, int_, uint_);
+		void write_array_vector(std::vector<std::string>, uint_); // net_ip_connection_info ID
+		int_ send_now(net_ip_write_buffer_t*);
 		std::string receive_now();
 		void loop();
 		void loop_send();

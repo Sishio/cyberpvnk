@@ -17,8 +17,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "limits.h"
 #include "class_main.h"
 
-void coord_t::update_array_pointers(){
-	array.update_pointers(); // clears everything
+coord_t::coord_t(bool add) : array(this, add){
 	array.data_lock.lock();
 	array.long_double_lock.lock();
 	array.long_double_array.push_back(&x);
@@ -33,14 +32,10 @@ void coord_t::update_array_pointers(){
 	array.int_lock.lock();
 	array.int_array.push_back(&model_id);
 	array.int_lock.unlock();
-	array.data_type = "coord_t";
 	array.data_lock.unlock();
-}
-
-coord_t::coord_t(bool add) : array(this, add){
-	update_array_pointers();
 	array.reset_values();
 	array.data_lock.lock();
+	array.data_type = "coord_t";
 	old_time = get_time();
 	mobile = true;
 	array.data_lock.unlock();
@@ -56,7 +51,7 @@ void coord_t::print(){
 
 void coord_t::set_x_angle(bool add, long double a){
 	array.data_lock.lock();
-	assert(fabs(a) < 100);
+	assert(std::abs(a) < 100);
 	if(add){
 		x_angle += a;
 		while(x_angle > 360) x_angle -= 360;
@@ -67,7 +62,7 @@ void coord_t::set_x_angle(bool add, long double a){
 
 void coord_t::set_y_angle(bool add, long double a){
 	array.data_lock.lock();
-	assert(fabs(a) < 100);
+	assert(std::abs(a) < 100);
 	if(add){
 		y_angle += a;
 		while(y_angle > 360) y_angle -= 360;
@@ -80,39 +75,34 @@ coord_t::~coord_t(){
 	delete (model_t*)find_pointer(model_id, "model_t");
 }
 
-void model_t::update_array(){
-	array.data_type = "model_t";
-	array.update_pointers();
-}
-
 model_t::model_t(bool add) : array(this, add){
-	update_array();
+	array.data_type = "model_t";
 }
 
 model_t::~model_t(){
-	const unsigned long int coord_size = coord.size();
-	for(unsigned long int i = 0;i < coord_size;i++){
+	const int_ coord_size = coord.size();
+	for(int_ i = 0;i < coord_size;i++){
 		delete coord[i];
 		coord[i] = nullptr;
 	}
 	coord.clear();
 
-	const unsigned long int vertex_size = vertex.size();
-	for(unsigned long int i = 0;i < vertex_size;i++){
+	const int_ vertex_size = vertex.size();
+	for(int_ i = 0;i < vertex_size;i++){
 		delete vertex[i];
 		vertex[i] = nullptr;
 	}
 	vertex.clear();
 
-	const unsigned long int faces_size = faces.size();
-	for(unsigned long int i = 0;i < faces_size;i++){
+	const int_ faces_size = faces.size();
+	for(int_ i = 0;i < faces_size;i++){
 		delete faces[i];
 		faces[i] = nullptr;
 	}
 	faces.clear();
 
-	const unsigned long int normals_size = normals.size();
-	for(unsigned long int i = 0;i < normals_size;i++){
+	const int_ normals_size = normals.size();
+	for(int_ i = 0;i < normals_size;i++){
 		delete normals[i];
 		normals[i] = nullptr;
 	}
@@ -121,15 +111,15 @@ model_t::~model_t(){
 	texture.clear();
 	lists.clear();
 
-	const unsigned long int materials_size = materials.size();
-	for(unsigned long int i = 0;i < materials_size;i++){
+	const int_ materials_size = materials.size();
+	for(int_ i = 0;i < materials_size;i++){
 		delete materials[i];
 		materials[i] = nullptr;
 	}
 	materials.clear();
 
-	const unsigned long int texturecoordinate_size = texturecoordinate.size();
-	for(unsigned long int i = 0;i < texturecoordinate_size;i++){
+	const int_ texturecoordinate_size = texturecoordinate.size();
+	for(int_ i = 0;i < texturecoordinate_size;i++){
 		delete texturecoordinate[i];
 		texturecoordinate[i] = nullptr;
 	}
@@ -143,16 +133,11 @@ void model_t::get_size(long double *x, long double *y, long double *z){
 	z[0] = z[1] = 0;
 }
 
-void client_t::update_array(){
-	array.update_pointers();
+client_t::client_t(bool add) : array(this, add){
 	array.int_array.push_back(&model_id);
 	array.int_array.push_back(&coord_id);
 	array.int_array.push_back(&connection_info_id);
 	array.data_type = "client_t";
-}
-
-client_t::client_t(bool add) : array(this, add){
-	update_array();
 }
 
 client_t::~client_t(){
@@ -180,7 +165,7 @@ net_ip_connection_info_t::net_ip_connection_info_t(bool add) : array(this, add){
 net_ip_connection_info_t::~net_ip_connection_info_t(){}
 
 input_settings_t::input_settings_t(bool add) : array(this, add){
-	for(unsigned long int i = 0;i < 64;i++){
+	for(int_ i = 0;i < 64;i++){
 		int_data[i][0] = int_data[i][1] = -1;
 		array.int_array.push_back(&int_data[i][0]);
 		array.int_array.push_back(&int_data[i][1]);
@@ -188,3 +173,20 @@ input_settings_t::input_settings_t(bool add) : array(this, add){
 }
 
 input_settings_t::~input_settings_t(){}
+
+void* class_new(std::string type){
+	if(type == "client_t"){
+		return new client_t;
+	}else if(type == "coord_t"){
+		return new coord_t;
+	}else if(type == "model_t"){
+		return new model_t;
+	}else if(type == "net_ip_connection_info_t"){
+		return new net_ip_connection_info_t;
+	}else if(type == "input_settings_t"){
+		return new input_settings_t;
+	}else{
+		printf("TODO: Make an allocator for '%s'\n", type.c_str());
+		return nullptr;
+	}
+}

@@ -1,439 +1,315 @@
-/*
-Czech_mate by Daniel
-This file is part of Czech_mate.
-
-Czech_mate is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License Version 2 as published by
-the Free Software Foundation, 
-
-Czech_mate is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
-*/
-#include "../render/render_main.h"
 #include "server_console.h"
-#include "server_net.h"
-#include "server_gametype.h"
 
-/*
-TODO:
-	Make a singlethreaded version. The only thread running will be running scanf and putting that information into an std::string.
-*/
+static std::thread console_thread;
+static std::string line;
+static std::string command[8];
+static std::string in_stack[8];
+static std::string out_stack[8];
+static int_* pointer_stack_int[8] = {nullptr};
+static long double* pointer_stack_long_double[8] = {nullptr};
+static std::string* pointer_stack_string[8] = {nullptr};
+static void *last_used_pointer = nullptr;
 
-#define CONSOLE_INPUT_ARRAY_SIZE 65536
-
-static void settings_engine();
-static void class_engine();
-static void terminate_engine();
-static void render_object_engine();
-static void input_render_object_engine(input_t*, coord_t*, float);
-static void int_modifier_engine(int*);
-static void double_modifier_engine(long double*);
-static void string_modifier_engine(std::string*);
-static std::thread *console_thread;
-static char console_input_array[CONSOLE_INPUT_ARRAY_SIZE];
-static std::string user_input;
-static std::mutex user_input_lock;
-extern net_t *net;
-extern bool terminate;
-static array_id_t last_gen_id = -1;
-static void update_last_gen_id(array_id_t);
-static array_id_t pull_user_input_id(array_t*, std::string);
-static array_id_t pull_last_gen_id(array_t*);
-static void loop_code_engine();
-
-inline static void prompt_for_item(std::string prompt){
-	std::cout << prompt;
-	scanf("%65535s", console_input_array);
-}
-
-static void update_last_gen_id(array_id_t id){
-	last_gen_id = id;
-}
-
-static array_id_t pull_user_input_id(array_t *tmp_array, std::string print_string = "ID"){
-	printf("%s\n", print_string.c_str());
-	prompt_for_item(print_string);
-	if((std::string)console_input_array == "last"){
-		return pull_last_gen_id(tmp_array);
-	}
-	array_id_t tmp = std::stoi(console_input_array);
-	update_last_gen_id(tmp);
-	return pull_last_gen_id(tmp_array); // assuring that the input ID is valid
-}
-
-static array_id_t pull_last_gen_id(array_t *tmp){
-	if(likely(last_gen_id != -1)){
-		if(likely((tmp = find_array_pointer(last_gen_id)) != nullptr)){
-			tmp->data_lock.unlock();
-			return last_gen_id;
-		}else{
-			printf("ID is no longer valid\n");
-			return pull_user_input_id(tmp);
-		}
-	}else{
-		tmp = nullptr;
-		return last_gen_id;
-	}
-}
+#define STD_INVALID_ARGUMENT_ERROR	"An error was reported: std::invalid_argument\n"
+#define OUT_OF_BOUNDS_ERROR			"An error was reported: you have requested an out-of-bounds item\n"
+#define INVALID_OBJECT_ERROR		"An error was reported: the object you requested doesn't exist\n"
 
 void console_init(){
-	console_thread = new std::thread(console_engine);
+	console_thread = std::thread(console_engine);
 }
+
+int run_command();
 
 void console_engine(){
-	while(terminate == false){
-		printf("]");
-		prompt_for_item("");
-		if((std::string)console_input_array == "settings"){
-			settings_engine();
-		}else if((std::string)console_input_array == "class"){
-			class_engine();
-		}else if((std::string)console_input_array == "terminate"){
-			terminate_engine();
-		}else if((std::string)console_input_array == "render" || (std::string)console_input_array == "render_object"){
-			render_object_engine();
-		}else if((std::string)console_input_array == "loop"){
-			loop_code_engine();
-		}
-	}
-}
-
-void console_close(){}
-
-#define INFO_INT_BIT 0
-#define INFO_STRING_BIT 1
-#define INFO_DOUBLE_BIT 2
-
-static void loop_code_engine(){
-	prompt_for_item("Code to run: ");
-	std::string code = console_input_array;
-	prompt_for_item("Times to loop the code: ");
-	int iterations = std::stoi(console_input_array);
-	if(code == "spawn_coord"){
-		new coord_t[iterations];
-	}
-}
-
-static void input_render_object_engine(input_t *input, coord_t *coord, float time){
-	if(input == nullptr){
-		printf("Input render engine called with a null input engine\n");
-		return;
-	}
-	if(coord == nullptr){
-		printf("Input render engine called with a null coord engine\n");
-		return;
-	}
-	const long double mod = time;
-	coord->array.data_lock.lock();
-	if(input->query_key(SDL_SCANCODE_W)){
-		coord->set_y_angle(true, mod);
-	}
-	if(input->query_key(SDL_SCANCODE_A)){
-		coord->set_x_angle(true, -mod);
-	}
-	if(input->query_key(SDL_SCANCODE_S)){
-		coord->set_y_angle(true, -mod);
-	}
-	if(input->query_key(SDL_SCANCODE_D)){
-		coord->set_x_angle(true, mod);
-	}
-	int coordinate_to_use = 0;
-	if(input->query_key(SDL_SCANCODE_X)){
-		SET_BIT(coordinate_to_use, 0, 1);
-	}
-	if(input->query_key(SDL_SCANCODE_Y)){
-		SET_BIT(coordinate_to_use, 1, 1);
-	}
-	if(input->query_key(SDL_SCANCODE_Z)){
-		SET_BIT(coordinate_to_use, 2, 1);
-	}
-	if(input->query_key(SDL_SCANCODE_F)){
-		if(CHECK_BIT(coordinate_to_use, 0)){
-			coord->x += mod;
-		}
-		if(CHECK_BIT(coordinate_to_use, 1)){
-			coord->y += mod;
-		}
-		if(CHECK_BIT(coordinate_to_use, 2)){
-			coord->z += mod;
-		}
-	}
-	if(input->query_key(SDL_SCANCODE_C)){
-		if(CHECK_BIT(coordinate_to_use, 0) == 1){
-			coord->x -= mod;
-		}
-		if(CHECK_BIT(coordinate_to_use, 1) == 1){
-			coord->y -= mod;
-		}
-		if(CHECK_BIT(coordinate_to_use, 2) == 1){
-			coord->z -= mod;
-		}
-	}
-	coord->array.data_lock.unlock();
-}
-
-static void render_object_engine(){
-	render_t *render = new render_t(argc_, argv_);
-	input_t *input = new input_t(argc_, argv_);
-	//coord_t *coord = new coord_t;
-	coord_t coord[2];
-	coord[0].mobile = coord[1].mobile = false;
-	coord[0].model_id = pull_user_input_id((array_t*)nullptr);
-	long double old_time = get_time(), time = 0;
-	while(infinite_loop()){
-		input_render_object_engine(input, &coord[0], time);
-		input->loop();
-		coord[0].print();
-		coord[1].print();
-		render->loop(&coord[1]);
-		time = get_time()-old_time;
-		old_time = get_time();
-	}
-	delete render;
-	delete input;
-	render = nullptr;
-	input = nullptr;
-}
-
-static void restart_terminate_engine(){
-	util_shell(UTIL_SHELL_DELETE, "server_state.save");
-	std::ofstream out("server_state.save");
-	if(out.is_open()){
-		const unsigned long int array_size = array_vector.size();
-		array_lock.lock();
-		for(unsigned long int i = 0;i < array_size;i++){
-			out << array_vector[i]->gen_updated_string(UINT_MAX) << "\n";
-		}
-		array_lock.unlock();
-		out.close();
-		terminate = true;
-	}else{
-		printf("Could not write to the server_save file, not restarting\n");
-	}
-}
-
-static void terminate_engine(){
-	prompt_for_item("'restart' or 'quit'\n");
-	if((std::string)console_input_array == "restart"){
-		restart_terminate_engine();
-	}else if((std::string)console_input_array == "quit"){
-		terminate = true;
-	}
-}
-
-static void new_class_engine(){
-	array_t *array_of_new_item = nullptr;
-	prompt_for_item("Type: ");
-	if((std::string)console_input_array == "coord_t"){
-		array_of_new_item = &((new coord_t)->array);
-	}else if((std::string)console_input_array == "model_t"){
-		array_of_new_item = &((new model_t)->array);
-	}else if((std::string)console_input_array == "gametype_t"){
-		array_of_new_item = &((new gametype_t)->array);
-	}
-	printf("Generated a %s with an ID of %d\n", array_of_new_item->data_type.c_str(), array_of_new_item->id);
-	update_last_gen_id(array_of_new_item->id);
-}
-
-static void mod_class_engine(){
-	array_t *selected = nullptr;
-	pull_user_input_id(selected);
-	selected->print();
-	prompt_for_item("VECTOR ('int_array', 'long_double_array', 'string_array')\n");
-	printf("ENTRY\n");
-	int position = 0;
-	scanf("%d", &position);
-	if((std::string)console_input_array == "int_array"){
-		selected->int_lock.lock();
-		int *tmp = selected->int_array[position];
-		selected->int_lock.unlock();
-		int_modifier_engine(tmp);
-	}else if((std::string)console_input_array == "long_double_array"){
-		selected->long_double_lock.lock();
-		long double *tmp = selected->long_double_array[position];
-		selected->long_double_lock.unlock();
-		double_modifier_engine(tmp);
-	}else if((std::string)console_input_array == "string_array"){
-		selected->string_lock.lock();
-		std::string *tmp = selected->string_array[position];
-		selected->string_lock.unlock();
-		string_modifier_engine(tmp);
-	}
-	update_last_gen_id(selected->id);
-}
-
-static void del_class_engine(){
-	array_t *array_to_delete = nullptr;
-	pull_user_input_id(array_to_delete);
-	delete_array_and_pointer(array_to_delete);
-}
-
-static void list_ext_class_engine(){
-	prompt_for_item("'type', 'id', or 'all' search: ");
-	std::vector<void*> *tmp_array_vector = nullptr;
-	bool allocated_memory = false;
-	if((std::string)console_input_array == "type"){
-		allocated_memory = true;
-		tmp_array_vector = new std::vector<void*>;
-		prompt_for_item("Type: ");
-		*tmp_array_vector = all_entries_of_type(console_input_array);
-	}else if((std::string)console_input_array == "id"){
-		allocated_memory = true;
-		tmp_array_vector = new std::vector<void*>;
-		array_t *new_array = nullptr;
-		pull_user_input_id(new_array);
-		tmp_array_vector->push_back(new_array);
-	}else if((std::string)console_input_array == "all"){
-		tmp_array_vector = (std::vector<void*>*)&array_vector;
-	}else return;
-	const unsigned long int tmp_array_vector_size = tmp_array_vector->size();
-	for(unsigned long int i = 0;i < tmp_array_vector_size;i++){
-		((array_t*)(*tmp_array_vector)[i])->print();
-	}
-	if(allocated_memory){
-		delete tmp_array_vector;
-		tmp_array_vector = nullptr;
-	}
-}
-
-static void patch_ext_class_engine(){
-	prompt_for_item("Filename: ");
-	std::ifstream in((std::string)console_input_array);
-	std::vector<std::string> tmp_vector;
-	if(in.is_open()){
-		while(in.getline(console_input_array, CONSOLE_INPUT_ARRAY_SIZE)){
-			tmp_vector.push_back(console_input_array);
-		}
-		const unsigned long int tmp_vector_size = tmp_vector.size();
-		for(unsigned long int i = 0;i < tmp_vector_size;i++){
-			update_class_data(tmp_vector[i], UINT_MAX);
-			update_progress_bar((long double)((long double)i/(long double)tmp_vector_size)*(long double)100);
-		}
-		printf("Finished with the patch.\n");
-	}else{
-		printf("Cannot open the patch, not applying anything.\n");
-	}
-}
-
-static void export_class_engine(){
-	array_id_t export_id = pull_user_input_id(nullptr, "ID to export: ");
-	prompt_for_item("Filename: ");
-	std::ofstream out(console_input_array);
-	if(out.is_open()){
-		array_t *tmp = find_array_pointer(export_id);
-		out << tmp->gen_updated_string(UINT_MAX);
-		tmp->data_lock.unlock();
-		out.close();
-	}else{
-		printf("Could not open the file\n");
-	}
-}
-
-static void class_engine(){
-	prompt_for_item("'new', 'mod', 'del', 'list', or 'patch'?\n");
-	if((std::string)console_input_array == "new"){
-		new_class_engine();
-	}else if((std::string)console_input_array == "mod"){
-		mod_class_engine();
-	}else if((std::string)console_input_array == "del"){
-		del_class_engine();
-	}else if((std::string)console_input_array == "list"){
-		list_ext_class_engine();
-	}else if((std::string)console_input_array == "patch" || (std::string)console_input_array == "import"){
-		patch_ext_class_engine();
-	}else if((std::string)console_input_array == "export"){
-		export_class_engine();
-	}
-}
-
-static void int_modifier_engine(int* pointer){
-	prompt_for_item("'bit', 'constant', or 'math' modification?\n");
-	if((std::string)console_input_array == "bit"){
-		printf("BIT NEW_VALUE\n");
-		int bit, value;
-		scanf("%d %d", &bit, &value);
-		SET_BIT(*pointer, bit, value);
-		printf("pointer's new value: %d\n", *pointer);
-		return;
-	}else if((std::string)console_input_array == "constant"){
-		printf("NEW_VALUE\n");
-		int new_value;
-		scanf("%d", &new_value);
-		*pointer = new_value;
-	}else if((std::string)console_input_array == "math"){
-		printf("'add', 'sub', 'mul' or 'div' is the first keyword, the value is the second one\n");
-		printf("KEYWORD VALUE\n");
-		float modifier;
-		scanf("%3s %f", console_input_array, &modifier);
-		if((std::string)console_input_array == "add"){
-			*pointer += modifier;
-		}else if((std::string)console_input_array == "sub"){
-			*pointer -= modifier;
-		}else if((std::string)console_input_array == "mul"){
-			*pointer *= modifier;
-		}else if((std::string)console_input_array == "div"){
-			if(modifier == 0){
-				modifier += 0.00000001;
-			}
-			*pointer /= modifier;
-		}
-	}
-}
-
-static void string_modifier_engine(std::string *pointer){
-	printf("constant modification is the only available one here\n");
-	prompt_for_item("NEW_CONSTANT\n");
-	*pointer = console_input_array;
-}
-
-static void double_modifier_engine(long double *pointer){
-	prompt_for_item("'constant' or 'math'\n");
-	if((std::string)console_input_array == "constant"){
-		prompt_for_item("NEW_VALUE");
-		// check to see that the input is valid so we don't blank the variable on accident
-		*pointer = strtold(console_input_array, nullptr);
-	}else if((std::string)console_input_array == "math"){
-		printf("'add', 'sub', 'mul', or 'div' is the first keyboard, the value is the second one\n");
-		float modifier;
-		scanf("%3s %f", console_input_array, &modifier);
-		if((std::string)console_input_array == "add"){
-			*pointer += modifier;
-		}else if((std::string)console_input_array == "sub"){
-			*pointer -= modifier;
-		}else if((std::string)console_input_array == "mul"){
-			*pointer *= modifier;
-		}else if((std::string)console_input_array == "div"){
-			*pointer /= modifier;
-		}
-	}
-}
-
-static void settings_engine(){
-	void *pointer_to_data;
-	int info_about_pointer = 0;
-	prompt_for_item("Variable to modify: ");
-	if((std::string)console_input_array == "loop_settings"){
-		pointer_to_data = &loop_settings;
-		SET_BIT(info_about_pointer, INFO_INT_BIT, 1);
-	}else if((std::string)console_input_array == "net_loop_settings"){
-		pointer_to_data = &net_loop_settings;
-		SET_BIT(info_about_pointer, INFO_INT_BIT, 1);
-	}
-	if(CHECK_BIT(info_about_pointer, INFO_INT_BIT) == 1){
-		int_modifier_engine((int*)pointer_to_data);
-	}else if(CHECK_BIT(info_about_pointer, INFO_STRING_BIT) == 1){
-		string_modifier_engine((std::string*)pointer_to_data);
-	}else if(CHECK_BIT(info_about_pointer, INFO_DOUBLE_BIT) == 1){
-		double_modifier_engine((long double*)pointer_to_data);
-	}
-}
-
-void input_thread(){
 	while(true){
+		std::cout << "]";
+		getline(std::cin, command[0]);
+		std::stringstream ss(command[0]);
+		ss >> command[0] >> command[1] >> command[2] >> command[3] >> command[4] >> command[5] >> command[6] >> command[7];
+		long double start_time = get_time();
+		if(run_command() == 0){
+			std::cout << "run_command finished in " << get_time()-start_time << "s" << std::endl;
+		}else{
+			std::cout << "run_command failed" << std::endl;
+		}
+		for(unsigned long int i = 0;i < 8;i++){
+			command[i] = "";
+		}
 	}
+}
+
+void console_close(){
+}
+
+std::string string_to_decimal_string(std::string a){
+	std::string return_value;
+	if(a.find_first_of("x") == 1){
+		int_ num = std::strtoll(a.c_str(), nullptr, 16);
+		return_value = std::to_string(num);
+	}else if(a.find_first_of("b") == 1){
+		int_ num = std::strtoll(a.c_str(), nullptr, 2);
+		return_value = std::to_string(num);
+	}else{
+		return_value = a;
+	}
+	return return_value;
+}
+
+std::string get_target_value(std::string target_value, void* thing, std::string type){
+	/*	std::cout << "get_target_value: target_value = '" << target_value << "'" << std::endl;
+	const bool psi_ = target_value.find_first_of("PSI") != std::string::npos;
+	const bool pss_ = target_value.find_first_of("PSS") != std::string::npos;
+	const bool psld_ = target_value.find_first_of("PSLD") != std::string::npos;
+	const bool nil_ = target_value == "NIL";
+	last_used_pointer = thing;
+	if(!psi_ && !pss_ && !psld_ && !nil_){
+		return target_value;
+	}
+	std::string return_value;
+	if(type == "string"){
+		return_value = *((std::string*)thing);
+	}else if(type == "long_double"){
+		return_value = std::to_string(*((long double*)thing));
+	}else if(type == "int"){
+		return_value = std::to_string(*((int_*)thing)); //you can convert down, I think
+	}
+	if(nil_){
+		return return_value;
+	}
+	int_ position_in_stack;
+	try{
+		position_in_stack = std::stoll(target_value);
+	}catch(std::invalid_argument){
+		printf_(STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
+		return return_value;
+	}
+	if(position_in_stack >= 8 && position_in_stack < 0){
+		printf_(OUT_OF_BOUNDS_ERROR, PRINTF_ERROR);
+		return return_value;
+	}
+	if(psi_){
+		if(pointer_stack_int[position_in_stack] == nullptr){
+			printf_(OUT_OF_BOUNDS_ERROR, PRINTF_ERROR);
+			return return_value;
+		}
+		return std::to_string(*pointer_stack_int[position_in_stack]);
+	}else if(pss_){
+		if(pointer_stack_string[position_in_stack] == nullptr){
+			printf_(OUT_OF_BOUNDS_ERROR, PRINTF_ERROR);
+			return return_value;
+		}
+		return std::to_string(*pointer_stack_int[position_in_stack]);
+	}else if(psld_){
+		if(pointer_stack_long_double[position_in_stack] == nullptr){
+			printf_(OUT_OF_BOUNDS_ERROR, PRINTF_ERROR);
+			return return_value;
+		}
+		return std::to_string(*pointer_stack_int[position_in_stack]);
+	}
+	return return_value;
+	*/
+	return target_value;
+}
+
+int run_command(){
+	if(command[0] == "modify"){
+		if(command[1] == "bitwise"){
+			int_ var[2];
+			if(in_stack[1] == ""){
+				in_stack[1] = "0"; // not
+			}
+			try{
+				var[0] = std::stoll(string_to_decimal_string(in_stack[0]));
+				var[1] = std::stoll(string_to_decimal_string(in_stack[1]));
+			}catch(std::invalid_argument){
+				printf_(STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
+				return -1;
+			}
+			if(command[2] == "xor"){
+				out_stack[0] = std::to_string(var[0]^var[1]);
+			}else if(command[2] == "or"){
+				out_stack[0] = std::to_string(var[0]|var[1]);
+			}else if(command[2] == "and"){
+				out_stack[0] = std::to_string(var[0]&var[1]);
+			}else if(command[2] == "not"){
+				out_stack[0] = std::to_string(~var[0]);
+			}else if(command[2] == "left_shift"){
+				out_stack[0] = std::to_string(var[0] << var[1]);
+			}else if(command[2] == "right_shift"){
+				out_stack[0] = std::to_string(var[0] >> var[1]);
+			}else{
+				return -1;
+			}
+		}else if(command[1] == "math"){
+			int_ var[2];
+			if(in_stack[1] == ""){
+				in_stack[1] = "0"; // sqrt
+			}
+			try{
+				var[0] = std::stoll(string_to_decimal_string(in_stack[0]));
+				var[1] = std::stoll(string_to_decimal_string(in_stack[1]));
+			}catch(std::invalid_argument){
+				printf_(STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
+				return -1;
+			}
+			if(command[2] == "mul"){
+				out_stack[0] = std::to_string(var[0]*var[1]);
+			}else if(command[2] == "div"){
+				out_stack[0] = std::to_string(var[0]/var[1]);
+			}else if(command[2] == "add"){
+				out_stack[0] = std::to_string(var[0]+var[1]);
+			}else if(command[2] == "sub"){
+				out_stack[0] = std::to_string(var[0]-var[1]);
+			}else if(command[2] == "pow"){
+				out_stack[0] = std::to_string(pow(var[0], var[1]));
+			}else if(command[2] == "sqrt"){
+				out_stack[0] = std::to_string(sqrt(var[0]));
+			}else{
+				return -1;
+			}
+		}
+	}else if(command[0] == "set"){ // set
+		/*
+		  set:
+		  in_stack[0]: array id of the desired variable
+		  in_stack[1]: the data type (long double, int_, std::string, etc...)
+		  in_stack[2]: the entry in this vector
+		  in_stack[3]: the target value
+		 */
+		const std::string array_id_ = in_stack[0];
+		const std::string set_type_ = in_stack[1];
+		const std::string entry_ = in_stack[2];
+		const std::string target_val_ = in_stack[3];
+		array_id_t array_id;
+		int_ entry;
+		try{
+			array_id = std::stoll(array_id_);
+			entry = std::stoll(entry_);
+		}catch(std::invalid_argument){
+			printf_(STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
+			return -1;
+		}
+		array_t *array_ = find_array_pointer(array_id);
+		if(array_ == nullptr){
+			printf_(INVALID_OBJECT_ERROR, PRINTF_ERROR);
+			return -1;
+		}
+		if(set_type_ == "int"){
+			if(array_->int_array.size() <= entry){
+				printf_(OUT_OF_BOUNDS_ERROR, PRINTF_ERROR);
+				return -1;
+			}
+			try{
+				*array_->int_array[entry] = std::stoll(get_target_value(target_val_, array_->int_array[entry], "int"));
+			}catch(std::invalid_argument){
+				printf_(STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
+				return -1;
+			}
+		}else if(set_type_ == "long_double"){
+			if(array_->long_double_array.size() <= entry){
+				printf_(OUT_OF_BOUNDS_ERROR, PRINTF_ERROR);
+				return -1;
+			}
+			try{
+				*array_->long_double_array[entry] = std::stold(get_target_value(target_val_, array_->long_double_array[entry], "long_double"));
+			}catch(std::invalid_argument){
+				printf_(STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
+				return -1;
+			}
+		}else if(set_type_ == "string"){
+			if(array_->string_array.size() <= entry){
+				printf_(OUT_OF_BOUNDS_ERROR, PRINTF_ERROR);
+				return -1;
+			}
+			try{
+				*array_->string_array[entry] = get_target_value(target_val_, array_->string_array[entry], "string");
+			}catch(std::invalid_argument){
+				printf_(STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
+				return -1;
+			}
+		}else{
+			printf_(" ", PRINTF_ERROR); // make an error for an otherwise invalid parameterxs
+			return -1;
+		}
+	}else if(std::isdigit(command[0][0])){
+		// 0-7 STACK VALUE
+		int_ in_stack_entry = std::stoll(command[0]);
+		if(in_stack_entry < 0 && in_stack_entry > 8){
+			printf_(OUT_OF_BOUNDS_ERROR, PRINTF_ERROR);
+			return -1;
+		}
+		if(command[1] == "int"){
+			pointer_stack_int[in_stack_entry] = (int_*)last_used_pointer;
+		}else if(command[1] == "long_double"){
+			pointer_stack_long_double[in_stack_entry] = (long double*)last_used_pointer;
+		}else if(command[1] == "string"){
+			pointer_stack_string[in_stack_entry] = (std::string*)last_used_pointer;
+		}else if(command[1] == "in_stack"){
+			in_stack[in_stack_entry] = command[2];
+		}else{
+			return -1;
+		}
+		/*
+		  if you want to refer to an item
+		  inside of the pointer_stack_int, 
+		  you would put 3_PSI to refer to
+		  the third item. PSLD and PSS also
+		  work
+		 */
+	}else if(command[0] == "stack_shift"){
+		if(command[1] == "in_stack"){
+			if(command[2] == "left"){
+				for(unsigned long int i = 0;i < 6;i++){
+					in_stack[i] = in_stack[i+1];
+				}
+				in_stack[7] = "";
+			}else if(command[2] == "right"){
+				for(int i = 6;i >= 0;i--){
+					in_stack[i+1] = in_stack[i];
+				}
+				in_stack[0] = "";
+			}else{
+				return -1;
+			}
+		}
+	}else if(command[0] == "print"){
+		if(in_stack[0] == "last_used_pointer"){
+			if(last_used_pointer == nullptr){
+				std::cout << "last_used_pointer: nullptr" << std::endl;
+			}else{
+				std::cout << "last_used_pointer: " << last_used_pointer << std::endl;
+			}
+		}else if(in_stack[0] == "stacks"){
+			std::string output;
+			for(unsigned long int i = 0;i < 8;i++){
+				output += "in_stack[" + std::to_string(i) + "]: " + in_stack[i] + "\n";
+			}
+			for(unsigned long int i = 0;i < 8;i++){
+				output += "out_stack[" + std::to_string(i) + "]: " + out_stack[i] + "\n";
+			}
+			for(unsigned long int i = 0;i < 8;i++){
+				output += "pointer_stack_int[" + std::to_string(i) + "]: " + ((pointer_stack_int[i] == nullptr) ? "nullptr" : std::to_string(*pointer_stack_int[i])) + "\n";
+			}
+			for(unsigned long int i = 0;i < 8;i++){
+				output += "pointer_stack_long_double[" + std::to_string(i) + "]: " + ((pointer_stack_long_double[i] == nullptr) ? "nullptr" : std::to_string(*pointer_stack_long_double[i])) + "\n";
+			}
+			for(unsigned long int i = 0;i < 8;i++){
+				output += "pointer_stack_string[" + std::to_string(i) + "]: " + ((pointer_stack_string[i] == nullptr) ? "nullptr" : *pointer_stack_string[i]) + "\n";
+			}
+			std::cout << output << std::endl;
+		}else if(in_stack[0] == "array_vector"){
+			for(uint_ i = 0;i < ARRAY_VECTOR_SIZE;i++){
+				if(array_vector[i] != nullptr){
+					std::cout << array_vector[i]->print() << std::endl;
+				}
+			}
+		}else{
+			return -1;
+		}
+	}else if(command[0] == "quit"){
+		set_signal(SIGTERM, true);
+	}else{
+		return -1;
+	}
+	return 0;
 }

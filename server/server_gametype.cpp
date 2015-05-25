@@ -8,7 +8,10 @@ void gametype_t::engine(){}
 gametype_t::~gametype_t(){}
 
 gametype_info_t::gametype_info_t() : array(this, true){
+	array.int_lock.lock();
 	array.int_array.push_back(&gametype_id);
+	array.int_lock.unlock();
+	gametype_id = 0;
 }
 
 gametype_info_t::~gametype_info_t(){}
