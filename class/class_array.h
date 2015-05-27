@@ -101,7 +101,12 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<int> int_new;
 		std::vector<int> double_new;
 		std::vector<int> string_new;
+		int_ spawn_iteration;
+		int_ send;
+		int_ write_protected;
 	public:
+		bool get_write_protected();
+		bool get_send();
 		std::string gen_print_prefix(); // don't store this as a value since copies would not change the initial address
 		void new_id(array_id_t);
 		std::mutex data_lock;
@@ -115,7 +120,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<int_*> int_array;
 		std::vector<long double*> long_double_array;
 		std::vector<std::string*> string_array;
-		std::string gen_updated_string(int_);
+		std::string gen_updated_string(int_ what_to_update = ~0);
 		std::string gen_long_double_string();
 		std::string gen_int_string();
 		std::string gen_string_string();
@@ -151,5 +156,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern std::vector<array_id_t> all_ids_of_type(std::string);
 	extern void delete_thread(std::thread*);
 	extern bool valid_id(array_id_t);
+	extern std::vector<std::string> generate_outbound_class_data();
 	#include "../input/input_main.h"
 #endif

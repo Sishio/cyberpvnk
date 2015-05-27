@@ -5,8 +5,6 @@
 #include "server_net.h"
 #include "server_gametype.h"
 
-int_ loop_settings;
-
 server_info_t *server_info = nullptr;
 net_ip_connection_info_t *self_info = nullptr; // TODO: rename this to prevent confusion with server_info
 
@@ -62,10 +60,12 @@ void test_logic_init(){
 }
 
 void test_logic_engine(){
-	coord_t tmp[1024];
-	for(int_ i = 0;i < 1024;i++){
-		find_pointer(find_array_pointer(tmp[i].array.id)->id);
-	}
+	coord_t a[2];
+	a[0].x = 1;
+	a[0].y = 2;
+	a[0].z = 3;
+	a[1].array.parse_string_entry(a[0].array.gen_updated_string());
+	std::cout << a[1].array.print() << std::endl;
 }
 
 void test_logic_close(){
@@ -82,30 +82,11 @@ static void load_previous_server_state(){
 		}
 		const uint_ save_size = save.size();
 		for(uint_ i = 0;i < save_size;i++){
-			update_class_data(save[i], UINT_MAX);
+			update_class_data(save[i], ~0);
 			update_progress_bar(i/save_size);
 		}
 	}else{
 		printf("There doesn't appear to be a server_save file to use\n");
-	}
-}
-
-static void load_initial_values(){
-	std::ifstream in("server_settings.save");
-	if(in.is_open()){
-		char data[512];
-		while(in.getline(data, 512)){
-			std::stringstream ss(data);
-			std::string data_[2];
-			ss >> data_[0] >> data_[1];
-			int_ data_num = atoi(data_[1].c_str());
-			if(data_[0] == "loop_settings"){
-				loop_settings = data_num;
-			}else if(data_[0] == "net_loop_settings"){
-				net_loop_settings = data_num;
-			}
-		}
-		in.close();
 	}
 }
 
@@ -115,11 +96,6 @@ void reserve_ids(){
 	iterator->int_array.push_back(&server_loop_code.tick);
 	iterator->new_id(RESERVE_ID_ITERATOR);
 	iterator->immunity(true);
-	// the rest aren't reserved, but should follow the same rules
-	array_t *loop_settings_ = new array_t(nullptr, true);
-	loop_settings_->int_array.push_back(&loop_settings);
-	loop_settings_->data_type = "loop_settings";
-	loop_settings_->immunity(true);
 }
 
 void init(int_ choice){
@@ -174,9 +150,9 @@ int main(int argc, char **argv){
 	argv_ = argv;
 	init(menu());
 	printf("Starting the main loop\n");
-	SET_BIT(loop_settings, LOOP_CODE_PARTIAL_MT, 0);
+	SET_BIT(server_loop_code->settings, LOOP_CODE_PARTIAL_MT, 0);
 	while(likely(check_signal(SIGINT) == false && check_signal(SIGKILL) == false && check_signal(SIGTERM) == false)){
-		loop_run(&server_loop_code, &loop_settings);
+		loop_run(&server_loop_code);
 		once_per_second_update();
 	}
 	close();

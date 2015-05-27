@@ -13,6 +13,7 @@ static void *last_used_pointer = nullptr;
 #define STD_INVALID_ARGUMENT_ERROR	"An error was reported: std::invalid_argument\n"
 #define OUT_OF_BOUNDS_ERROR			"An error was reported: you have requested an out-of-bounds item\n"
 #define INVALID_OBJECT_ERROR		"An error was reported: the object you requested doesn't exist\n"
+#define NOT_IMPLEMENTED_ERROR		"An error was reported: the command you have given has not been implemented yet\n"
 
 void console_init(){
 	console_thread = std::thread(console_engine);
@@ -44,10 +45,10 @@ void console_close(){
 std::string string_to_decimal_string(std::string a){
 	std::string return_value;
 	if(a.find_first_of("x") == 1){
-		int_ num = std::strtoll(a.c_str(), nullptr, 16);
+		int_ num = std::strtoll(a.c_str(), nullptr, 16); // do I chop off the 0x?
 		return_value = std::to_string(num);
-	}else if(a.find_first_of("b") == 1){
-		int_ num = std::strtoll(a.c_str(), nullptr, 2);
+	}else if(a.find_first_of("b") == 1){ // prefixed wiht 0b
+		int_ num = std::strtoll(a.substr(2, a.size()).c_str(), nullptr, 2);
 		return_value = std::to_string(num);
 	}else{
 		return_value = a;
@@ -56,13 +57,14 @@ std::string string_to_decimal_string(std::string a){
 }
 
 std::string get_target_value(std::string target_value, void* thing, std::string type){
-	std::cout << "get_target_value: target_value = '" << target_value << "'" << std::endl;
-	const bool psi_ = target_value.find_first_of("PSI") != std::string::npos;
-	const bool pss_ = target_value.find_first_of("PSS") != std::string::npos;
-	const bool psld_ = target_value.find_first_of("PSLD") != std::string::npos;
+	const bool psi_ = target_value.find_first_of("_PSI") != std::string::npos;
+	const bool pss_ = target_value.find_first_of("_PSS") != std::string::npos;
+	const bool psld_ = target_value.find_first_of("_PSLD") != std::string::npos;
+	const bool os_ = target_value.find_first_of("_OS") != std::string::npos;
+	const bool is_ = target_value.find_first_of("_IS") != std::string::npos;
 	const bool nil_ = target_value == "NIL";
 	last_used_pointer = thing;
-	if(!psi_ && !pss_ && !psld_ && !nil_){
+	if(!psi_ && !pss_ && !psld_ && !os_ && !is_ && !nil_){
 		return target_value; // no special conditions have been met
 	}
 	std::string return_value;
@@ -105,6 +107,10 @@ std::string get_target_value(std::string target_value, void* thing, std::string 
 			return return_value;
 		}
 		return std::to_string(*pointer_stack_int[position_in_stack]);
+	}else if(os_){
+		return out_stack[position_in_stack];
+	}else if(is_){
+		return in_stack[position_in_stack];
 	}
 	return return_value;
 }
@@ -113,7 +119,7 @@ int run_command(){
 	if(command[0] == "modify"){
 		if(command[1] == "bitwise"){
 			int_ var[2];
-			if(in_stack[1] == ""){
+			if(in_stack[1] == "" && command[2] == "not"){
 				in_stack[1] = "0"; // not
 			}
 			try{
@@ -140,7 +146,7 @@ int run_command(){
 			}
 		}else if(command[1] == "math"){
 			int_ var[2];
-			if(in_stack[1] == ""){
+			if(in_stack[1] == "" && command[2] == "sqrt"){
 				in_stack[1] = "0"; // sqrt
 			}
 			try{
@@ -226,7 +232,6 @@ int run_command(){
 				return -1;
 			}
 		}else{
-			printf_(" ", PRINTF_ERROR); // make an error for an otherwise invalid parameterxs
 			return -1;
 		}
 	}else if(std::isdigit(command[0][0])){
@@ -236,14 +241,16 @@ int run_command(){
 			printf_(OUT_OF_BOUNDS_ERROR, PRINTF_ERROR);
 			return -1;
 		}
-		if(command[1] == "int"){
+		if(command[1] == "pointer_int_stack"){
 			pointer_stack_int[in_stack_entry] = (int_*)last_used_pointer;
-		}else if(command[1] == "long_double"){
+		}else if(command[1] == "pointer_long_double_stack"){
 			pointer_stack_long_double[in_stack_entry] = (long double*)last_used_pointer;
-		}else if(command[1] == "string"){
+		}else if(command[1] == "pointer_string_stack"){
 			pointer_stack_string[in_stack_entry] = (std::string*)last_used_pointer;
 		}else if(command[1] == "in_stack"){
-			in_stack[in_stack_entry] = command[2];
+			in_stack[in_stack_entry] = get_target_value(command[2], &in_stack[in_stack_entry], "string");
+		}else if(command[1] == "out_stack"){
+			out_stack[in_stack_entry] = get_target_value(command[2], &out_stack[in_stack_entry], "string");
 		}else{
 			return -1;
 		}
@@ -255,17 +262,26 @@ int run_command(){
 		  work
 		 */
 	}else if(command[0] == "stack_shift"){
-		if(command[1] == "in_stack"){
+		std::string *stack_ = nullptr;
+		int_* stack_int_ = nullptr;
+		long double* stack_long_double_= nullptr;
+		std::string stack_string_ = nullptr;
+		if(command[1] == "out_stack"){
+			stack_ = out_stack;
+		}else if(command[1] == "in_stack"){
+			stack_ = in_stack;
+		}
+		if(stack_ != nullptr){
 			if(command[2] == "left"){
 				for(unsigned long int i = 0;i < 6;i++){
-					in_stack[i] = in_stack[i+1];
+					stack_[i] = stack_[i+1];
 				}
-				in_stack[7] = "";
+				stack_[7] = "";
 			}else if(command[2] == "right"){
 				for(int i = 6;i >= 0;i--){
-					in_stack[i+1] = in_stack[i];
+					stack_[i+1] = stack_[i];
 				}
-				in_stack[0] = "";
+				stack_[0] = "";
 			}else{
 				return -1;
 			}

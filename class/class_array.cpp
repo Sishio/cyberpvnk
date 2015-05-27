@@ -93,41 +93,46 @@ void quick_vector_free(){
   in the corresponding ARRAY_RESERVE.
  */
 
-array_t::array_t(void* tmp_pointer, bool add_array_to_vector){
+bool array_t::get_send(){return send;}
+
+int_ find_empty_array_entry(){
+	int_ i;
+	#ifdef RESERVE_ID_SIZE
+	i = RESERVE_ID_SIZE;
+	#else
+	i = 0;
+	#endif
+	for(;i < ARRAY_VECTOR_SIZE;i++){
+		if(array_vector[i] == nullptr){
+			array_vector[i] = this;
+			break;
+		}
+	}
+	return i;
+}
+
+array_t::array_t(void* tmp_pointer, bool send_){
 	pointer = tmp_pointer;
-	int_ spawn_iteration = new_int();
+	write_protected = false;
+	send = send_;
+	last_update = get_time();
 	array_t *iterator_ptr = find_array_pointer(RESERVE_ID_ITERATOR);
 	if(iterator_ptr != nullptr){
-		*int_array[spawn_iteration] = *(iterator_ptr->int_array[ARRAY_RESERVE_INT_SIZE]); // first usable 
+		spawn_iteration = *(iterator_ptr->int_array[ARRAY_RESERVE_INT_SIZE]); // first usable 
 	}else{
 		printf_(gen_print_prefix() + "Couldn't find the iterator, assuming this is the first iteration\n", PRINTF_UNLIKELY_WARN);
-		*int_array[spawn_iteration] = 0;
+		spawn_iteration = 0;
 	}
+	//^ default values
+	int_array.push_back&spawn_iteration, 
 	int_array.push_back(&id);
 	string_array.push_back(&data_type);
-	reset_values();
-	if(add_array_to_vector){
-		quick_vector_free();
-		array_lock.lock();
-		int_ i;
-		#ifdef RESERVE_ID_SIZE
-		i = RESERVE_ID_SIZE;
-		#else
-		i = 0;
-		#endif
-		for(;i < ARRAY_VECTOR_SIZE;i++){
-			if(array_vector[i] == nullptr){
-				array_vector[i] = this;
-				break;
-			}
-		}
-		id = scramble_id(i);
-		array_lock.unlock();
-	}else{
-		printf_(gen_print_prefix() + "Since this item is NOT being added to the array, its ID = 0", PRINTF_DEBUG);
-		id = 0;
-	}
-	last_update = get_time();
+	quick_vector_free();
+	array_lock.lock();
+	int_ tmp_entry = find_empty_array_entry();
+	array_vector[tmp_entry] = this;
+	id = scramble_id(tmp_entry);
+	array_lock.unlock();
 }
 
 void array_t::reset_values(){
@@ -195,8 +200,6 @@ void array_t::parse_string_entry(std::string tmp_string){
 	}
 	data_lock.unlock();
 	if(old_id != id){
-		// this is a newly generated item and 
-		// the auto-assigned location is wrong
 		array_id_t new_id_ = id;
 		id = old_id;
 		// the NEW ID needs to be passed as the parameter
@@ -384,6 +387,19 @@ std::string array_t::gen_long_double_string(){
 	return return_value;
 }
 
+std::vector<std::string> generate_outbound_class_data(){
+	std::vector<std::string> return_value;
+	for(uint_ i = 0;i < ARRAY_VECTOR_SIZE;i++){
+		if(array_vector[i] != nullptr && array_vector[i]->get_send()){
+			array_vector[i]->data_lock.lock();
+			const std::string tmp = array_vector[i]->gen_updated_string(~0);
+			array_vector[i]->data_lock.unlock();
+			return_value.push_back(tmp);
+		}
+	}
+	return return_value;
+}
+
 void update_class_data(std::string a, int_ what_to_update){
 	array_id_t id = pull_id(a);
 	array_t *tmp = (array_t*)find_array_pointer(id);
@@ -407,7 +423,9 @@ void update_class_data(std::string a, int_ what_to_update){
 			free_ram();
 		}
 	}
-	tmp->parse_string_entry(a); // will lock it when called
+	if(tmp->gen_write_protected() == false){
+		tmp->parse_string_entry(a);
+	}
 }
 
 void add_two_arrays(array_t *a, array_t *b){
@@ -598,3 +616,5 @@ void array_t::immunity(bool a){
 		*int_array[0] = *(iterator->int_array[2]);
 	}
 }
+
+bool array_t::get_write_protected(){return write_protected;}

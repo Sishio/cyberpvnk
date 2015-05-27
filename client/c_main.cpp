@@ -31,7 +31,6 @@ static net_ip_connection_info_t tmp_conn_info;
 
 static void init(){
 	loop.name = "client loop code";
-	std::vector<void(*)()> init_vector;
 	loop_t init_loop;
 	switch(choice){
 	case 1:
@@ -49,9 +48,8 @@ static void init(){
 		assert(false);
 		break;
 	}
-	int_ init_settings = 0;
-	if(check_for_parameter("--fast-init", argc_, argv_)) SET_BIT(init_settings, LOOP_CODE_PARTIAL_MT, 1);
-	loop_run(&init_loop, &init_settings);
+	if(check_for_parameter("--fast-init", argc_, argv_)) SET_BIT(init_loop->settings, LOOP_CODE_PARTIAL_MT, 1);
+	loop_run(&init_loop);
 }
 
 static void close(){
@@ -76,10 +74,9 @@ int main(int argc, char **argv){
 	argv_ = argv;
 	choice = menu_loop();
 	init();
-	int_ loop_settings = 0;
-	SET_BIT(loop_settings, LOOP_CODE_NEVEREND_MT, 0);
+	SET_BIT(loop->settings, LOOP_CODE_NEVEREND_MT, 0);
 	while(likely(check_signal(SIGINT) == false && check_signal(SIGKILL) == false && check_signal(SIGTERM) == false)){
-		loop_run(&loop, &loop_settings);
+		loop_run(&loop);
 		once_per_second_update();
 	}
 	close();

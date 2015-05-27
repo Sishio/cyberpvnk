@@ -23,6 +23,16 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../class/class_main.h"
 	#include "thread"
 	#include "cstring"
+	struct physics_rules_t{
+	private:
+		long double max_speed;
+		long double acceleration;
+		long double mysterious_downward_force; // mysterious downward force
+	public:
+		array_t array;
+		physics_rules_t();
+		~~physics_rules_t();
+	};
 	extern std::vector<client_t*> client;
 	extern void physics_init();
 	extern void physics_close();

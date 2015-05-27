@@ -95,30 +95,17 @@ static void net_send_data(){
 			net->write(reset_vector, ((client_t*)find_pointer(client_vector[i], "coord_t"))->connection_info_id);
 		}
 	}
-	for(uint_ c = 0;c < ARRAY_VECTOR_SIZE;c++){
-		if(array_vector[c] != nullptr){
-			array_vector[c]->data_lock.lock();
-			if(once_per_second){
-				SET_BIT(what_to_update, ARRAY_INT_HASH_BIT, 1);
-				SET_BIT(what_to_update, ARRAY_LONG_DOUBLE_HASH_BIT, 1);
-				SET_BIT(what_to_update, ARRAY_STRING_HASH_BIT, 1);
-			}else{
-				array_vector[c]->data_lock.unlock();
-				array_vector[c]->updated(&what_to_update);
-				array_vector[c]->data_lock.lock();
-			}
-			array_vector[c]->data_lock.unlock();
-			const std::string gen_string = array_vector[c]->gen_updated_string(what_to_update);
-			array_vector[c]->data_lock.lock();
-			for(uint_ i = 0;i < client_vector_size;i++){
-				client_t *tmp_client = (client_t*)find_pointer(client_vector[i], "client_t");
+	std::vector<std::string> data_to_send = generate_outbound_class_data();
+	for(uint_ c = 0;c < data_to_send.size();c++){
+		for(uint_ i = 0;i < client_vector_size;i++){
+			client_t *tmp_client = (client_t*)find_pointer(client_vector[i], "client_t");
+			if(tmp_client != nullptr){
 				if(find_pointer(tmp_client->connection_info_id, "net_ip_connection_info_t") == nullptr){
-					printf("Could not find the client net_ip_connection_info class, not sending to said client\n");
+					printf_("WARNING: Found an addressless client", PRINTF_UNUSUAL_WARN);
 				}else{
 					net->write(gen_string, tmp_client->connection_info_id);
 				}
 			}
-			array_vector[c]->data_lock.unlock();
 		}
 	}
 }

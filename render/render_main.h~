@@ -1,0 +1,10 @@
+#ifdef RENDER_MAIN_H
+	#define RENDER_MAIN_H
+	#include "cstdio"
+struct image_t{
+}
+	struct tile_t{
+	private:
+		
+	};
+#endif

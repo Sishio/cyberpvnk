@@ -88,6 +88,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void update_outbound_port(array_id_t);
 		void update_inbound_port(array_id_t);
 	public:
+		int_ new_read_buffer;
+		int_ new_write_buffer;
 		net_ip_connection_info_t self_info;
 		int_ init(int_,char**, array_id_t);
 		std::string read(std::string);

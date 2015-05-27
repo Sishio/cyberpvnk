@@ -72,16 +72,16 @@ static void loop_update_neverend_thread(loop_t *a){
 	}
 }
 
-void loop_run(loop_t *a, int_ *settings){
-	const bool print_this_time = CHECK_BIT(*settings, LOOP_PRINT_THIS_TIME);
+void loop_run(loop_t *a){
+	const bool print_this_time = CHECK_BIT(settings, LOOP_PRINT_THIS_TIME);
 	if(print_this_time){
-		FLIP_BIT(*settings, LOOP_PRINT_THIS_TIME);
-		printf_("settings: " + std::to_string(*settings) + "\n", PRINTF_VITAL);
+		FLIP_BIT(settings, LOOP_PRINT_THIS_TIME);
+		printf_("settings: " + std::to_string(settings) + "\n", PRINTF_VITAL);
 	}
 	std::string summary = a->name + "\n";
 	const uint_ code_size = a->code.size();
 	const long double start_time = get_time();
-	if(CHECK_BIT(*settings, LOOP_CODE_PARTIAL_MT) == 1){
+	if(CHECK_BIT(settings, LOOP_CODE_PARTIAL_MT) == 1){
 		std::vector<std::thread*> thread;
 		for(uint_ i = 0;i < code_size;i++){
 			if(loop_entry_will_run(a, &a->code[i])){
@@ -93,7 +93,7 @@ void loop_run(loop_t *a, int_ *settings){
 			delete thread[i];
 			thread[i] = nullptr;
 		}
-	}else if(CHECK_BIT(*settings, LOOP_CODE_NEVEREND_MT) == 0){
+	}else if(CHECK_BIT(settings, LOOP_CODE_NEVEREND_MT) == 0){
 		for(uint_ i = 0;i < code_size;i++){
 			if(loop_entry_will_run(a, &a->code[i])){
 				const long double start_time = get_time();
@@ -113,7 +113,7 @@ void loop_run(loop_t *a, int_ *settings){
 			}
 			a->neverend_threads.clear();
 		}
-	}else if(CHECK_BIT(*settings, LOOP_CODE_NEVEREND_MT) == 1){
+	}else if(CHECK_BIT(settings, LOOP_CODE_NEVEREND_MT) == 1){
 		loop_update_neverend_thread(a);
 	}
 	const long double end_time = get_time();
@@ -124,7 +124,7 @@ void loop_run(loop_t *a, int_ *settings){
 	a->average_rate += current_rate;
 	a->average_rate *= .5;
 	if(print_this_time){
-		summary += "current frame rate: " + std::to_string(current_rate) + "\naverage framerate: " + std::to_string(a->average_rate) + "\nloop_settings: " + std::to_string(*settings) + "\n";
+		summary += "current frame rate: " + std::to_string(current_rate) + "\naverage framerate: " + std::to_string(a->average_rate) + "\nloop_settings: " + std::to_string(settings) + "\n";
 		if(a->neverend_threads.size() != 0){
 			summary += "neverend_thread is in use with " + std::to_string(a->neverend_threads.size()) + " threads.\n";
 		}else{
