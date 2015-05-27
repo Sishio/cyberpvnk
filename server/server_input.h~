@@ -1,5 +1,0 @@
-#ifndef SERVER_INPUT_H
-	#define SERVER_INPUT_H
-void input_init();
-void input_close();
-void input_loop();
