@@ -58,7 +58,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		int_ tick;
 	};
 	extern void loop_add(loop_t*, std::string, void(*)());
-	extern void loop_run(loop_t*, int_*);
+	extern void loop_run(loop_t*);
 	extern void loop_del(loop_t*, void(*)());
 	extern void loop_del(loop_t*, std::string);
 	extern bool infinite_loop();

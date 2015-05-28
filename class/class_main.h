@@ -133,7 +133,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void set_x_angle(bool,long double);
 		void set_y_angle(bool,long double);
 		~coord_t();
-		array_id_t model_id;
+		array_id_t model_id, tile_id;
+		int_ settings;
+		bool get_interactable();
+		void set_interactable(bool);
 	};
 	class client_t{
 	public:

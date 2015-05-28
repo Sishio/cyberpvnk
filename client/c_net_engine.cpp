@@ -152,7 +152,7 @@ void net_engine(){
 		 */
 		net_init_loop();
 	}
-	loop_run(&net_loop_mt, &loop_settings);
+	loop_run(&net_loop_mt);
 }
 
 void net_close(){

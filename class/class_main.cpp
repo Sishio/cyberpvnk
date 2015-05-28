@@ -17,6 +17,14 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "limits.h"
 #include "class_main.h"
 
+bool coord_t::get_interactable(){
+	return CHECK_BIT(settings, 0);
+}
+
+void coord_t::set_interactable(bool a){
+	SET_BIT(settings, 0, a);
+}
+
 coord_t::coord_t(bool add) : array(this, add){
 	array.data_lock.lock();
 	array.long_double_lock.lock();
@@ -31,6 +39,7 @@ coord_t::coord_t(bool add) : array(this, add){
 	array.long_double_lock.unlock();
 	array.int_lock.lock();
 	array.int_array.push_back(&model_id);
+	array.int_array.push_back(&tile_id);
 	array.int_lock.unlock();
 	array.data_lock.unlock();
 	array.reset_values();
@@ -38,6 +47,7 @@ coord_t::coord_t(bool add) : array(this, add){
 	array.data_type = "coord_t";
 	old_time = get_time();
 	mobile = true;
+	model_id = tile_id = 0;
 	array.data_lock.unlock();
 }
 

@@ -104,7 +104,6 @@ int_ find_empty_array_entry(){
 	#endif
 	for(;i < ARRAY_VECTOR_SIZE;i++){
 		if(array_vector[i] == nullptr){
-			array_vector[i] = this;
 			break;
 		}
 	}
@@ -116,15 +115,6 @@ array_t::array_t(void* tmp_pointer, bool send_){
 	write_protected = false;
 	send = send_;
 	last_update = get_time();
-	array_t *iterator_ptr = find_array_pointer(RESERVE_ID_ITERATOR);
-	if(iterator_ptr != nullptr){
-		spawn_iteration = *(iterator_ptr->int_array[ARRAY_RESERVE_INT_SIZE]); // first usable 
-	}else{
-		printf_(gen_print_prefix() + "Couldn't find the iterator, assuming this is the first iteration\n", PRINTF_UNLIKELY_WARN);
-		spawn_iteration = 0;
-	}
-	//^ default values
-	int_array.push_back&spawn_iteration, 
 	int_array.push_back(&id);
 	string_array.push_back(&data_type);
 	quick_vector_free();
@@ -423,7 +413,7 @@ void update_class_data(std::string a, int_ what_to_update){
 			free_ram();
 		}
 	}
-	if(tmp->gen_write_protected() == false){
+	if(tmp->get_write_protected() == false){
 		tmp->parse_string_entry(a);
 	}
 }
@@ -599,22 +589,11 @@ void array_t::delete_string(int_ position_in_vector){
 
 void array_t::immunity(bool a){
 	// If I get an actual track of new variables, ditch the (possibly) un-needed find_array_pointer
-	array_t *iterator = find_array_pointer(RESERVE_ID_ITERATOR);
-	if(iterator == nullptr){
-		printf_(gen_print_prefix() + "Couldn't find the iterator array, this is bad\n", PRINTF_VITAL);
-		assert(false);
-	}
-	if(a){
-		if(int_array[0] != iterator->int_array[2]){
-			delete int_array[0];
-		}
-		int_array[0] = iterator->int_array[2];
-	}else{
-		if(int_array[0] == iterator->int_array[2]){
-			int_array[0] = new int_;
-		}
-		*int_array[0] = *(iterator->int_array[2]);
-	}
+	//array_t *iterator = find_array_pointer(RESERVE_ID_ITERATOR);
+	//if(iterator == nullptr){
+	//	printf_(gen_print_prefix() + "Couldn't find the iterator array, this is bad\n", PRINTF_VITAL);
+	//	assert(false);
+	//}
 }
 
 bool array_t::get_write_protected(){return write_protected;}

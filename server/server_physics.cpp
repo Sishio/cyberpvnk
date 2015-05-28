@@ -88,19 +88,19 @@ namespace coord_2d_input_functions{
 }
 
 void coord_2d_input_functions::up(coord_t* a){
-	a->y_vel += a->physics_time*get_acceleration();
+	a->y_vel += a->physics_time*rules->get_acceleration();
 }
 
 void coord_2d_input_functions::down(coord_t* a){
-	a->y_vel -= a->physics_time*get_acceleration();
+	a->y_vel -= a->physics_time*rules->get_acceleration();
 }
 
 void coord_2d_input_functions::left(coord_t *a){
-	a->x_vel -= a->physics_time*get_acceleration();
+	a->x_vel -= a->physics_time*rules->get_acceleration();
 }
 
 void coord_2d_input_functions::right(coord_t *a){
-	a->x_vel += a->physics_time*get_acceleration();
+	a->x_vel += a->physics_time*rules->get_acceleration();
 }
 
 void physics_init(){
@@ -112,6 +112,10 @@ void physics_close(){
 }
 
 std::vector<array_id_t> coord_vector;
+
+static void coord_collision_check(coord_t*);
+static bool tile_overlap(array_id_t, array_id_t){return false;}
+static bool model_overlap(array_id_t, array_id_t){return false;}
 
 void coord_loop(array_id_t a){
 	coord_t *a_ = (coord_t*)find_pointer(a, "coord_t");
@@ -134,33 +138,33 @@ void physics_engine(){
 }
 
 static void coord_collision_check(coord_t *coord){
-	assert(id->array.data_lock.try_lock() == false);
-	if(coord->interactable == false){
-		printf_("WARNING: Attempted a coord_collision_check with an non-interactable object\n");
+	assert(coord->array.data_lock.try_lock() == false);
+	if(coord->get_interactable() == false){
+		printf_("WARNING: Attempted a coord_collision_check with an non-interactable object\n", PRINTF_LIKELY_WARN);
 	}
-	const int_ coord_vector_size = coord_vector.size();
+	const uint_ coord_vector_size = coord_vector.size();
 	for(uint_ i = 0;i < coord_vector_size;i++){
-		coord_t *current_coord = find_pointer(coord_vector[i]);
+		coord_t *current_coord = (coord_t*)find_pointer(coord_vector[i]);
 		bool collision = false;
-		if(unlikely(coord->array.id == current_coord->array.id) || current_coord->interactable == false){
+		if(unlikely(coord->array.id == current_coord->array.id) || current_coord->get_interactable() == false){
 			collision = false;
 		}else{
 			bool use_model = current_coord->model_id != 0;
 			bool use_tile = current_coord->tile_id != 0;
 			if(!use_model && !use_tile){
-				printf_("WARNING: Attempting to check for a collision on a model-less and tile-less object. This hasn't been implemented yet.\n", PRINTF_WARN);
+				printf_("WARNING: Attempting to check for a collision on a model-less and tile-less object. This hasn't been implemented yet.\n", PRINTF_LIKELY_WARN);
 			}else if(use_tile){
 				if(coord->tile_id != 0){
 					collision = tile_overlap(coord->tile_id, current_coord->tile_id);
 				}else{
-					printf_("WARNING: 3D and 2D models are interacting with each other\n", PRINTF_UNUSUAL_WARN);
+					printf_("WARNING: 3D and 2D models are interacting with each other\n", PRINTF_UNLIKELY_WARN);
 					collision = false;
 				}
 			}else if(use_model){
 				if(coord->model_id != 0){
 					collision = model_overlap(coord->model_id, current_coord->model_id);
 				}else{
-					printf_("WARNING: 3D and 2D models are interacting with each other\n", PRINTF_UNUSUAL_WARN);
+					printf_("WARNING: 3D and 2D models are interacting with each other\n", PRINTF_UNLIKELY_WARN);
 					collision = false;
 				}
 			}
@@ -173,12 +177,12 @@ static void coord_collision_check(coord_t *coord){
 			current_coord->y_vel = -current_coord->y_vel;
 			current_coord->z_vel = -current_coord->z_vel;
 		}else{
-			printf_("WARNING: Couldn't make the two object collide\n");
+			printf_("WARNING: Couldn't make the two object collide\n", PRINTF_UNLIKELY_WARN);
 		}
 	}
 }
 
-static void coord_physics_iteration(coord_t *a) : array(this, false){ // don't send this until I find an easy write protection thing
+static void coord_physics_iteration(coord_t *a){ // don't send this until I find an easy write protection thing
 	const long double time = get_time();
 	a->physics_time = time-(a->old_time);
 	a->old_time = time;
@@ -199,15 +203,17 @@ static void coord_physics_iteration(coord_t *a) : array(this, false){ // don't s
 	a->y_angle_vel *= angle_mul;
 }
 
-physics_rules_t::physics_rules_t(){
+physics_rules_t::physics_rules_t() : array(this, false){
 	array.data_type = "physics_rules_t";
-	array.long_double_array.push_back(&max_speed);
 	array.long_double_array.push_back(&acceleration);
 	array.long_double_array.push_back(&mysterious_downward_force);
-	max_speed = 2;
 	acceleration = 1;
 	mysterious_downward_force = 9.81/2; // two meters per 16*16 block
 }
+
+long double physics_rules_t::get_acceleration(){return acceleration;}
+
+long double physics_rules_t::get_gravity(){return mysterious_downward_force;}
 
 physics_rules_t::~physics_rules_t(){
 }

@@ -48,7 +48,7 @@ static void init(){
 		assert(false);
 		break;
 	}
-	if(check_for_parameter("--fast-init", argc_, argv_)) SET_BIT(init_loop->settings, LOOP_CODE_PARTIAL_MT, 1);
+	if(check_for_parameter("--fast-init", argc_, argv_)) SET_BIT(init_loop.settings, LOOP_CODE_PARTIAL_MT, 1);
 	loop_run(&init_loop);
 }
 
@@ -74,7 +74,7 @@ int main(int argc, char **argv){
 	argv_ = argv;
 	choice = menu_loop();
 	init();
-	SET_BIT(loop->settings, LOOP_CODE_NEVEREND_MT, 0);
+	SET_BIT(loop.settings, LOOP_CODE_NEVEREND_MT, 0);
 	while(likely(check_signal(SIGINT) == false && check_signal(SIGKILL) == false && check_signal(SIGTERM) == false)){
 		loop_run(&loop);
 		once_per_second_update();

@@ -20,13 +20,13 @@ public:
 };
 struct tile_t{
 private:
-	array_id_t image_id;
+	array_id_t image_id[128];
 	bool render;
 public:
 	tile_t(array_id_t);
 	~tile_t();
-	image_t *get_image();
-	array_id_t get_image_id();
+	image_t *get_image(int_); // int = image in animation
+	array_id_t get_image_id(int_);
 };
 
 struct screen_t{

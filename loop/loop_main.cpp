@@ -73,6 +73,7 @@ static void loop_update_neverend_thread(loop_t *a){
 }
 
 void loop_run(loop_t *a){
+	int settings = a->settings;
 	const bool print_this_time = CHECK_BIT(settings, LOOP_PRINT_THIS_TIME);
 	if(print_this_time){
 		FLIP_BIT(settings, LOOP_PRINT_THIS_TIME);

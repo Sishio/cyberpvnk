@@ -96,14 +96,14 @@ static void net_send_data(){
 		}
 	}
 	std::vector<std::string> data_to_send = generate_outbound_class_data();
-	for(uint_ c = 0;c < data_to_send.size();c++){
+	for(uint_ c = 0;c < data_to_send.size();c++){ // optimize this later
 		for(uint_ i = 0;i < client_vector_size;i++){
 			client_t *tmp_client = (client_t*)find_pointer(client_vector[i], "client_t");
 			if(tmp_client != nullptr){
 				if(find_pointer(tmp_client->connection_info_id, "net_ip_connection_info_t") == nullptr){
-					printf_("WARNING: Found an addressless client", PRINTF_UNUSUAL_WARN);
+					printf_("WARNING: Found an addressless client", PRINTF_UNLIKELY_WARN);
 				}else{
-					net->write(gen_string, tmp_client->connection_info_id);
+					net->write(data_to_send[c], tmp_client->connection_info_id);
 				}
 			}
 		}
@@ -140,7 +140,7 @@ int_ net_loop_settings = 0;
 void net_engine(){
 	net->loop();
 	//SET_BIT(net_loop_settings, LOOP_CODE_MT, 1);
-	loop_run(&net_loop_code, &net_loop_settings);
+	loop_run(&net_loop_code);
 }
 
 void net_close(){

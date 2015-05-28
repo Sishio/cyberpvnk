@@ -104,7 +104,6 @@ void init(int_ choice){
 	load_previous_server_state();
 	server_loop_code.name = "server loop code";
 	//signal(SIGINT, simple_signal_handler);
-	load_initial_values();
 	switch(choice){
 	case 1:
 		server_info_init();
@@ -150,7 +149,7 @@ int main(int argc, char **argv){
 	argv_ = argv;
 	init(menu());
 	printf("Starting the main loop\n");
-	SET_BIT(server_loop_code->settings, LOOP_CODE_PARTIAL_MT, 0);
+	SET_BIT(server_loop_code.settings, LOOP_CODE_PARTIAL_MT, 0);
 	while(likely(check_signal(SIGINT) == false && check_signal(SIGKILL) == false && check_signal(SIGTERM) == false)){
 		loop_run(&server_loop_code);
 		once_per_second_update();

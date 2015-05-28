@@ -101,7 +101,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<int> int_new;
 		std::vector<int> double_new;
 		std::vector<int> string_new;
-		int_ spawn_iteration;
+		int_** spawn_iteration;
 		int_ send;
 		int_ write_protected;
 	public:
