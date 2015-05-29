@@ -120,23 +120,27 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void close();
 		uint_ collective_size;
 	};
+	#define COORD_
 	class coord_t{
 	public:
 		array_t array;
+		int_ dimensions_;
+		int_ dimensions();
 		long double x,y,z,x_angle,y_angle;
 		long double x_vel,y_vel,z_vel,x_angle_vel,y_angle_vel;
 		long double physics_time;
 		long double old_time;
-		bool mobile;
 		coord_t(bool add_to_array_vector = true);
 		void print();
-		void set_x_angle(bool,long double);
+		void set_x_angle(bool,long double); // complex func. in .cpp
 		void set_y_angle(bool,long double);
 		~coord_t();
 		array_id_t model_id, tile_id;
 		int_ settings;
-		bool get_interactable();
-		void set_interactable(bool);
+		void set_movable(bool a){SET_BIT(settings, 1, a);}
+		bool get_movable(){return CHECK_BIT(settings, 1);}
+		bool get_interactable(){return CHECK_BIT(settings, 0);}
+		void set_interactable(bool a){SET_BIT(settings, 0, a);}
 	};
 	class client_t{
 	public:

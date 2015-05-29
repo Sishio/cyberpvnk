@@ -597,3 +597,11 @@ void array_t::immunity(bool a){
 }
 
 bool array_t::get_write_protected(){return write_protected;}
+
+bool array_t::unlocked(){
+	bool return_value = data_lock.try_lock();
+	if(return_value == true){ // it has locked
+		data_lock.unlock();
+	}
+	return return_value;
+}

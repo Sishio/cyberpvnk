@@ -17,12 +17,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "limits.h"
 #include "class_main.h"
 
-bool coord_t::get_interactable(){
-	return CHECK_BIT(settings, 0);
-}
-
-void coord_t::set_interactable(bool a){
-	SET_BIT(settings, 0, a);
+int_ coord_t::dimensions(){
+	return dimensions_;
 }
 
 coord_t::coord_t(bool add) : array(this, add){
@@ -40,13 +36,14 @@ coord_t::coord_t(bool add) : array(this, add){
 	array.int_lock.lock();
 	array.int_array.push_back(&model_id);
 	array.int_array.push_back(&tile_id);
+	array.int_array.push_back(&dimensions_);
 	array.int_lock.unlock();
 	array.data_lock.unlock();
 	array.reset_values();
 	array.data_lock.lock();
 	array.data_type = "coord_t";
 	old_time = get_time();
-	mobile = true;
+	dimensions_ = 2;
 	model_id = tile_id = 0;
 	array.data_lock.unlock();
 }
@@ -155,15 +152,6 @@ client_t::~client_t(){
 	delete (model_t*)find_pointer(model_id, "model_t");
 	delete (net_ip_connection_info_t*)find_pointer(connection_info_id, "net_ip_connection_info_t");
 }
-
-/*render_buffer_t::render_buffer_t(bool add) : array(this, add){
-	array.int_array.push_back(&coord_id);
-	array.int_array.push_back(&model_id);
-	array.data_type = "render_buffer_t";
-}
-
-render_buffer_t::~render_buffer_t(){}
-*/
 
 net_ip_connection_info_t::net_ip_connection_info_t(bool add) : array(this, add){
 	array.data_type = "net_ip_connection_info_t";

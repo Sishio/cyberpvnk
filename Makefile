@@ -1,7 +1,7 @@
 CC=clang++
 ADD=-g -fno-omit-frame-pointer
 CFLAGS=-std=c++11 -pipe -Wall -Wextra -Wpedantic -Wno-error=unused-parameter $(ADD)
-LINKER=-lSDL2 -lm -lGL -lSDL2_net -pthread
+LINKER=-lSDL2 -lm -lGL -lSDL2_net -pthread -lSDL2_image
 
 all: client server
 
@@ -50,10 +50,13 @@ c_engine: c_input_engine c_net_engine c_render_engine c_test_logic
 	ld -r client/obj/c_test_logic.o client/obj/c_net_engine.o client/obj/c_menu_engine.o client/obj/c_render_engine.o client/obj/c_input_engine.o -o client/obj/c_engine.o
 
 
-client: loop client_delete class net input util math c_engine
+render:
+	$(CC) -c $(CFLAGS) render/render_main.cpp -o render/obj/render.o
+
+client: render loop client_delete class net input util math c_engine
 	$(CC) -c $(CFLAGS) client/c_main.cpp -o client/obj/c_main.o
 	ld -r client/obj/c_main.o client/obj/c_engine.o -o client/obj/c.o
-	$(CC) $(CFLAGS) util/obj/util.o math/obj/math.o class/obj/class.o net/obj/net.o input/obj/input.o loop/obj/loop.o client/obj/c.o -o bin/client.$(shell uname -m) $(LINKER)
+	$(CC) $(CFLAGS) util/obj/util.o math/obj/math.o render/obj/render.o class/obj/class.o net/obj/net.o input/obj/input.o loop/obj/loop.o client/obj/c.o -o bin/client.$(shell uname -m) $(LINKER)
 
 console: util net
 	$(CC) $(CFLAGS) net/obj/net.o console/console_main.cpp util/obj/util_main.o -o bin/console.$(shell uname -m) $(LINKER)

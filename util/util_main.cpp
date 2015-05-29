@@ -242,7 +242,7 @@ int_ printf_(std::string data_to_print, int_ status){
 	if(unlikely(print_level == -1)){
 		if(check_for_parameter("--debug", argc_, argv_)){
 			print_level = PRINTF_DEBUG;
-		}else print_level = PRINTF_UNLIKELY_WARN; // something wonky happened, but it was (semi-?)recoverable
+		}
 	}
 	if(status <= print_level){
 		std::cout << data_to_print;

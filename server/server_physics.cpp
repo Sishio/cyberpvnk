@@ -128,8 +128,55 @@ void coord_loop(array_id_t a){
 	a_->array.data_lock.unlock();
 }
 
+static void coord_process_input(array_id_t client_id){
+	client_t *tmp_client = (client_t*)find_pointer(client_id);
+	if(tmp_client == nullptr) return;
+	tmp_client->array.data_lock.lock();
+	coord_t *tmp_coord = (coord_t*)find_pointer(tmp_client->coord_id);
+	if(tmp_coord == nullptr) return;
+	tmp_coord->array.data_lock.lock();
+	input_keyboard_map_t *tmp = (input_keyboard_map_t*)find_pointer(tmp_client->keyboard_map_id);
+	if(tmp == nullptr) return;
+	tmp->array.data_lock.lock();
+	if(tmp->keyboard_map[SDL_SCANCODE_W]){
+		if(tmp_coord->dimensions() == 3){
+			coord_3d_input_functions::forward(tmp_coord);
+		}else{
+			coord_2d_input_functions::up(tmp_coord);
+		}
+	}
+	if(tmp->keyboard_map[SDL_SCANCODE_S]){
+		if(tmp_coord->dimensions() == 3){
+			coord_3d_input_functions::backward(tmp_coord);
+		}else{
+			coord_2d_input_functions::down(tmp_coord);
+		}
+	}
+	if(tmp->keyboard_map[SDL_SCANCODE_A]){
+		if(tmp_coord->dimensions() == 3){
+			coord_3d_input_functions::left(tmp_coord);
+		}else{
+			coord_2d_input_functions::left(tmp_coord);
+		}
+	}
+	if(tmp->keyboard_map[SDL_SCANCODE_D]){
+		if(tmp_coord->dimensions() == 3){
+			coord_3d_input_functions::right(tmp_coord);
+		}else{
+			coord_2d_input_functions::right(tmp_coord);
+		}
+	}
+	tmp->array.data_lock.unlock();
+	tmp_coord->array.data_lock.unlock();
+	tmp_client->array.data_lock.unlock();
+}
+
 void physics_engine(){
 	once_per_second_update();
+	std::vector<array_id_t> client_vector = all_ids_of_type("client_t");
+	for(uint_ i = 0;i < client_vector.size();i++){
+		coord_process_input(client_vector[i]);
+	}
 	std::vector<array_id_t> coord_vector = all_ids_of_type("coord_t");
 	// pull the client's input and work that into here
 	for(uint_ i = 0;i < coord_vector.size();i++){
@@ -138,7 +185,7 @@ void physics_engine(){
 }
 
 static void coord_collision_check(coord_t *coord){
-	assert(coord->array.data_lock.try_lock() == false);
+	assert(coord->array.unlocked() == false);
 	if(coord->get_interactable() == false){
 		printf_("WARNING: Attempted a coord_collision_check with an non-interactable object\n", PRINTF_LIKELY_WARN);
 	}
@@ -183,10 +230,11 @@ static void coord_collision_check(coord_t *coord){
 }
 
 static void coord_physics_iteration(coord_t *a){ // don't send this until I find an easy write protection thing
+	a->array.data_lock.lock();
 	const long double time = get_time();
 	a->physics_time = time-(a->old_time);
 	a->old_time = time;
-	if(a->mobile){
+	if(a->get_movable()){
 		a->x += a->x_vel*a->physics_time;
 		a->y_vel += rules->get_gravity()*a->physics_time;
 		a->y += a->y_vel*a->physics_time;
@@ -195,12 +243,13 @@ static void coord_physics_iteration(coord_t *a){ // don't send this until I find
 		a->x_vel *= pos_mul;
 		a->y_vel *= pos_mul;
 		a->z_vel *= pos_mul;
+		a->x_angle += a->x_angle_vel*a->physics_time;
+		a->y_angle += a->y_angle_vel*a->physics_time;
+		const long double angle_mul = 1/(1+(.1*a->physics_time));
+		a->x_angle_vel *= angle_mul;
+		a->y_angle_vel *= angle_mul;
 	}
-	a->x_angle += a->x_angle_vel*a->physics_time;
-	a->y_angle += a->y_angle_vel*a->physics_time;
-	const long double angle_mul = 1/(1+(.1*a->physics_time));
-	a->x_angle_vel *= angle_mul;
-	a->y_angle_vel *= angle_mul;
+	a->array.data_lock.unlock();
 }
 
 physics_rules_t::physics_rules_t() : array(this, false){

@@ -101,10 +101,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<int> int_new;
 		std::vector<int> double_new;
 		std::vector<int> string_new;
-		int_** spawn_iteration;
 		int_ send;
 		int_ write_protected;
 	public:
+		bool unlocked();
 		bool get_write_protected();
 		bool get_send();
 		std::string gen_print_prefix(); // don't store this as a value since copies would not change the initial address

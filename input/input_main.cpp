@@ -35,10 +35,16 @@ void input_t::keyboard_to_signal(){
 	}
 }
 
-input_keyboard_map_t::input_keyboard_map_t() : array(this, true){}
+input_keyboard_map_t::input_keyboard_map_t() : array(this, true){
+	array.data_lock.lock();
+	for(uint_ i = 0;i < 1024;i++){
+		keyboard_map[i] = 0; // flipping bits to save space?
+		array.int_array.push_back(&keyboard_map[i]);
+	}
+	array.data_lock.unlock();
+}
 
 input_keyboard_map_t::~input_keyboard_map_t(){
-	array.data_lock.unlock();
 }
 
 input_t::input_t(int argc, char** argv, array_id_t _keyboard_map_id){

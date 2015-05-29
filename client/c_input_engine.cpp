@@ -29,14 +29,14 @@ void input_init(){
 }
 
 void input_engine(){
-	void *client_ptr = find_pointer(self_id, "client_t");
-	if(input != nullptr && client_ptr != nullptr && current_keyboard_map_id == ((client_t*)client_ptr)->keyboard_map_id){ // use the client map
+	client_t *client_ptr = (client_t*)find_pointer(self_id);
+	if(input != nullptr && client_ptr != nullptr && current_keyboard_map_id == client_ptr->keyboard_map_id){ // use the client map
 		delete input;
 		input = nullptr; // just in case Valgrind throws a hissy fit
 		input_keyboard_map_t *current_keyboard_map = (input_keyboard_map_t*)find_pointer(current_keyboard_map_id, "input_keyboard_map_t");
 		if(current_keyboard_map != nullptr){
 			input_keyboard_map_t *target_map = (input_keyboard_map_t*)find_pointer(((client_t*)client_ptr)->keyboard_map_id, "input_keyboard_map_t");
-			memcpy(target_map->keyboard_map, current_keyboard_map->keyboard_map, sizeof(bool)*1024);
+			memcpy(target_map->keyboard_map, current_keyboard_map->keyboard_map, sizeof(int_)*1024);
 		} // copy all the keyboard data over so held keypresses don't get lost
 		current_keyboard_map_id = ((client_t*)client_ptr)->keyboard_map_id;
 		input = new input_t(argc_, argv_, current_keyboard_map_id); // just reset the module with the correct keyboard id

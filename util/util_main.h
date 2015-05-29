@@ -16,6 +16,21 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef UTIL_H // this is embeded enough for it to not be modular
 	#define UTIL_H
+	#define likely(x) __builtin_expect(x,1)
+	#define unlikely(x) __builtin_expect(x,0)
+	#define UTIL_SHELL_DELETE 0
+	#define UTIL_TIME_MILLISECOND 0
+	#define UTIL_TIME_SECOND 1
+	#define CHECK_BIT(var, pos) ((var & ( 1 << pos )) >> pos)
+	#define SET_BIT(var,pos,val) (var ^= (-val ^ var) & (1 << pos))
+	#define FLIP_BIT(var, pos) (var ^= (1 << pos))	
+	#define PRINTF_VITAL 0
+	#define PRINTF_ERROR 1
+	#define PRINTF_UNLIKELY_WARN 2
+	#define PRINTF_LIKELY_WARN 3
+	#define PRINTF_STATUS 4
+	#define PRINTF_DEBUG 5
+	#define NEW_NULLPTR_ERROR "ERROR: Couldn't allocate data\n"
 	#include "../math/math_main.h"
 	#include  "../main.h"
 	#include "cstdio"
@@ -40,20 +55,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		#include "windows.h"
 	#endif
 	#include "../class/class_array.h"
-	#define likely(x) __builtin_expect(x,1)
-	#define unlikely(x) __builtin_expect(x,0)
-	#define UTIL_SHELL_DELETE 0
-	#define UTIL_TIME_MILLISECOND 0
-	#define UTIL_TIME_SECOND 1
-	#define CHECK_BIT(var, pos) ((var & ( 1 << pos )) >> pos)
-	#define SET_BIT(var,pos,val) (var ^= (-val ^ var) & (1 << pos))
-	#define FLIP_BIT(var, pos) (var ^= (1 << pos))	
-	#define PRINTF_VITAL 0
-	#define PRINTF_ERROR 1
-	#define PRINTF_UNLIKELY_WARN 2
-	#define PRINTF_LIKELY_WARN 3
-	#define PRINTF_STATUS 4
-	#define PRINTF_DEBUG 5
 	struct sort_t{
 		void *pointer;
 		int_ value;

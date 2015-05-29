@@ -13,7 +13,7 @@
 	class input_keyboard_map_t{
 	public:
 		array_t array;
-		bool keyboard_map[1024];
+		int_ keyboard_map[1024];
 		input_keyboard_map_t();
 		~input_keyboard_map_t();
 	};

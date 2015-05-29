@@ -39,7 +39,6 @@ static void net_connect(){
 	std::string packet = ((net_ip_connection_info_t*)find_pointer(self_info_id, "net_ip_connection_info_t"))->array.gen_updated_string(INT_MAX) + NET_JOIN;
 	net->write(packet, host_info_id);
 	bool connection_established = false;
-	long double start_time = get_time();
 	while(connection_established == false && infinite_loop()){
 		net->loop();
 		std::string connecting_packet;

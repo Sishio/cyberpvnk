@@ -270,6 +270,8 @@ int run_command(){
 			stack_ = out_stack;
 		}else if(command[1] == "in_stack"){
 			stack_ = in_stack;
+		}else{
+			printf_(NOT_IMPLEMENTED_ERROR, PRINTF_ERROR);
 		}
 		if(stack_ != nullptr){
 			if(command[2] == "left"){
@@ -315,6 +317,16 @@ int run_command(){
 			for(uint_ i = 0;i < ARRAY_VECTOR_SIZE;i++){
 				if(array_vector[i] != nullptr){
 					std::cout << array_vector[i]->print() << std::endl;
+				}
+			}
+		}else if(command[1] == "locked_arrays"){
+			for(uint_ i = 0;i < ARRAY_VECTOR_SIZE;i++){
+				if(array_vector[i] != nullptr){
+					if(array_vector[i]->unlocked() == false){
+						std::cout << "array_vector entry: " << i << std::endl;
+					}else{
+						array_vector[i]->data_lock.unlock();
+					}
 				}
 			}
 		}else{
