@@ -99,4 +99,5 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern array_id_t scramble_id(array_id_t);
 	extern void hanging_debug();
 	extern long double get_last_time();
+	extern void misc_init();
 #endif

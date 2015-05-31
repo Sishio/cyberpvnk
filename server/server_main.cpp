@@ -95,13 +95,14 @@ void reserve_ids(){
 	iterator->data_type = "server_iterator";
 	iterator->int_array.push_back(&server_loop_code.tick);
 	iterator->new_id(RESERVE_ID_ITERATOR);
-	iterator->immunity(true);
+	iterator->set_setting(ARRAY_SETTING_IMMUNITY, true);
 }
 
 void init(int_ choice){
 	reserve_ids();
 	console_init();
 	load_previous_server_state();
+	misc_init();
 	server_loop_code.name = "server loop code";
 	//signal(SIGINT, simple_signal_handler);
 	switch(choice){

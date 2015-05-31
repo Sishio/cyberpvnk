@@ -1,4 +1,8 @@
+#include "../class/class_array.h"
+#include "../class/class_main.h"
 #include "render_main.h"
+
+tile_t *no_tile_tile = nullptr;
 
 static void load_all_images(){
 	std::string image_directory = "../image_data/";
@@ -20,12 +24,25 @@ static void load_all_images(){
 	in.close();
 }
 
-render_t::render_t(int_ argc, char** argv){
-	IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
-	load_all_images();
+render_t::render_t(int_ argc, char** argv) : array(this, true){
+	array.set_setting(ARRAY_SETTING_SEND, false);
+	array.set_setting(ARRAY_SETTING_IMMUNITY, true);
+	array.data_type = "render_t";
 	if(SDL_Init(SDL_INIT_VIDEO) < 0){
 		printf_("ERROR: SDL2 Video couldn't be initialized", PRINTF_VITAL);
 		return;
+	}
+	IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
+	load_all_images();
+	if(no_tile_tile == nullptr){
+		no_tile_tile = new tile_t;
+		no_tile_tile->array.set_setting(ARRAY_SETTING_IMMUNITY, true);
+		array_id_t no_tile_image = all_ids_of_type("image_t")[0];
+		printf_("STATUS: no_tile_image (ID) == " + std::to_string(no_tile_image) + "\n", PRINTF_STATUS);
+		for(uint_ i = 0;i < TILE_IMAGE_SIZE; i++){
+			no_tile_tile->set_image_id(0, i, no_tile_image);
+		}
+		no_tile_tile->set_current_animation_entry(0);
 	}
 }
 
@@ -54,9 +71,6 @@ void render_t::loop(){
 		}
 		tmp_screen->write_to_screen(tmp);
 	}
-	//if(SDL_UpdateWindowSurface(tmp_screen->screen) < 0){
-	//	printf_("ERROR: SDL2: '" + (std::string)SDL_GetError() + "'\n", PRINTF_ERROR);
-	//}
 	if(tmp_screen->renderer != nullptr){
 		SDL_RenderPresent(tmp_screen->renderer);
 		SDL_RenderClear(tmp_screen->renderer);
@@ -92,7 +106,7 @@ void screen_t::new_screen(){
 	if(screen_surface == nullptr){
 		printf_("ERROR: SDL2 Window's Surface couldn't be intialized\n", PRINTF_VITAL);
 	}
-	renderer = SDL_CreateRenderer(screen, -1, 0);
+	renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_SOFTWARE);
 	if(renderer == nullptr){
 		printf_("ERROR: SDL2 Window's Renderer couldn't be initialized\n", PRINTF_ERROR);
 	}
@@ -110,23 +124,49 @@ void screen_t::del_screen(){
 }
 
 tile_t::tile_t() : array(this, true){
-	for(int i = 0;i < 128;i++){
-		image[i] = 0;
-		array.int_array.push_back(&image[i]);
+	for(int c = 0;c < TILE_ANIMATION_SIZE;c++){
+		for(int i = 0;i < TILE_IMAGE_SIZE;i++){
+			image[c][i] = 0;
+			array.int_array.push_back(&image[c][i]);
+		}
 	}
+	current_animation_entry = 0;
+	array.int_array.push_back(&current_animation_entry);
 }
 
-image_t *tile_t::get_image(uint_ a){
-	return (image_t*)find_pointer(image[a]);
+image_t *tile_t::get_image(uint_ c, uint_ a){
+	if(c > TILE_ANIMATION_SIZE || a > TILE_IMAGE_SIZE){
+		printf_("ERROR: get_image: requested out of bounds data\n", PRINTF_ERROR);
+		assert(false);
+		return nullptr;
+	}
+	return (image_t*)find_pointer(image[c][a]);
+}
+
+uint_ tile_t::get_current_animation_entry(){
+	return current_animation_entry;
+}
+
+void tile_t::set_current_animation_entry(uint_ a){
+	if(a > TILE_ANIMATION_SIZE){
+		printf_("ERROR: current_animation_entry > TILE_ANIMATION_SIZE.\n", PRINTF_ERROR);
+		a = 0;
+	}
+	current_animation_entry = a;
 }
 
 image_t *tile_t::get_current_image(){
 	double int_part = 0, get_time_ = get_time();
-	return get_image((uint_)(modf(get_time_, &int_part)*TILE_IMAGE_SIZE)-.5); // have to round down since 128 isn't valid
+	uint_ entry = (modf(get_time_, &int_part)*TILE_IMAGE_SIZE)-.5;
+	return get_image(get_current_animation_entry(), entry); // have to round down since 128 isn't valid
 }
 
-void tile_t::set_image_id(uint_ entry, array_id_t id){
-	image[entry] = id;
+void tile_t::set_image_id(uint_ tmp, uint_ entry, array_id_t id){
+	if(entry > TILE_IMAGE_SIZE){
+		printf_("ERROR: entry > TILE_IMAGE_SIZE\n", PRINTF_ERROR);
+		entry = 0;
+	}
+	image[tmp][entry] = id;
 }
 
 tile_t::~tile_t(){
@@ -138,7 +178,7 @@ image_t::image_t(std::string filename_) : array(this, true){
 	array.data_type = "image_t";
 	surface = IMG_Load(filename_.c_str());
 	if(surface == nullptr){
-		printf_("ERROR: Couldn't load '" + filename_ + "' as a SDL_Surface.\n", PRINTF_ERROR);
+		printf_("ERROR: Couldn't load '" + filename_ + "' as an SDL_Surface.\n", PRINTF_ERROR);
 	}else{
 		printf_("STATUS: Loaded '" + filename_ + "'\n", PRINTF_STATUS);
 	}
@@ -156,9 +196,9 @@ void screen_t::write_to_screen(coord_t* tmp){
 		return;
 	}
 	SDL_Rect dest;
-	dest.x = tmp->x;
-	dest.y = tmp->y;
-	dest.w = 16; // width and height should be fixed at 16, but define this inside the tile_t anyways
+	dest.x = tmp->x-8;
+	dest.y = tmp->y-8; // 1/2 of the width and height makes the center coord
+	dest.w = 16; // tile size is 16*16
 	dest.h = 16;
 	tile_t *tmp_tile = (tile_t*)find_pointer(tmp->tile_id);
 	if(tmp_tile == nullptr){
@@ -170,13 +210,28 @@ void screen_t::write_to_screen(coord_t* tmp){
 		printf_("ERROR: tmp_image == nullptr\n", PRINTF_ERROR);
 		return;
 	}
+	bool no_surface = false;
 	SDL_Surface *tmp_surface = tmp_image->get_surface();
 	if(tmp_surface == nullptr){
 		printf_("ERROR: tmp_surface == nullptr\n", PRINTF_ERROR);
-		return;
+		no_surface = true;
 	}
-	SDL_Texture *tmp_texture = SDL_CreateTextureFromSurface(renderer, tmp_surface);
-	//SDL_BlitSurface(tmp_surface, NULL, screen_surface, &dest);
+	SDL_Texture *tmp_texture = nullptr;
+	if(no_surface && no_tile_tile != nullptr){
+		image_t *tmp_image = no_tile_tile->get_current_image();
+		if(tmp_image == nullptr){
+			printf_("ERROR: tmp_image == nullptr\n", PRINTF_ERROR);
+			return;
+		}
+		SDL_Surface *no_tile_surface = tmp_image->get_surface();
+		if(no_tile_surface == nullptr){
+			printf_("ERROR: no_tile_surface == nullptr\n", PRINTF_ERROR);
+			return;
+		}
+		tmp_texture = SDL_CreateTextureFromSurface(renderer, no_tile_surface);
+	}else{
+		tmp_texture = SDL_CreateTextureFromSurface(renderer, tmp_surface);
+	}
 	SDL_RenderCopy(renderer, tmp_texture, NULL, &dest);
-	SDL_DestroyTexture(tmp_texture); // cheap
+	SDL_DestroyTexture(tmp_texture);
 }

@@ -88,6 +88,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		};
 	#endif
 	#define ID_BIT_LENGTH 16
+	#define ARRAY_SETTING_SEND 1
+	#define ARRAY_SETTING_WRITE_PROTECTED 2
+	#define ARRAY_SETTING_IMMUNITY 4
 	class array_t{
 	private:
 		void parse_int_from_string(std::string);
@@ -101,22 +104,17 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<int> int_new;
 		std::vector<int> double_new;
 		std::vector<int> string_new;
-		int_ send;
-		int_ write_protected;
+		int_ settings_;
 	public:
-		bool unlocked();
-		bool get_write_protected();
-		bool get_send();
-		std::string gen_print_prefix(); // don't store this as a value since copies would not change the initial address
-		void new_id(array_id_t);
-		std::mutex data_lock;
-		std::mutex int_lock, long_double_lock, string_lock;
-		void update_pointers();
-		void reset_values();
+		// directly related to the pointer item
 		void* pointer;
 		std::string data_type;
-		long double last_update;
+		// directly related to the array iteself
 		array_id_t id;
+		array_t(void*, bool add); // TODO: put data_type in the initializer
+		~array_t();
+		std::mutex data_lock;
+		std::mutex int_lock, long_double_lock, string_lock;
 		std::vector<int_*> int_array;
 		std::vector<long double*> long_double_array;
 		std::vector<std::string*> string_array;
@@ -124,19 +122,25 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::string gen_long_double_string();
 		std::string gen_int_string();
 		std::string gen_string_string();
-		array_t(void*, bool add); // TODO: put data_type in the initializer
-		~array_t();
+		bool updated(int_*);
+		// getter and setter functions
+		bool get_send(){return settings_&ARRAY_SETTING_SEND;}
+		bool get_write_protected(){return settings_&ARRAY_SETTING_WRITE_PROTECTED;}
+		bool get_immunity(){return settings_&ARRAY_SETTING_IMMUNITY;}
+		bool get_setting(int_ x){return (settings_ & x)!=0;} //comparing against 0 is pretty fast
+		void set_setting(int_ x, bool y){(y)?(settings_|=x):(settings_&=~x);}
+		void set_settings(int_ a){settings_=a;}
+		int_ get_settings(){return settings_;}
+		void new_id(array_id_t);
+
+		// debugging
+		bool unlocked();
+		std::string gen_print_prefix();
+		void reset_values();
+		long double last_update;
 		bool id_match(array_id_t);
 		void parse_string_entry(std::string);
-		bool updated(int_*);
 		std::string print();
-		void immunity(bool);
-		int_ new_int();
-		void delete_int(int_);
-		void delete_long_double(int_);
-		void delete_string(int_);
-		int_ new_long_double();
-		int_ new_string();
 	};
 	//extern std::vector<array_t*> array_vector;
 	extern array_id_t array_scan_for_id(array_id_t);

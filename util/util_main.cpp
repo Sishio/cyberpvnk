@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "util_main.h"
+#include "../render/render_main.h"
 
 bool once_per_second = false;
 
@@ -242,6 +243,8 @@ int_ printf_(std::string data_to_print, int_ status){
 	if(unlikely(print_level == -1)){
 		if(check_for_parameter("--debug", argc_, argv_)){
 			print_level = PRINTF_DEBUG;
+		}else{
+			print_level = PRINTF_LIKELY_WARN;
 		}
 	}
 	if(status <= print_level){
@@ -254,4 +257,13 @@ void hanging_debug(){
 	while(check_signal(SIGNAL_QUIT_LOOP) == false){
 		ms_sleep(1000);
 	}
+}
+
+void free_ram(){
+	printf_("ERROR: Ran out of RAM. DO SOMETHING\n", PRINTF_VITAL);
+}
+
+void misc_init(){
+	// set_new_handler
+	std::set_new_handler(free_ram);
 }

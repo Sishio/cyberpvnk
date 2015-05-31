@@ -41,59 +41,11 @@ array_id_t array_highest_id(){
 	return id;
 }
 
-void quick_vector_free();
-
-void free_ram(){
-	/*
-	  There has to be something
-	  I can put here to free
-	  some RAM.
-	 */
-	quick_vector_free();
-}
-
-void quick_vector_free(){
-	/*
-	  Genius idea: Reserve a little area
-	  inside the int_array for IDs. If there
-	  is an array that has no references and
-	  has been around for a while, put it on
-	  a list of things to possibly delete. I 
-	  am afraid that some of these items are
-	  on the stack and arent' dynamically 
-	  allocated. HOWEVER, I can set up an
-	  initializing iteration variable in
-	  the array that could be checked to see
-	  how many iterations this item has been
-	  around (time doesn't work well here since
-	  some delays suck, but the same could be 
-	  said about the iterations and the console
-	  thread, but I could just ASSIGN A POINTER
-	  to the int_vector. I have to write this as
-	  a setter, so I have to make an immunity
-	  function, which shouldn't be that hard.
-
-	  How would this work over the internet?
-	  The item would be deleted and constantly
-	  updated from another source. Not a good 
-	  idea for larger files at all. There should
-	  be a boolean variable set either instead or
-	  alongside the pointer. Better yet, we don't touch
-	  models and we stick to things like coordinates, 
-	  networking stuff, and other misc. stuff.
-
-	  tl;dr iterator pointers immunize undeletable
-	  items, networking is shit with larger data sets.
-	 */
-}
-
 /*
   WARNING: Make sure everything I do
   to the arrays initially is accounted for
   in the corresponding ARRAY_RESERVE.
  */
-
-bool array_t::get_send(){return send;}
 
 int_ find_empty_array_entry(){
 	int_ i;
@@ -112,12 +64,10 @@ int_ find_empty_array_entry(){
 
 array_t::array_t(void* tmp_pointer, bool send_){
 	pointer = tmp_pointer;
-	write_protected = false;
-	send = send_;
+	settings_ = 0;
 	last_update = get_time();
 	int_array.push_back(&id);
 	string_array.push_back(&data_type);
-	quick_vector_free();
 	array_lock.lock();
 	int_ tmp_entry = find_empty_array_entry();
 	array_vector[tmp_entry] = this;
@@ -395,22 +345,17 @@ void update_class_data(std::string a, int_ what_to_update){
 	array_t *tmp = (array_t*)find_array_pointer(id);
 	if(tmp == nullptr){
 		std::string type = a.substr(a.find_first_of(ARRAY_TYPE_SEPERATOR_START)+1, a.find_first_of(ARRAY_TYPE_SEPERATOR_END)-a.find_first_of(ARRAY_TYPE_SEPERATOR_START)-1);
-		try{
-			if(type == "coord_t"){
-				tmp = &((new coord_t)->array);
-			}else if(type == "model_t"){
-				tmp = &((new model_t)->array);
-			}else if(type == "client_t"){
-				tmp = &((new client_t)->array);
-			}else if(type == "net_ip_connection_info_t"){
-				tmp = &((new net_ip_connection_info_t)->array);
-			}else{
-				printf("TODO: make a special allocator for '%s'\n", type.c_str());
-				tmp = new array_t(nullptr, true);
-			}
-		}catch(std::bad_alloc &a){
-			printf_("update_class_data: couldn't allocate data for a new item\n", PRINTF_VITAL);
-			free_ram();
+		if(type == "coord_t"){
+			tmp = &((new coord_t)->array);
+		}else if(type == "model_t"){
+			tmp = &((new model_t)->array);
+		}else if(type == "client_t"){
+			tmp = &((new client_t)->array);
+		}else if(type == "net_ip_connection_info_t"){
+			tmp = &((new net_ip_connection_info_t)->array);
+		}else{
+			printf("TODO: make a special allocator for '%s'\n", type.c_str());
+			tmp = new array_t(nullptr, true);
 		}
 	}
 	if(tmp->get_write_protected() == false){
@@ -556,47 +501,6 @@ std::vector<array_id_t> all_ids_of_type(std::string type){
 bool valid_id(array_id_t a){
 	return valid_int(a) && a != 0 && a != -1;
 }
-
-int_ array_t::new_int(){
-	int_array.push_back(new int_);
-	return int_array.size()-1;
-}
-
-void array_t::delete_int(int_ position_in_vector){
-	delete int_array[position_in_vector];
-	int_array[position_in_vector] = nullptr;
-}
-
-int_ array_t::new_long_double(){
-	long_double_array.push_back(new long double);
-	return long_double_array.size()-1;
-}
-
-void array_t::delete_long_double(int_ position_in_vector){
-	delete long_double_array[position_in_vector];
-	long_double_array[position_in_vector] = nullptr;
-}
-
-int_ array_t::new_string(){
-	string_array.push_back(new std::string);
-	return string_array.size()-1;
-}
-
-void array_t::delete_string(int_ position_in_vector){
-	delete string_array[position_in_vector];
-	string_array[position_in_vector] = nullptr;
-}
-
-void array_t::immunity(bool a){
-	// If I get an actual track of new variables, ditch the (possibly) un-needed find_array_pointer
-	//array_t *iterator = find_array_pointer(RESERVE_ID_ITERATOR);
-	//if(iterator == nullptr){
-	//	printf_(gen_print_prefix() + "Couldn't find the iterator array, this is bad\n", PRINTF_VITAL);
-	//	assert(false);
-	//}
-}
-
-bool array_t::get_write_protected(){return write_protected;}
 
 bool array_t::unlocked(){
 	bool return_value = data_lock.try_lock();

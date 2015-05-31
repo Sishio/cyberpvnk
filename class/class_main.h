@@ -120,7 +120,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void close();
 		uint_ collective_size;
 	};
-	#define COORD_
 	class coord_t{
 	public:
 		array_t array;
@@ -152,5 +151,4 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		client_t(bool add_to_array_vector = true);
 		~client_t();
 	};
-	extern void* class_new(std::string);
 #endif
