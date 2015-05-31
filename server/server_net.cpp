@@ -52,7 +52,7 @@ static void net_client_join(std::string data){
 		std::cout << "tmp_net_ip id is " << tmp_net_ip->array.id << std::endl;
 		//printf("tmp_net_ip.ip:%s\ttmp_net_ip.port: %d\n", tmp_net_ip->ip.c_str(), tmp_net_ip->port);
 		std::string return_packet = NET_JOIN + std::to_string(client_tmp->array.id);
-		net->write(return_packet, client_tmp->connection_info_id);
+		net->write(return_packet, 0, client_tmp->connection_info_id);
 	}else{
 		printf("someone is spamming the server with join requests\n");
 	}
@@ -92,7 +92,7 @@ static void net_send_data(){
 	if(once_per_second){
 		const std::string reset_vector = wrap(ARRAY_FUNCTION_START, "reset_vector", ARRAY_FUNCTION_END);
 		for(uint_ i = 0;i < client_vector_size;i++){
-			net->write(reset_vector, ((client_t*)find_pointer(client_vector[i], "coord_t"))->connection_info_id);
+			net->write(reset_vector, 0, ((client_t*)find_pointer(client_vector[i], "coord_t"))->connection_info_id);
 		}
 	}
 	std::vector<std::string> data_to_send = generate_outbound_class_data();
@@ -103,7 +103,7 @@ static void net_send_data(){
 				if(find_pointer(tmp_client->connection_info_id, "net_ip_connection_info_t") == nullptr){
 					printf_("WARNING: Found an addressless client", PRINTF_UNLIKELY_WARN);
 				}else{
-					net->write(data_to_send[c], tmp_client->connection_info_id);
+					net->write(data_to_send[c], 0, tmp_client->connection_info_id);
 				}
 			}
 		}

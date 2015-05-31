@@ -43,7 +43,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		int_ loop();
 		~net_t();
 		std::string read(std::string search = "");
-		void write(std::string data, int_ a, uint_ packet = 0);
+		void write(std::string data, int_ a, uint_ packet);
 	};
 	extern std::string net_generate_ip_address(std::string prefix = "");
 	extern void net_write_array_vector(std::vector<std::vector<std::string>>, int_);

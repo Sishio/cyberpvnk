@@ -37,7 +37,7 @@ static void net_module_loop(){
 static void net_connect(){
 	((net_ip_connection_info_t*)find_pointer(host_info_id, "net_ip_connection_info_t"))->array.print();
 	std::string packet = ((net_ip_connection_info_t*)find_pointer(self_info_id, "net_ip_connection_info_t"))->array.gen_updated_string(INT_MAX) + NET_JOIN;
-	net->write(packet, host_info_id);
+	net->write(packet, 0, host_info_id);
 	bool connection_established = false;
 	while(connection_established == false && infinite_loop()){
 		net->loop();
@@ -78,7 +78,7 @@ static void net_send_engine(){
 		}
 		std::string data = client_tmp->array.gen_updated_string(what_to_update);
 		client_tmp->array.data_lock.unlock();
-		net->write(data.c_str(), host_info_id);
+		net->write(data.c_str(), 0, host_info_id);
 	}
 }
 

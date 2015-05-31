@@ -124,7 +124,7 @@ std::string net_ip_t::read(std::string search){
 }
 
 void net_ip_t::write(std::string data, int_ b, uint_ packet_id){
-	net_ip_write_buffer_t write_buffer_tmp(data, packet_id, b);
+	net_ip_write_buffer_t write_buffer_tmp(data, b, packet_id);
 	write_buffer_lock.lock();
 	write_buffer.push_back(write_buffer_tmp);
 	write_buffer_lock.unlock();
@@ -143,7 +143,7 @@ std::string net_ip_t::receive_now(){
 
 int_ net_ip_t::send_now(net_ip_write_buffer_t *data){
 	int_ return_value = 0;
-	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_pointer(data->connection_info_id, "net_ip_connection_info_t");
+	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_pointer(data->connection_info_id);
 	if(outbound == NULL){
 		printf("Cannot use outbound port. Check to see if you have proper permissions to use raw sockets\n");
 		return_value = -1;
@@ -196,7 +196,7 @@ int_ net_ip_t::send_now(net_ip_write_buffer_t *data){
 		}
 		raw_packets.clear();
 	}else{
-		printf_("The connection ID (" + std::to_string(data->connection_info_id) + ") does not match up with anything here\n", PRINTF_STATUS);
+		printf_("The connection ID (" + std::to_string(data->connection_info_id) + ") does not match up with anything here. CANNOT SEND THE DATA\n", PRINTF_STATUS);
 	}
 	return return_value;
 }

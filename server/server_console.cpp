@@ -1,3 +1,5 @@
+#include "../net/net_main.h"
+extern net_t *net;
 #include "server_console.h"
 
 static std::thread console_thread;
@@ -331,6 +333,24 @@ int run_command(){
 			}
 		}else{
 			return -1;
+		}
+	}else if(command[0] == "test"){
+		if(command[1] == "net"){
+			if(net != nullptr){
+				net_ip_connection_info_t *tmp = new net_ip_connection_info_t;
+				tmp->ip = "127.0.0.1";
+				tmp->port = NET_IP_SERVER_RECEIVE_PORT;
+				net->write("temp", 0, tmp->array.id);
+				for(int i = 0;i < 8;i++) net->loop();
+				std::string read = net->read();
+				if(read == "temp"){
+					std::cout << "Test was successful with four bytes" << std::endl;
+				}else{
+					std::cout << "Test failed. Received '" << read << "'" << std::endl;
+				}
+				delete tmp;
+				tmp = nullptr;
+			}
 		}
 	}else if(command[0] == "quit"){
 		set_signal(SIGTERM, true);
