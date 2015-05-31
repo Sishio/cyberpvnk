@@ -2,7 +2,7 @@
 #define RENDER_MAIN_H
 #include "../main.h"
 #include "cstdio"
-#ifdef __linux
+#if defined(__linux) || defined(OSX)
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_opengl.h"
 #include "SDL2/SDL_image.h"

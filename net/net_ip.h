@@ -25,8 +25,13 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #include "mutex"
 #include "string"
 #include "thread"
-#include "SDL2/SDL.h"
-#include "SDL2/SDL_net.h"
+#if defined(__linux) || defined(OSX)
+	#include "SDL2/SDL.h"
+	#include "SDL2/SDL_net.h"
+#else
+	#include "SDL.h"
+	#include "SDL_net.h"
+#endif
 #ifndef NET_IP_H
 	#define NET_IP_H
 	#define NET_IP_MTU 256

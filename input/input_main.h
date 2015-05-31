@@ -3,7 +3,7 @@
 	#include "../util/util_main.h"
 	#include "../class/class_main.h"
 	#include "../class/class_array.h"
-	#ifdef __linux
+	#if defined(__linux) || defined(OSX)
 		#include "SDL2/SDL.h"
 		#include "signal.h"
 		#define POSIX_SIGNALS 1

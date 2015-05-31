@@ -51,6 +51,9 @@ void input_engine(){
 		}
 	}
 	input->loop();
+	if(input->query_key(SDL_SCANCODE_ESCAPE)){
+		set_signal(SIGTERM, true);
+	}
 }
 
 void input_close(){

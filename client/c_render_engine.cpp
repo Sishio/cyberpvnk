@@ -59,11 +59,11 @@ void background_init(){
 		coord->tile_id = tile->array.id;
 		coord->x = current_x;
 		coord->y = current_y;
-		if(current_x-8 < current_screen->x_res){
+		if(current_x <= current_screen->x_res){
 			current_x += 16;
 		}else{
 			current_x = 8;
-			if(current_y-8 < current_screen->y_res){
+			if(current_y <= current_screen->y_res){
 				current_y += 16;
 			}else{
 				i = 1024; // don't get out of the loop

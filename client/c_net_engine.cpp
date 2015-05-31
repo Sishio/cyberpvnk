@@ -50,7 +50,7 @@ static void net_connect(){
 		}
 	}
 	if(connection_established == false){
-		printf("The server didn't respond in time (5 seconds). I am shutting down the entire network engine to save resources.\n");
+		printf("The server didn't respond in time (5 seconds or until SIGNAL_QUIT_LOOP was caught). I am shutting down the entire network engine to save resources.\n");
 		net_close();
 	}
 }
@@ -141,14 +141,6 @@ void net_engine(){
 	int_ loop_settings = 0;
 	SET_BIT(loop_settings, LOOP_CODE_NEVEREND_MT, 1);
 	if(unlikely(net == nullptr)){
-		/*
-		  If there is some loop inside of the initialization
-		  code that needs to be stopped, there is a way to
-		  access it with the input library (either with the
-		  window input or signals). This also makes it easier
-		  for one initializer to use another's resources (although
-		  this should never be the case).
-		 */
 		net_init_loop();
 	}
 	loop_run(&net_loop_mt);
