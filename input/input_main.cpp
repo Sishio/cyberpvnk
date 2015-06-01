@@ -35,11 +35,11 @@ void input_t::keyboard_to_signal(){
 	}
 }
 
-input_keyboard_map_t::input_keyboard_map_t() : array(this, true){
+input_keyboard_map_t::input_keyboard_map_t() : array(this, ARRAY_SETTING_SEND){
 	array.data_lock.lock();
 	for(uint_ i = 0;i < 1024;i++){
 		keyboard_map[i] = 0; // flipping bits to save space?
-		array.int_array.push_back(&keyboard_map[i]);
+		array.int_array.push_back(std::make_pair(&keyboard_map[i], "keyboard map entry " + std::to_string(i)));
 	}
 	array.data_lock.unlock();
 }

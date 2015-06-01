@@ -21,22 +21,22 @@ int_ coord_t::dimensions(){
 	return dimensions_;
 }
 
-coord_t::coord_t(bool add) : array(this, add){
+coord_t::coord_t() : array(this, ARRAY_SETTING_SEND){
 	array.data_lock.lock();
 	array.long_double_lock.lock();
-	array.long_double_array.push_back(&x);
-	array.long_double_array.push_back(&y);
-	array.long_double_array.push_back(&z);
-	array.long_double_array.push_back(&x_angle);
-	array.long_double_array.push_back(&y_angle);
-	array.long_double_array.push_back(&x_vel);
-	array.long_double_array.push_back(&y_vel);
-	array.long_double_array.push_back(&z_vel);
+	array.long_double_array.push_back(std::make_pair(&x, "x coordinate"));
+	array.long_double_array.push_back(std::make_pair(&y, "y coordinate"));
+	array.long_double_array.push_back(std::make_pair(&z, "z coordinate"));
+	array.long_double_array.push_back(std::make_pair(&x_angle, "x angle"));
+	array.long_double_array.push_back(std::make_pair(&y_angle, "y angle"));
+	array.long_double_array.push_back(std::make_pair(&x_vel, "x velocity"));
+	array.long_double_array.push_back(std::make_pair(&y_vel, "y velocity"));
+	array.long_double_array.push_back(std::make_pair(&z_vel, "z velocity"));
 	array.long_double_lock.unlock();
 	array.int_lock.lock();
-	array.int_array.push_back(&model_id);
-	array.int_array.push_back(&tile_id);
-	array.int_array.push_back(&dimensions_);
+	array.int_array.push_back(std::make_pair(&model_id, "model id"));
+	array.int_array.push_back(std::make_pair(&tile_id, "tile id"));
+	array.int_array.push_back(std::make_pair(&dimensions_, "dimensions"));
 	array.int_lock.unlock();
 	array.data_lock.unlock();
 	array.reset_values();
@@ -45,14 +45,6 @@ coord_t::coord_t(bool add) : array(this, add){
 	old_time = get_time();
 	dimensions_ = 2;
 	model_id = tile_id = 0;
-	array.data_lock.unlock();
-}
-
-void coord_t::print(){
-	array.data_lock.lock();
-	printf("X:%Lf\tY:%Lf\tZ:%Lf\n",x,y,z);
-	printf("Vel_x:%Lf\tVel_Y:%Lf\tVel_z:%Lf\n",x_vel,y_vel,z_vel);
-	printf("X_angle:%Lf\tY_angle:%Lf\n",x_angle,y_angle);
 	array.data_lock.unlock();
 }
 
@@ -78,12 +70,11 @@ void coord_t::set_y_angle(bool add, long double a){
 	array.data_lock.unlock();
 }
 
-coord_t::~coord_t(){
-	delete (model_t*)find_pointer(model_id, "model_t");
-}
+coord_t::~coord_t(){}
 
-model_t::model_t(bool add) : array(this, add){
+model_t::model_t() : array(this, ARRAY_SETTING_SEND){
 	array.data_type = "model_t";
+	array.string_array.push_back(std::make_pair(&entire_object_file, "entire object file"));
 }
 
 model_t::~model_t(){
@@ -140,37 +131,23 @@ void model_t::get_size(long double *x, long double *y, long double *z){
 	z[0] = z[1] = 0;
 }
 
-client_t::client_t(bool add) : array(this, add){
-	array.int_array.push_back(&model_id);
-	array.int_array.push_back(&coord_id);
-	array.int_array.push_back(&connection_info_id);
+client_t::client_t(bool add) : array(this, ARRAY_SETTING_SEND){
+	array.int_array.push_back(std::make_pair(&model_id, "model ID"));
+	array.int_array.push_back(std::make_pair(&coord_id, "coord ID"));
+	array.int_array.push_back(std::make_pair(&connection_info_id, "connection info ID"));
 	array.data_type = "client_t";
 }
 
-client_t::~client_t(){
-	delete (coord_t*)find_pointer(coord_id, "coord_t");
-	delete (model_t*)find_pointer(model_id, "model_t");
-	delete (net_ip_connection_info_t*)find_pointer(connection_info_id, "net_ip_connection_info_t");
-}
+client_t::~client_t(){}
 
-net_ip_connection_info_t::net_ip_connection_info_t(bool add) : array(this, add){
+net_ip_connection_info_t::net_ip_connection_info_t(bool add) : array(this, ARRAY_SETTING_SEND){
 	array.data_type = "net_ip_connection_info_t";
-	array.int_array.push_back(&port);
-	array.int_array.push_back(&connection_type);
-	array.string_array.push_back(&ip);
+	array.int_array.push_back(std::make_pair(&port, "port"));
+	array.int_array.push_back(std::make_pair(&connection_type, "connection type"));
+	array.string_array.push_back(std::make_pair(&ip, "IP address"));
 }
 
 net_ip_connection_info_t::~net_ip_connection_info_t(){}
-
-input_settings_t::input_settings_t(bool add) : array(this, add){
-	for(int_ i = 0;i < 64;i++){
-		int_data[i][0] = int_data[i][1] = -1;
-		array.int_array.push_back(&int_data[i][0]);
-		array.int_array.push_back(&int_data[i][1]);
-	}
-}
-
-input_settings_t::~input_settings_t(){}
 
 void* class_new(std::string type){
 	if(type == "client_t"){
@@ -181,8 +158,6 @@ void* class_new(std::string type){
 		return new model_t;
 	}else if(type == "net_ip_connection_info_t"){
 		return new net_ip_connection_info_t;
-	}else if(type == "input_settings_t"){
-		return new input_settings_t;
 	}else{
 		printf("TODO: Make an allocator for '%s'\n", type.c_str());
 		return nullptr;

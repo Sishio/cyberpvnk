@@ -39,7 +39,8 @@ static void net_connect(){
 	std::string packet = ((net_ip_connection_info_t*)find_pointer(self_info_id, "net_ip_connection_info_t"))->array.gen_updated_string(INT_MAX) + NET_JOIN;
 	net->write(packet, 0, host_info_id);
 	bool connection_established = false;
-	while(connection_established == false && infinite_loop()){
+	const long double start_time = get_time();
+	while((connection_established == false || get_time()-start_time < 5) && infinite_loop()){
 		net->loop();
 		std::string connecting_packet;
 		if((connecting_packet = net->read(NET_JOIN)) != ""){
@@ -83,9 +84,9 @@ static void net_send_engine(){
 }
 
 static void net_init_loop(){
-	loop_add(&net_loop_mt, "net_module_loop", net_module_loop);
-	loop_add(&net_loop_mt, "net_receive_engine", net_receive_engine);
-	loop_add(&net_loop_mt, "net_send_engine", net_send_engine);
+	loop_add(&net_loop_mt, loop_generate_entry(loop_entry_t(), "net_module_loop", net_module_loop));
+	loop_add(&net_loop_mt, loop_generate_entry(loop_entry_t(), "net_receive_engine", net_receive_engine));
+	loop_add(&net_loop_mt, loop_generate_entry(loop_entry_t(), "net_send_engine", net_send_engine));
 	net_ip_connection_info_t *self_info = new net_ip_connection_info_t;
 	net_ip_connection_info_t *host_info = new net_ip_connection_info_t;
 	self_info->array.data_lock.lock();
@@ -134,7 +135,7 @@ static void net_init_loop(){
 }
 
 void net_init(){
-	loop_add(&loop, "net_engine", net_engine);
+	loop_add(&loop, loop_generate_entry(loop_entry_t(), "net_engine", net_engine));
 }
 
 void net_engine(){

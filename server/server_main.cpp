@@ -52,7 +52,7 @@ void server_info_init(){
 void test_logic_engine();
 
 void test_logic_init(){
-	loop_add(&server_loop_code, "test_logic_engine", test_logic_engine);
+	loop_add(&server_loop_code, loop_generate_entry(loop_entry_t(), "test_logic_engine", test_logic_engine));
 	net_ip_connection_info_t *tmp_conn_info = new net_ip_connection_info_t;
 	tmp_conn_info->ip = "127.0.0.1";
 	tmp_conn_info->port = NET_IP_SERVER_RECEIVE_PORT;
@@ -93,7 +93,7 @@ static void load_previous_server_state(){
 void reserve_ids(){
 	array_t *iterator = new array_t(nullptr, false);
 	iterator->data_type = "server_iterator";
-	iterator->int_array.push_back(&server_loop_code.tick);
+	iterator->int_array.push_back(std::make_pair(&server_loop_code.tick, "server iterator"));
 	iterator->new_id(RESERVE_ID_ITERATOR);
 	iterator->set_setting(ARRAY_SETTING_IMMUNITY, true);
 }
@@ -150,7 +150,7 @@ int main(int argc, char **argv){
 	argv_ = argv;
 	init(menu());
 	printf("Starting the main loop\n");
-	SET_BIT(server_loop_code.settings, LOOP_CODE_PARTIAL_MT, 0);
+	server_loop_code.settings |= LOOP_CODE_PARTIAL_MT;
 	while(likely(check_signal(SIGINT) == false && check_signal(SIGKILL) == false && check_signal(SIGTERM) == false)){
 		loop_run(&server_loop_code);
 		once_per_second_update();

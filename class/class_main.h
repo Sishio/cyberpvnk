@@ -58,13 +58,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		net_ip_connection_info_t(bool add_to_array_vector = true);
 		~net_ip_connection_info_t();
 	};
-	class input_settings_t{
-	public:
-		input_settings_t(bool add_to_array_vector = true);
-		~input_settings_t();
-		array_t array;
-		int_ int_data[64][2];
-	};
 	struct face{
 		int_ facenum;
 		bool four;
@@ -114,7 +107,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::vector<material*> materials;
 		std::vector<texcoord*> texturecoordinate;
 		bool ismaterial,isnormals,istexture;
-		model_t(bool add_to_array_vector = true);
+		model_t();
 		~model_t();
 		void get_size(long double*, long double*, long double*);
 		void close();
@@ -129,8 +122,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		long double x_vel,y_vel,z_vel,x_angle_vel,y_angle_vel;
 		long double physics_time;
 		long double old_time;
-		coord_t(bool add_to_array_vector = true);
-		void print();
+		coord_t();
 		void set_x_angle(bool,long double); // complex func. in .cpp
 		void set_y_angle(bool,long double);
 		~coord_t();

@@ -22,6 +22,14 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 array_t* array_vector[ARRAY_VECTOR_SIZE] = {nullptr};
 std::mutex array_lock;
 
+/*
+  The hash function that is used
+  is based on the implementation,
+  so that can't be networked unless
+  I make my own function.
+ */
+static std::hash<std::string> type_hash_function;
+
 static array_id_t pull_id(std::string a){
 	int_ return_value;
 	const int_ start = a.find_first_of(ARRAY_ID_START);
@@ -62,12 +70,14 @@ int_ find_empty_array_entry(){
 	return i;
 }
 
-array_t::array_t(void* tmp_pointer, bool send_){
+array_t::array_t(void* tmp_pointer, int_ settings__){
+	set_settings(settings__);
 	pointer = tmp_pointer;
 	settings_ = 0;
+	data_type_hash = 0;
 	last_update = get_time();
-	int_array.push_back(&id);
-	string_array.push_back(&data_type);
+	int_array.push_back(std::make_pair(&id, "ID"));
+	string_array.push_back(std::make_pair(&data_type, "data type"));
 	array_lock.lock();
 	int_ tmp_entry = find_empty_array_entry();
 	array_vector[tmp_entry] = this;
@@ -75,24 +85,33 @@ array_t::array_t(void* tmp_pointer, bool send_){
 	array_lock.unlock();
 }
 
+void array_t::update_data(){
+	data_lock.lock();
+	std::size_t hash_ = type_hash_function(data_type);
+	if(data_type_hash != hash_){
+		data_type_hash = hash_;
+	}
+	data_lock.unlock();
+}
+
 void array_t::reset_values(){
 	data_lock.lock();
 	int_lock.lock();
 	const int_ int_array_size = int_array.size();
 	for(int_ i = 1;i < int_array_size;i++){ // first one is reserved for the array class
-		*int_array[i] = DEFAULT_INT_VALUE;
+		*(std::get<0>(int_array[i])) = DEFAULT_INT_VALUE;
 	}
 	int_lock.unlock();
 	string_lock.lock();
 	const int_ string_array_size = string_array.size();
 	for(int_ i = 1;i < string_array_size;i++){ // first one is reserved for the array class
-		*string_array[i] = DEFAULT_STRING_VALUE;
+		*(std::get<0>(string_array[i])) = DEFAULT_STRING_VALUE;
 	}
 	string_lock.unlock();
 	long_double_lock.lock();
 	const int_ long_double_array_size = long_double_array.size();
 	for(int_ i = 0;i < long_double_array_size;i++){
-		*long_double_array[i] = DEFAULT_LONG_DOUBLE_VALUE;
+		*(std::get<0>(long_double_array[i])) = DEFAULT_LONG_DOUBLE_VALUE;
 	}
 	long_double_lock.unlock();
 	data_lock.unlock();
@@ -212,16 +231,16 @@ std::vector<std::string> array_t::pull_items(char *x, std::string a, char *y, st
 void array_t::parse_int_from_string(std::string a){
 	std::vector<int> entries_for_data;
 	const std::vector<std::string> int_data = pull_items(ARRAY_INT_SEPERATOR_START, a, ARRAY_INT_SEPERATOR_END, &entries_for_data);
-	const int_ int_data_size = int_data.size();
+	const uint_ int_data_size = int_data.size();
 	while(int_array.size() < int_data.size()){
-		int_array.push_back(new int_);
+		int_array.push_back(std::make_pair(new int_, "mysterious new variable"));
 	}
 	int_lock.lock();
-	for(int_ i = 0;i < int_data_size;i++){
+	for(uint_ i = 0;i < int_data_size;i++){
 		#ifdef CLASS_DEBUG_OUTPUT
 		printf("int_data[%d]: %s\n", entries_for_data[i], int_data[i].c_str());
 		#endif
-		*int_array[entries_for_data[i]] = std::atoll(int_data[i].c_str());
+		*(std::get<0>(int_array[entries_for_data[i]])) = std::atoll(int_data[i].c_str());
 	}
 	int_lock.unlock();
 }
@@ -229,13 +248,13 @@ void array_t::parse_int_from_string(std::string a){
 void array_t::parse_long_double_from_string(std::string a){
 	std::vector<int> entries_for_data;
 	const std::vector<std::string> long_double_data = pull_items(ARRAY_LONG_DOUBLE_SEPERATOR_START, a, ARRAY_LONG_DOUBLE_SEPERATOR_END, &entries_for_data);
-	const int_ long_double_data_size = long_double_data.size();
+	const uint_ long_double_data_size = long_double_data.size();
 	long_double_lock.lock();
 	while(long_double_array.size() < long_double_data_size){
-		long_double_array.push_back(new long double);
+		long_double_array.push_back(std::make_pair(new long double, "mysterious new variable"));
 	}
-	for(int_ i = 0;i < long_double_data_size;i++){
-		*long_double_array[entries_for_data[i]] = strtold(long_double_data[i].c_str(), nullptr);
+	for(uint_ i = 0;i < long_double_data_size;i++){
+		*(std::get<0>(long_double_array[entries_for_data[i]])) = strtold(long_double_data[i].c_str(), nullptr);
 	}
 	long_double_lock.unlock();
 }
@@ -243,16 +262,16 @@ void array_t::parse_long_double_from_string(std::string a){
 void array_t::parse_string_from_string(std::string a){
 	std::vector<int> entries_for_data;
 	const std::vector<std::string> string_data = pull_items(ARRAY_STRING_SEPERATOR_START, a, ARRAY_STRING_SEPERATOR_END, &entries_for_data);
-	const int_ string_data_size = string_data.size();
+	const uint_ string_data_size = string_data.size();
 	string_lock.lock();
 	while(string_array.size() < string_data_size){
-		string_array.push_back(new std::string);
+		string_array.push_back(std::make_pair(new std::string, "mysterious new variable"));
 	}
-	for(int_ i = 0;i < string_data_size;i++){
+	for(uint_ i = 0;i < string_data_size;i++){
 		#ifdef CLASS_DEBUG_OUTPUT
 		printf("string_array[%d]: %s\n",entries_for_data[i], string_data[i].c_str());
 		#endif
-		*string_array[entries_for_data[i]] = string_data[i];
+		*(std::get<0>(string_array[entries_for_data[i]])) = string_data[i];
 	}
 	string_lock.unlock();
 }
@@ -296,7 +315,7 @@ std::string array_t::gen_string_string(){
 	//data_lock.lock();
 	const int_ string_size = string_array.size();
 	for(int_ i = 0;i < string_size;i++){
-		if(string_array[i] != nullptr) return_value += array_gen_data_vector_entry((std::string)*string_array[i], (int_)i);
+		if(std::get<0>(string_array[i]) != nullptr) return_value += array_gen_data_vector_entry((std::string)*(std::get<0>(string_array[i])), (int_)i);
 	}
 	//data_lock.unlock();
 	return_value = wrap(ARRAY_STRING_SEPERATOR_START, return_value, ARRAY_STRING_SEPERATOR_END);
@@ -308,7 +327,7 @@ std::string array_t::gen_int_string(){
 	//data_lock.lock();
 	const int_ int_size = int_array.size();
 	for(int_ i = 0;i < int_size;i++){
-		if(int_array[i] != nullptr) return_value += array_gen_data_vector_entry(std::to_string((int_)*int_array[i]), (int_)i);
+		if(std::get<0>(int_array[i]) != nullptr) return_value += array_gen_data_vector_entry(std::to_string((int_)*(std::get<0>(int_array[i]))), (int_)i);
 	}
 	//data_lock.unlock();
 	return_value = wrap(ARRAY_INT_SEPERATOR_START, return_value, ARRAY_INT_SEPERATOR_END);
@@ -320,7 +339,7 @@ std::string array_t::gen_long_double_string(){
 	//data_lock.lock();
 	const int_ long_double_size = long_double_array.size();
 	for(int_ i = 0;i < long_double_size;i++){
-		if(long_double_array[i] != nullptr) return_value += array_gen_data_vector_entry(std::to_string((long double)*long_double_array[i]), (int_)i);
+		if(std::get<0>(long_double_array[i]) != nullptr) return_value += array_gen_data_vector_entry(std::to_string((long double)*(std::get<0>(long_double_array[i]))), (int_)i);
 	}
 	//data_lock.unlock();
 	return_value = wrap(ARRAY_LONG_DOUBLE_SEPERATOR_START, return_value, ARRAY_LONG_DOUBLE_SEPERATOR_END);
@@ -393,18 +412,15 @@ bool match_id(array_t* a){
 	return match_id_ == a->id;
 }
 
-__attribute__((always_inline)) void *find_pointer(array_id_t id, std::string type){
+void *find_pointer(array_id_t id, std::string type){
 	const array_id_t truncated_id = strip_id(id);
-	if(array_vector[truncated_id] == nullptr){
-		return nullptr;
-	}
-	if(array_vector[truncated_id]->id == id){
+	if(array_vector[truncated_id] != nullptr && array_vector[truncated_id]->id == id){
 		return array_vector[truncated_id]->pointer;
 	}
 	return nullptr;
 }
 
-__attribute__((always_inline)) array_t* find_array_pointer(array_id_t id){
+array_t* find_array_pointer(array_id_t id){
 	return array_vector[strip_id(id)];
 }
 
@@ -423,8 +439,6 @@ void delete_array_and_pointer(array_t *array){
 		delete (coord_t*)ptr;
 	}else if(type == "model_t"){
 		delete (model_t*)ptr;
-	}else if(type == "input_settings_t"){
-		delete (input_settings_t*)ptr;
 	}else if(type == "client_t"){
 		delete (client_t*)ptr;
 	}else if(type == "net_ip_connection_info_t"){
@@ -457,15 +471,15 @@ std::string array_t::print(){
 	int_lock.lock();
 	const int_ int_array_size = int_array.size();
 	for(int_ i = 0;i < int_array_size;i++){
-		output += "\tint_array[" + std::to_string(i) + "]: " + std::to_string(*int_array[i]) + "\n";
+		output += "\tint_array[" + std::to_string(i) + "]: " + std::to_string(*(std::get<0>(int_array[i]))) + "\t" + std::get<1>(int_array[i]) + "\n";
 	}
 	int_lock.unlock();
 	string_lock.lock();
 	const int_ max_print_string_length = 8192;
 	const int_ string_array_size = string_array.size();
 	for(int_ i = 0;i < string_array_size;i++){
-		if(string_array[i]->size() < max_print_string_length){
-			output += "\tstring_array[" + std::to_string(i) + "]: " + *string_array[i] + "\n";
+		if(std::get<0>(string_array[i])->size() < max_print_string_length){
+			output += "\tstring_array[" + std::to_string(i) + "]: " + *(std::get<0>(string_array[i])) + "\t" + std::get<1>(string_array[i]) + "\n";
 		}else{
 			output += "\tstring_array[" + std::to_string(i) + "] is too large to print\n";
 		}
@@ -474,7 +488,7 @@ std::string array_t::print(){
 	long_double_lock.lock();
 	const int_ long_double_array_size = long_double_array.size();
 	for(int_ i = 0;i < long_double_array_size;i++){
-		output += "\tlong_double_array[" + std::to_string(i) + "]: " + std::to_string(*long_double_array[i]) + "\n";
+		output += "\tlong_double_array[" + std::to_string(i) + "]: " + std::to_string(*(std::get<0>(long_double_array[i]))) + "\t" + std::get<1>(long_double_array[i]) + "\n";
 	}
 	long_double_lock.unlock();
 	output += "\n";
@@ -486,10 +500,11 @@ std::string array_t::print(){
 
 std::vector<array_id_t> all_ids_of_type(std::string type){
 	std::vector<array_id_t> return_value;
+	const std::size_t type_hash = type_hash_function(type);
 	array_lock.lock();
-	for(int_ i = 0;i < ARRAY_VECTOR_SIZE;i++){
+	for(uint_ i = 0;i < ARRAY_VECTOR_SIZE;i++){
 		if(array_vector[i] != nullptr){
-			if(array_vector[i]->data_type == type){
+			if(array_vector[i]->data_type_hash == type_hash || array_vector[i]->data_type == type){
 				return_value.push_back(array_vector[i]->id);
 			}
 		}

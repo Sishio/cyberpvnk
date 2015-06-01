@@ -73,10 +73,10 @@ void net_init(){
 		SET_BIT(class_data_settings, CLASS_DATA_COORD_BIT, 1);
 		SET_BIT(class_data_settings, CLASS_DATA_MODEL_BIT, 1);
 		SET_BIT(class_data_settings, CLASS_DATA_CLIENT_BIT, 1);
-		loop_add(&net_loop_code, "net_read_data", net_read_data);
-		loop_add(&net_loop_code, "net_pingout", net_pingout);
-		loop_add(&net_loop_code, "net_send_data",  net_send_data);
-		loop_add(&server_loop_code, "net_engine",  net_engine);
+		loop_add(&net_loop_code, loop_generate_entry(loop_entry_t(), "net_read_data", net_read_data));
+		loop_add(&net_loop_code, loop_generate_entry(loop_entry_t(), "net_pingout", net_pingout));
+		loop_add(&net_loop_code, loop_generate_entry(loop_entry_t(), "net_send_data",  net_send_data));
+		loop_add(&server_loop_code, loop_generate_entry(loop_entry_t(), "net_engine",  net_engine));
 	}else{
 		printf("net_init has already been initalized, not re-running the initializer\n");
 	}
@@ -139,7 +139,6 @@ int_ net_loop_settings = 0;
 
 void net_engine(){
 	net->loop();
-	//SET_BIT(net_loop_settings, LOOP_CODE_MT, 1);
 	loop_run(&net_loop_code);
 }
 

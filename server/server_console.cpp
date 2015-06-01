@@ -173,6 +173,8 @@ int run_command(){
 			}else{
 				return -1;
 			}
+		}else{
+			return -1;
 		}
 	}else if(command[0] == "set"){ // set
 		/*
@@ -206,7 +208,7 @@ int run_command(){
 				return -1;
 			}
 			try{
-				*array_->int_array[entry] = std::stoll(get_target_value(target_val_, array_->int_array[entry], "int"));
+				*(std::get<0>(array_->int_array[entry])) = std::stoll(get_target_value(target_val_, std::get<0>(array_->int_array[entry]), "int"));
 			}catch(std::invalid_argument){
 				printf_(STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
 				return -1;
@@ -217,7 +219,7 @@ int run_command(){
 				return -1;
 			}
 			try{
-				*array_->long_double_array[entry] = std::stold(get_target_value(target_val_, array_->long_double_array[entry], "long_double"));
+				*(std::get<0>(array_->long_double_array[entry])) = std::stold(get_target_value(target_val_, std::get<0>(array_->long_double_array[entry]), "long_double"));
 			}catch(std::invalid_argument){
 				printf_(STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
 				return -1;
@@ -228,7 +230,7 @@ int run_command(){
 				return -1;
 			}
 			try{
-				*array_->string_array[entry] = get_target_value(target_val_, array_->string_array[entry], "string");
+				*(std::get<0>(array_->string_array[entry])) = get_target_value(target_val_, std::get<0>(array_->string_array[entry]), "string");
 			}catch(std::invalid_argument){
 				printf_(STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
 				return -1;
@@ -265,9 +267,6 @@ int run_command(){
 		 */
 	}else if(command[0] == "stack_shift"){
 		std::string *stack_ = nullptr;
-		int_* stack_int_ = nullptr;
-		long double* stack_long_double_= nullptr;
-		std::string stack_string_ = nullptr;
 		if(command[1] == "out_stack"){
 			stack_ = out_stack;
 		}else if(command[1] == "in_stack"){
@@ -289,6 +288,8 @@ int run_command(){
 			}else{
 				return -1;
 			}
+		}else{
+			return -1;
 		}
 	}else if(command[0] == "print"){
 		if(command[1] == "last_used_pointer"){
@@ -350,7 +351,11 @@ int run_command(){
 				}
 				delete tmp;
 				tmp = nullptr;
+			}else{
+				return -1;
 			}
+		}else{
+			return -1;
 		}
 	}else if(command[0] == "quit"){
 		set_signal(SIGTERM, true);

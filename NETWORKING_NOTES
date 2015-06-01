@@ -1,4 +1,0 @@
-Every single packet will have a return address just in case the entire packet is not sent over.
-If the packet piece has not been updated for a second, ask for a re-send of the information from the ID and the return address.
-The return address will use the following format for tighter data compaction:
-	The IP address and port will be printed in plain-text until using base 128 is deemed practical for this.

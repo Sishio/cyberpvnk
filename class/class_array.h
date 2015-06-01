@@ -85,6 +85,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		public:
 			void lock(){}
 			void unlock(){}
+			bool try_lock(){return true;}
 		};
 	#endif
 	#define ID_BIT_LENGTH 16
@@ -101,33 +102,32 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		int_ int_hash;
 		int_ string_hash;
 		int_ long_double_hash;
-		std::vector<int> int_new;
-		std::vector<int> double_new;
-		std::vector<int> string_new;
 		int_ settings_;
 	public:
 		// directly related to the pointer item
 		void* pointer;
 		std::string data_type;
+		std::size_t data_type_hash;
 		// directly related to the array iteself
 		array_id_t id;
-		array_t(void*, bool add); // TODO: put data_type in the initializer
+		array_t(void*, int_); // TODO: put data_type in the initializer
 		~array_t();
 		std::mutex data_lock;
 		std::mutex int_lock, long_double_lock, string_lock;
-		std::vector<int_*> int_array;
-		std::vector<long double*> long_double_array;
-		std::vector<std::string*> string_array;
+		std::vector<std::pair<int_*, std::string> > int_array;
+		std::vector<std::pair<long double*, std::string> > long_double_array;
+		std::vector<std::pair<std::string*, std::string> > string_array;
 		std::string gen_updated_string(int_ what_to_update = ~0);
 		std::string gen_long_double_string();
 		std::string gen_int_string();
 		std::string gen_string_string();
 		bool updated(int_*);
+		void update_data();
 		// getter and setter functions
 		bool get_send(){return settings_&ARRAY_SETTING_SEND;}
 		bool get_write_protected(){return settings_&ARRAY_SETTING_WRITE_PROTECTED;}
 		bool get_immunity(){return settings_&ARRAY_SETTING_IMMUNITY;}
-		bool get_setting(int_ x){return (settings_ & x)!=0;} //comparing against 0 is pretty fast
+		bool get_setting(int_ x){return (settings_&x)!=0;} //comparing against 0 is pretty fast
 		void set_setting(int_ x, bool y){(y)?(settings_|=x):(settings_&=~x);}
 		void set_settings(int_ a){settings_=a;}
 		int_ get_settings(){return settings_;}
@@ -151,8 +151,8 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern void delete_array_id(array_id_t);
 	extern void delete_all_data();
 	extern void delete_array_and_pointer(array_t*);
-	extern __attribute__((always_inline)) void* find_pointer(array_id_t, std::string type = "");
-	extern __attribute__((always_inline)) array_t* find_array_pointer(array_id_t);
+	extern void* find_pointer(array_id_t, std::string type = "");
+	extern array_t* find_array_pointer(array_id_t);
 	extern array_id_t array_highest_id();
 	extern array_t* array_vector[ARRAY_VECTOR_SIZE];
 	extern std::mutex array_lock;

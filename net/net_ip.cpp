@@ -68,7 +68,7 @@ std::string pull_local_ip_address(std::string local_ip){
 		scanf("%s\n", data_tmp);
 		return_value = data_tmp;
 	}
-	printf("Local IP address if %s\n", return_value.c_str());
+	printf("Local IP address is %s\n", return_value.c_str());
 	return return_value;
 }
 
@@ -94,6 +94,9 @@ void net_ip_t::update_outbound_port(array_id_t new_net_id){
 void net_ip_t::update_inbound_port(array_id_t new_net_id){
 	delete inbound;
 	inbound = new udp_socket_t(new_net_id);
+}
+
+net_ip_t::net_ip_t() : array(this, false){
 }
 
 int_ net_ip_t::init(int_ argc, char** argv, array_id_t tmp_conn_id){

@@ -25,7 +25,7 @@ public:
 	~image_t();
 	void load();
 	void write_to_screen(int_, int_);
-	std::string get_filename();
+	std::string get_filename(){return filename;}
 	std::string get_image_string();
 	SDL_Surface *get_surface(){return surface;}
 };
@@ -33,7 +33,6 @@ public:
 struct tile_t{
 private:
 	array_id_t image[TILE_ANIMATION_SIZE][TILE_IMAGE_SIZE];
-	bool render;
 	int_ current_animation_entry;
 public:
 	array_t array;
@@ -62,11 +61,12 @@ public:
 };
 
 class render_t{
- public:
+public:
 	array_t array;
 	std::vector<array_id_t> screen;
 	render_t(int_, char**);
 	~render_t();
 	void loop();
 };
+extern array_id_t search_for_image(std::string);
 #endif

@@ -4,6 +4,21 @@
 
 tile_t *no_tile_tile = nullptr;
 
+array_id_t search_for_image(std::string image_path){
+	std::vector<array_id_t> all_images = all_ids_of_type("image_t");
+	const uint all_images_size = all_images.size();
+	for(uint_ i = 0;i < all_images_size;i++){
+		image_t *tmp = (image_t*)find_pointer(all_images[i]);
+		if(tmp != nullptr){
+			if(tmp->get_filename() == image_path){ // find_first_of would work pretty well here
+				return all_images[i];
+			}
+		}
+	}
+	printf_("STATUS: Generating a new image since the requested image hasn't been created yet\n", PRINTF_STATUS);
+	return (new image_t(image_path))->array.id;
+}
+
 static void load_all_images(){
 	std::string image_directory = "../image_data/";
 	#ifdef __linux
@@ -19,12 +34,12 @@ static void load_all_images(){
 	while(in.getline(image_list_line, 511)){
 		image_list_line[511] = '\0';
 		std::string line = image_list_line;
-		new image_t(line);
+		new image_t(image_directory + line); // filename == path
 	}
 	in.close();
 }
 
-render_t::render_t(int_ argc, char** argv) : array(this, true){
+render_t::render_t(int_ argc, char** argv) : array(this, ARRAY_SETTING_SEND){
 	array.set_setting(ARRAY_SETTING_SEND, false);
 	array.set_setting(ARRAY_SETTING_IMMUNITY, true);
 	array.data_type = "render_t";
@@ -48,7 +63,7 @@ render_t::render_t(int_ argc, char** argv) : array(this, true){
 
 void render_t::loop(){
 	if(screen.size() == 0){
-		printf_("WARNING: There is not a loaded screen yet. FIX THIS\n", PRINTF_LIKELY_WARN);
+		printf_("WARNING: There is not a loaded screen yet. FIX THIS\n", PRINTF_UNLIKELY_WARN);
 		return;
 	}
 	screen_t *tmp_screen = (screen_t*)find_pointer(screen[0]);
@@ -84,16 +99,16 @@ render_t::~render_t(){
 	IMG_Quit();
 }
 
-screen_t::screen_t() : array(this, false){
-	array.int_array.push_back(&x_res);
-	array.int_array.push_back(&y_res);
-	array.string_array.push_back(&title);
+screen_t::screen_t() : array(this, 0){
+	array.int_array.push_back(std::make_pair(&x_res, "x res."));
+	array.int_array.push_back(std::make_pair(&y_res, "y res."));
+	array.string_array.push_back(std::make_pair(&title, "title"));
 	screen = nullptr;
 	screen_surface = nullptr;
 	renderer = nullptr;
 	x_res = 640;
 	y_res = 480;
-	title = "Title";
+	title = "No Title";
 }
 
 void screen_t::new_screen(){
@@ -108,7 +123,7 @@ void screen_t::new_screen(){
 	}
 	renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_SOFTWARE);
 	if(renderer == nullptr){
-		printf_("ERROR: SDL2 Window's Renderer couldn't be initialized\n", PRINTF_ERROR);
+		printf_("ERROR: SDL2 Window's Renderer couldn't be initialized\n", PRINTF_VITAL);
 	}
 }
 
@@ -119,19 +134,19 @@ void screen_t::del_screen(){
 	}
 	if(screen != nullptr){
 		SDL_DestroyWindow(screen);
-		screen_surface = nullptr;
+		screen = nullptr;
 	}
 }
 
-tile_t::tile_t() : array(this, true){
+tile_t::tile_t() : array(this, ARRAY_SETTING_SEND){
 	for(int c = 0;c < TILE_ANIMATION_SIZE;c++){
 		for(int i = 0;i < TILE_IMAGE_SIZE;i++){
 			image[c][i] = 0;
-			array.int_array.push_back(&image[c][i]);
+			array.int_array.push_back(std::make_pair(&image[c][i], "tile image " + std::to_string(c) + " " + std::to_string(i) + " "));
 		}
 	}
 	current_animation_entry = 0;
-	array.int_array.push_back(&current_animation_entry);
+	array.int_array.push_back(std::make_pair(&current_animation_entry, "current animation entry"));
 }
 
 image_t *tile_t::get_image(uint_ c, uint_ a){
@@ -172,9 +187,9 @@ void tile_t::set_image_id(uint_ tmp, uint_ entry, array_id_t id){
 tile_t::~tile_t(){
 }
 
-image_t::image_t(std::string filename_) : array(this, true){
+image_t::image_t(std::string filename_) : array(this, ARRAY_SETTING_SEND){
 	filename = filename_;
-	array.string_array.push_back(&filename);
+	array.string_array.push_back(std::make_pair(&filename, "filename"));
 	array.data_type = "image_t";
 	surface = IMG_Load(filename_.c_str());
 	if(surface == nullptr){

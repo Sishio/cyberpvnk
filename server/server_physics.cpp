@@ -104,7 +104,7 @@ void coord_2d_input_functions::right(coord_t *a){
 }
 
 void physics_init(){
-	loop_add(&server_loop_code, "physics engine", physics_engine);
+	loop_add(&server_loop_code, loop_generate_entry(loop_entry_t(), "physics engine", physics_engine));
 }
 
 void physics_close(){
@@ -122,10 +122,8 @@ void coord_loop(array_id_t a){
 	if(a_ == nullptr){
 		return;
 	}
-	a_->array.data_lock.lock();
 	coord_physics_iteration(a_);
 	coord_collision_check(a_);
-	a_->array.data_lock.unlock();
 }
 
 static void coord_process_input(array_id_t client_id){
@@ -185,7 +183,7 @@ void physics_engine(){
 }
 
 static void coord_collision_check(coord_t *coord){
-	assert(coord->array.unlocked() == false);
+	coord->array.data_lock.lock();
 	if(coord->get_interactable() == false){
 		printf_("WARNING: Attempted a coord_collision_check with an non-interactable object\n", PRINTF_LIKELY_WARN);
 	}
@@ -227,6 +225,7 @@ static void coord_collision_check(coord_t *coord){
 			printf_("WARNING: Couldn't make the two object collide\n", PRINTF_UNLIKELY_WARN);
 		}
 	}
+	coord->array.data_lock.unlock();
 }
 
 static void coord_physics_iteration(coord_t *a){ // don't send this until I find an easy write protection thing
@@ -254,8 +253,8 @@ static void coord_physics_iteration(coord_t *a){ // don't send this until I find
 
 physics_rules_t::physics_rules_t() : array(this, false){
 	array.data_type = "physics_rules_t";
-	array.long_double_array.push_back(&acceleration);
-	array.long_double_array.push_back(&mysterious_downward_force);
+	array.long_double_array.push_back(std::make_pair(&acceleration, "acceleration"));
+	array.long_double_array.push_back(std::make_pair(&mysterious_downward_force, "mysterious downward force"));
 	acceleration = 1;
 	mysterious_downward_force = 9.81/2; // two meters per 16*16 block
 }

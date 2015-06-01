@@ -9,7 +9,7 @@ gametype_t::~gametype_t(){}
 
 gametype_info_t::gametype_info_t() : array(this, true){
 	array.int_lock.lock();
-	array.int_array.push_back(&gametype_id);
+	array.int_array.push_back(std::make_pair(&gametype_id, "gametype ID"));
 	array.int_lock.unlock();
 	gametype_id = 0;
 }
@@ -21,7 +21,7 @@ static gametype_info_t gametype_info;
 void gametype_engine();
 
 void gametype_init(){
-	loop_add(&server_loop_code, "gametype engine", gametype_engine);
+	loop_add(&server_loop_code, loop_generate_entry(loop_entry_t(), "gametype engine", gametype_engine));
 }
 
 void gametype_engine(){

@@ -42,13 +42,14 @@ void background_init(){
 	uint_ current_y = 8;
 	screen_t *current_screen = (screen_t*)find_pointer(render->screen[0]);
 	current_screen->array.data_lock.lock();
-	for(uint_ i = 0;i < 1024;i++){
+	for(uint_ i = 0;true;i++){
+		std::cout << current_x << " " << current_y << std::endl;
 		std::string tile_filename = get_tile_filename(current_x, current_y);
 		coord_t *coord = new coord_t;
 		coord->array.data_lock.lock();
 		tile_t *tile = new tile_t;
 		tile->array.data_lock.lock();
-		image_t *image = new image_t(tile_filename);
+		image_t *image = (image_t*)find_pointer(search_for_image(tile_filename)); //search_for_image always returns a valid image
 		image->array.data_lock.lock();
 		for(uint_ i = 0;i < TILE_ANIMATION_SIZE;i++){
 			for(uint_ c = 0;c < TILE_IMAGE_SIZE;c++){
@@ -59,6 +60,7 @@ void background_init(){
 		coord->tile_id = tile->array.id;
 		coord->x = current_x;
 		coord->y = current_y;
+		bool end = false;
 		if(current_x <= current_screen->x_res){
 			current_x += 16;
 		}else{
@@ -66,18 +68,19 @@ void background_init(){
 			if(current_y <= current_screen->y_res){
 				current_y += 16;
 			}else{
-				i = 1024; // don't get out of the loop
+				end = true;
 			}
 		}
 		coord->array.data_lock.unlock();
 		tile->array.data_lock.unlock();
 		image->array.data_lock.unlock();
+		if(end) break;
 	}
 	current_screen->array.data_lock.unlock();
 }
 
 void render_init(){
-	loop_add(&loop, "render_engine", render_engine);
+	loop_add(&loop, loop_generate_entry(loop_entry_t(), "render_engine", render_engine));
 	render = new render_t(argc_, argv_);
 	screen_t *screen_ = new screen_t();
 	screen_->array.data_lock.lock();
