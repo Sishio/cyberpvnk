@@ -55,10 +55,11 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::string name;
 	};
 	struct loop_t{
+	public:
+		array_t array;
 		loop_t();
 		long double target_rate;
 		long double average_rate;
-		std::string name;
 		std::vector<loop_entry_t> code;
 		int_ settings;
 		int_ tick;

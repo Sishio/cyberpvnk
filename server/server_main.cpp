@@ -1,3 +1,8 @@
+#include "../main.h"
+#include "../loop/loop_main.h"
+#include "../class/class_main.h"
+#include "../class/class_array.h"
+#include "../util/util_main.h"
 #include "server_main.h"
 #include "server_console.h"
 #include "server_input.h"
@@ -8,7 +13,7 @@
 server_info_t *server_info = nullptr;
 net_ip_connection_info_t *self_info = nullptr; // TODO: rename this to prevent confusion with server_info
 
-loop_t server_loop_code;
+loop_t *server_loop_code = nullptr;
 
 int_ argc_;
 char **argv_;
@@ -52,7 +57,7 @@ void server_info_init(){
 void test_logic_engine();
 
 void test_logic_init(){
-	loop_add(&server_loop_code, loop_generate_entry(loop_entry_t(), "test_logic_engine", test_logic_engine));
+	loop_add(server_loop_code, loop_generate_entry(loop_entry_t(), "test_logic_engine", test_logic_engine));
 	net_ip_connection_info_t *tmp_conn_info = new net_ip_connection_info_t;
 	tmp_conn_info->ip = "127.0.0.1";
 	tmp_conn_info->port = NET_IP_SERVER_RECEIVE_PORT;
@@ -69,7 +74,7 @@ void test_logic_engine(){
 }
 
 void test_logic_close(){
-	loop_del(&server_loop_code, test_logic_engine);
+	loop_del(server_loop_code, test_logic_engine);
 }
 
 static void load_previous_server_state(){
@@ -91,19 +96,19 @@ static void load_previous_server_state(){
 }
 
 void reserve_ids(){
-	array_t *iterator = new array_t(nullptr, false);
-	iterator->data_type = "server_iterator";
-	iterator->int_array.push_back(std::make_pair(&server_loop_code.tick, "server iterator"));
+	array_t *iterator = new array_t(nullptr, "server iterator", false);
+	iterator->int_array.push_back(std::make_pair(&server_loop_code->tick, "server iterator"));
 	iterator->new_id(RESERVE_ID_ITERATOR);
 	iterator->set_setting(ARRAY_SETTING_IMMUNITY, true);
 }
 
 void init(int_ choice){
+	server_loop_code = new loop_t;
 	reserve_ids();
 	console_init();
 	load_previous_server_state();
 	misc_init();
-	server_loop_code.name = "server loop code";
+	server_loop_code->array.name = "server loop code";
 	//signal(SIGINT, simple_signal_handler);
 	switch(choice){
 	case 1:
@@ -132,7 +137,6 @@ void close(){
 	physics_close();
 	console_close();
 	test_logic_close();
-	delete_all_data();
 	// the functions are smart enough to not close if they never initialized
 }
 
@@ -150,9 +154,9 @@ int main(int argc, char **argv){
 	argv_ = argv;
 	init(menu());
 	printf("Starting the main loop\n");
-	server_loop_code.settings |= LOOP_CODE_PARTIAL_MT;
+	server_loop_code->settings |= LOOP_CODE_PARTIAL_MT;
 	while(likely(check_signal(SIGINT) == false && check_signal(SIGKILL) == false && check_signal(SIGTERM) == false)){
-		loop_run(&server_loop_code);
+		loop_run(server_loop_code);
 		once_per_second_update();
 	}
 	close();

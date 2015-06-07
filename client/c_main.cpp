@@ -14,27 +14,41 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "c_main.h"
+#include "../loop/loop_main.h"
+#include "../main.h"
+#include "../net/net_main.h"
+#include "../input/input_main.h"
+#include "../util/util_main.h"
+#include "../class/class_main.h"
+#include "../math/math_main.h"
+#include "../console/console_main.h"
 #include "c_test_logic.h"
 #include "c_net_engine.h"
 #include "c_input_engine.h"
 #include "c_render_engine.h"
+#include "c_main.h"
+
 
 array_id_t self_id = 0;
 extern net_t *net;
 extern input_t *input;
 int_ argc_;
 char **argv_;
-loop_t loop;
+loop_t *loop = nullptr;
 static int_ choice;
 
-loop_t init_, end_;
+loop_t *init_ = nullptr, *end_ = nullptr;
 
 static void load_engines(){
-	loop.name = "client loop code";
-	init_.name = "init code";
-	end_.name = "close code";
-	init_.settings = end_.settings = 0;
+	misc_init(); // takes precedence over everything else
+	loop = new loop_t;
+	init_ = new loop_t;
+	end_ = new loop_t;
+	loop->array.name = "client loop code";
+	loop->settings = LOOP_CODE_PARTIAL_MT;
+	init_->array.name = "init code";
+	end_->array.name = "close code";
+	init_->settings = end_->settings = 0;
 	loop_entry_t init_loop_template, end_loop_template;
 	if(check_for_parameter("--fast-init", argc_, argv_)){
 		init_loop_template.settings = LOOP_CODE_PARTIAL_MT;
@@ -42,24 +56,25 @@ static void load_engines(){
 	if(check_for_parameter("--fast-close", argc_, argv_)){ // who needs this?
 		end_loop_template.settings = LOOP_CODE_PARTIAL_MT;
 	}
+	loop_add(init_, loop_generate_entry(init_loop_template, "console_init", console_init));
 	switch(choice){
 	case 1:
 		if(!check_for_parameter("--render-disable", argc_, argv_)){
-			loop_add(&init_, loop_generate_entry(init_loop_template, "render_init", render_init));
-			loop_add(&end_, loop_generate_entry(end_loop_template, "render_close", render_close));
+			loop_add(init_, loop_generate_entry(init_loop_template, "render_init", render_init));
+			loop_add(end_, loop_generate_entry(end_loop_template, "render_close", render_close));
 		}
 		if(!check_for_parameter("--input-disable", argc_, argv_)){
-			loop_add(&init_, loop_generate_entry(init_loop_template, "input_init", input_init));
-			loop_add(&end_, loop_generate_entry(end_loop_template, "input_close", input_close));
+			loop_add(init_, loop_generate_entry(init_loop_template, "input_init", input_init));
+			loop_add(end_, loop_generate_entry(end_loop_template, "input_close", input_close));
 		}
 		if(!check_for_parameter("--net-disable", argc_, argv_)){
-			loop_add(&init_, loop_generate_entry(init_loop_template, "net_init", net_init));
-			loop_add(&end_, loop_generate_entry(end_loop_template, "net_close", net_close));
+			loop_add(init_, loop_generate_entry(init_loop_template, "net_init", net_init));
+			loop_add(end_, loop_generate_entry(end_loop_template, "net_close", net_close));
 		}
 		break;
 	case 2:
-		loop_add(&init_, loop_generate_entry(init_loop_template, "test_logic_init", test_logic_init));
-		loop_add(&end_, loop_generate_entry(end_loop_template, "test_logic_close", test_logic_close));
+		loop_add(init_, loop_generate_entry(init_loop_template, "test_logic_init", test_logic_init));
+		loop_add(end_, loop_generate_entry(end_loop_template, "test_logic_close", test_logic_close));
 		break;
 	case 3:
 		exit(0);
@@ -68,11 +83,8 @@ static void load_engines(){
 		assert(false);
 		break;
 	}
-}
-
-static void close(){
-	loop_run(&end_);
-	delete_all_data();
+	loop_add(end_, loop_generate_entry(init_loop_template, "console_close", console_close));
+	// console should always be the last thing to open
 }
 
 int main(int argc, char **argv){
@@ -80,14 +92,15 @@ int main(int argc, char **argv){
 	argv_ = argv;
 	choice = menu_loop();
 	load_engines();
-	loop_run(&init_);
+	loop_run(init_);
 	printf_("STATUS: Stopped init loop. Starting main loop\n", PRINTF_STATUS);
 	while(likely(check_signal(SIGINT) == false && check_signal(SIGKILL) == false && check_signal(SIGTERM) == false)){
-		loop_run(&loop);
+		loop_run(loop);
 		once_per_second_update();
 	}
 	printf_("STATUS: Stopped main loop. Starting close loop\n", PRINTF_STATUS);
-	loop_run(&end_);
-	close();
+	loop_run(end_);
+	//delete_all_data();
+	// this makes the program hang, so let's not do this here
 	return 0;
 }

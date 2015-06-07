@@ -14,21 +14,59 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "../loop/loop_struct_forward.h"
+#include "../render/render_struct_forward.h"
+#include "../net/net_struct_forward.h"
+#include "../input/input_struct_forward.h"
+#include "../util/util_main.h"
 #include "class_main.h"
 #include "class_array.h"
 
 //#define CLASS_DEBUG_OUTPUT 1
 
 array_t* array_vector[ARRAY_VECTOR_SIZE] = {nullptr};
-std::mutex array_lock;
 
-/*
-  The hash function that is used
-  is based on the implementation,
-  so that can't be networked unless
-  I make my own function.
- */
+#define TYPE_VECTOR_SIZE 64 // only used 13
+
+static std::vector<array_id_t> type_vector[TYPE_VECTOR_SIZE]; // fixed types are neat here
+
+lock_t array_lock;
 static std::hash<std::string> type_hash_function;
+
+std::string all_types[TYPE_VECTOR_SIZE] = {
+	"coord_t",
+	"client_t",
+	"model_t",
+	"net_ip_connection_info_t",
+	"loop_t",
+	"input_t",
+	"render_t",
+	"net_t",
+	"input_keyboard_map_t",
+	"loop_entry_t",
+	"function_t",
+	"tile_t",
+	"image_t",
+	"shell_script_t"
+};
+
+int_ type_to_type_entry(std::string a){
+	for(uint_ i = 0;i < TYPE_VECTOR_SIZE;i++){
+		if(all_types[i] == a){
+			return i;
+		}
+	}
+	printf_("WARNING: The requested type doesn't exist in the all_types array yet ('" + a + "'), putting it in there at runtime\n", PRINTF_UNLIKELY_WARN);
+	// likely at the time of writing, but this should be reported as UNLIKELY
+	for(uint_ i = 0;i < TYPE_VECTOR_SIZE;i++){
+		if(all_types[i] == ""){
+			all_types[i] = a;
+			return i;
+		}
+	}
+	printf_("ERROR: type_to_type_entry: No more room to create a new type (TYPE_VECTOR_SIZE)\n", PRINTF_ERROR);
+	throw std::runtime_error(" cannot generate new type");
+}
 
 static array_id_t pull_id(std::string a){
 	int_ return_value;
@@ -70,50 +108,58 @@ int_ find_empty_array_entry(){
 	return i;
 }
 
-array_t::array_t(void* tmp_pointer, int_ settings__){
+array_t::array_t(void* tmp_pointer, std::string type, int_ settings__){
+	add_int(std::make_pair(&id, "array_t: ID"));
+	int_ entry = find_empty_array_entry();
+	array_vector[entry] = this;
+	id = scramble_id(entry);
+	add_int(std::make_pair(&settings_, "array_t: settings"));
 	set_settings(settings__);
+	add_string(std::make_pair(&data_type, "array_t: data type"));
+	data_type = type;
+	add_string(std::make_pair(&name, "array_t: name"));
+	// nothing to do here
+	add_void_ptr(std::make_pair(&pointer, "array_t: pointer to object"));
 	pointer = tmp_pointer;
-	settings_ = 0;
-	data_type_hash = 0;
+	put_inside_type_vector = false;
 	last_update = get_time();
-	int_array.push_back(std::make_pair(&id, "ID"));
-	string_array.push_back(std::make_pair(&data_type, "data type"));
 	array_lock.lock();
-	int_ tmp_entry = find_empty_array_entry();
-	array_vector[tmp_entry] = this;
-	id = scramble_id(tmp_entry);
+	int_ type_entry = type_to_type_entry(data_type); // should return a new entry if the current type isn't on the list
+	if(type_entry > -1){
+		type_vector[type_entry].push_back(id);
+	}
 	array_lock.unlock();
 }
 
 void array_t::update_data(){
-	data_lock.lock();
-	std::size_t hash_ = type_hash_function(data_type);
-	if(data_type_hash != hash_){
-		data_type_hash = hash_;
-	}
-	data_lock.unlock();
 }
 
 void array_t::reset_values(){
 	data_lock.lock();
 	int_lock.lock();
 	const int_ int_array_size = int_array.size();
-	for(int_ i = 1;i < int_array_size;i++){ // first one is reserved for the array class
+	for(int_ i = ARRAY_RESERVE_INT_SIZE;i < int_array_size;i++){ // first one is reserved for the array class
 		*(std::get<0>(int_array[i])) = DEFAULT_INT_VALUE;
 	}
 	int_lock.unlock();
 	string_lock.lock();
 	const int_ string_array_size = string_array.size();
-	for(int_ i = 1;i < string_array_size;i++){ // first one is reserved for the array class
+	for(int_ i = ARRAY_RESERVE_STRING_SIZE;i < string_array_size;i++){ // first one is reserved for the array class
 		*(std::get<0>(string_array[i])) = DEFAULT_STRING_VALUE;
 	}
 	string_lock.unlock();
 	long_double_lock.lock();
 	const int_ long_double_array_size = long_double_array.size();
-	for(int_ i = 0;i < long_double_array_size;i++){
+	for(int_ i = ARRAY_RESERVE_LONG_DOUBLE_SIZE;i < long_double_array_size;i++){
 		*(std::get<0>(long_double_array[i])) = DEFAULT_LONG_DOUBLE_VALUE;
 	}
 	long_double_lock.unlock();
+	void_ptr_lock.lock();
+	const int_ void_ptr_array_size = void_ptr_array.size();
+	for(int_ i = ARRAY_RESERVE_VOID_PTR_SIZE;i < void_ptr_array_size;i++){
+		*(std::get<0>(void_ptr_array[i])) = nullptr;
+	}
+	void_ptr_lock.unlock();
 	data_lock.unlock();
 }
 
@@ -233,7 +279,7 @@ void array_t::parse_int_from_string(std::string a){
 	const std::vector<std::string> int_data = pull_items(ARRAY_INT_SEPERATOR_START, a, ARRAY_INT_SEPERATOR_END, &entries_for_data);
 	const uint_ int_data_size = int_data.size();
 	while(int_array.size() < int_data.size()){
-		int_array.push_back(std::make_pair(new int_, "mysterious new variable"));
+		add_int(std::make_pair(new int_, "mysterious new variable"));
 	}
 	int_lock.lock();
 	for(uint_ i = 0;i < int_data_size;i++){
@@ -265,7 +311,7 @@ void array_t::parse_string_from_string(std::string a){
 	const uint_ string_data_size = string_data.size();
 	string_lock.lock();
 	while(string_array.size() < string_data_size){
-		string_array.push_back(std::make_pair(new std::string, "mysterious new variable"));
+		add_string(std::make_pair(new std::string, "mysterious new variable"));
 	}
 	for(uint_ i = 0;i < string_data_size;i++){
 		#ifdef CLASS_DEBUG_OUTPUT
@@ -312,36 +358,33 @@ bool array_t::updated( int_ *what_to_update){
 
 std::string array_t::gen_string_string(){
 	std::string return_value;
-	//data_lock.lock();
 	const int_ string_size = string_array.size();
 	for(int_ i = 0;i < string_size;i++){
-		if(std::get<0>(string_array[i]) != nullptr) return_value += array_gen_data_vector_entry((std::string)*(std::get<0>(string_array[i])), (int_)i);
+		std::string value = get_string(i);
+		return_value += array_gen_data_vector_entry(value, i);
 	}
-	//data_lock.unlock();
 	return_value = wrap(ARRAY_STRING_SEPERATOR_START, return_value, ARRAY_STRING_SEPERATOR_END);
 	return return_value;
 }
 
 std::string array_t::gen_int_string(){
 	std::string return_value;
-	//data_lock.lock();
 	const int_ int_size = int_array.size();
 	for(int_ i = 0;i < int_size;i++){
-		if(std::get<0>(int_array[i]) != nullptr) return_value += array_gen_data_vector_entry(std::to_string((int_)*(std::get<0>(int_array[i]))), (int_)i);
+		int_ value = get_int(i);
+		return_value += array_gen_data_vector_entry(std::to_string(value), i);
 	}
-	//data_lock.unlock();
 	return_value = wrap(ARRAY_INT_SEPERATOR_START, return_value, ARRAY_INT_SEPERATOR_END);
 	return return_value;
 }
 
 std::string array_t::gen_long_double_string(){
 	std::string return_value;
-	//data_lock.lock();
 	const int_ long_double_size = long_double_array.size();
 	for(int_ i = 0;i < long_double_size;i++){
-		if(std::get<0>(long_double_array[i]) != nullptr) return_value += array_gen_data_vector_entry(std::to_string((long double)*(std::get<0>(long_double_array[i]))), (int_)i);
+		long double value = get_long_double(i);
+		return_value += array_gen_data_vector_entry(std::to_string(value), i);
 	}
-	//data_lock.unlock();
 	return_value = wrap(ARRAY_LONG_DOUBLE_SEPERATOR_START, return_value, ARRAY_LONG_DOUBLE_SEPERATOR_END);
 	return return_value;
 }
@@ -374,7 +417,7 @@ void update_class_data(std::string a, int_ what_to_update){
 			tmp = &((new net_ip_connection_info_t)->array);
 		}else{
 			printf("TODO: make a special allocator for '%s'\n", type.c_str());
-			tmp = new array_t(nullptr, true);
+			tmp = new array_t(nullptr, "", true);
 		}
 	}
 	if(tmp->get_write_protected() == false){
@@ -421,10 +464,14 @@ void *find_pointer(array_id_t id, std::string type){
 }
 
 array_t* find_array_pointer(array_id_t id){
-	return array_vector[strip_id(id)];
+	array_t *ptr = array_vector[strip_id(id)];
+	//if(ptr == nullptr){
+		//throw std::runtime_error(" ID is invalid");
+	//}
+	return ptr;
 }
 
-void delete_array_and_pointer(array_t *array){
+/*void delete_array_and_pointer(array_t *array){
 	if(array == nullptr){
 		return;
 	}
@@ -443,8 +490,22 @@ void delete_array_and_pointer(array_t *array){
 		delete (client_t*)ptr;
 	}else if(type == "net_ip_connection_info_t"){
 		delete (net_ip_connection_info_t*)ptr;
+	}else if(type == "render_t"){
+		delete (render_t*)ptr;
+	}else if(type == "input_t"){
+		delete (input_t*)ptr;
+	}else if(type == "net_t"){
+		delete (net_t*)ptr;
+	}else if(type == "image_t"){
+		delete (image_t*)ptr;
+	}else if(type == "tile_t"){
+		delete (tile_t*)ptr;
+	}else if(type == "loop_t"){
+		//delete (loop_t*)ptr; // this is the only item that isn't dynamically allocated
+	}else if(type == "screen_t"){
+		delete (screen_t*)ptr;
 	}else{
-		printf_("delete_array_and_pointer: cannot delete the unknown data type '" + type + "'\n" + array->print(), PRINTF_ERROR);
+		printf_("delete_array_and_pointer: cannot delete the unknown data type '" + type + "'\n", PRINTF_ERROR);
 	}
 }
 
@@ -453,7 +514,7 @@ void delete_all_data(){
 		delete_array_and_pointer(array_vector[i]);
 		array_vector[i] = nullptr;
 	}
-}
+}*/
 
 std::string array_t::gen_print_prefix(){
 	std::stringstream ss;
@@ -461,34 +522,54 @@ std::string array_t::gen_print_prefix(){
 	return "array_t::array_t (this = " + ss.str() + "): ";
 }
 
+static void* get_entry_pointer(std::pair<void*, std::string> a){
+	return std::get<0>(a);
+}
+
 std::string array_t::print(){
 	std::string output;
 	std::stringstream ss_;
 	ss_ << this;
-	output += "Type: " + data_type + "\t";
-	output += "Pointer: " + ss_.str() + "\t";
-	output += "ID: " + std::to_string(id) + "\n";
+	output += "Pointer: " + ss_.str() + "\n";
 	int_lock.lock();
 	const int_ int_array_size = int_array.size();
 	for(int_ i = 0;i < int_array_size;i++){
-		output += "\tint_array[" + std::to_string(i) + "]: " + std::to_string(*(std::get<0>(int_array[i]))) + "\t" + std::get<1>(int_array[i]) + "\n";
+		int* ptr = (int*)get_entry_pointer(int_array[i]);
+		std::stringstream ptr_;
+		ptr_ << ptr;
+		output += "\tint_array[" + std::to_string(i) + "] (" + ptr_.str() + ") : " + std::to_string(*ptr) + "\t\t" + std::get<1>(int_array[i]) + "\n";
 	}
 	int_lock.unlock();
 	string_lock.lock();
 	const int_ max_print_string_length = 8192;
 	const int_ string_array_size = string_array.size();
 	for(int_ i = 0;i < string_array_size;i++){
+		std::string *ptr = (std::string*)get_entry_pointer(string_array[i]);
+		std::stringstream ptr_;
+		ptr_ << ptr;
 		if(std::get<0>(string_array[i])->size() < max_print_string_length){
-			output += "\tstring_array[" + std::to_string(i) + "]: " + *(std::get<0>(string_array[i])) + "\t" + std::get<1>(string_array[i]) + "\n";
+			output += "\tstring_array[" + std::to_string(i) + "] (" + ptr_.str() + ") : " + *ptr + "\t" + std::get<1>(string_array[i]) + "\n";
 		}else{
-			output += "\tstring_array[" + std::to_string(i) + "] is too large to print\n";
+			output += "\tstring_array[" + std::to_string(i) + "] (" + ptr_.str() + ") is too large to print\n";
 		}
 	}
 	string_lock.unlock();
 	long_double_lock.lock();
 	const int_ long_double_array_size = long_double_array.size();
 	for(int_ i = 0;i < long_double_array_size;i++){
-		output += "\tlong_double_array[" + std::to_string(i) + "]: " + std::to_string(*(std::get<0>(long_double_array[i]))) + "\t" + std::get<1>(long_double_array[i]) + "\n";
+		long double* ptr = (long double*)get_entry_pointer(long_double_array[i]);
+		std::stringstream ptr_;
+		ptr_ << ptr;
+		output += "\tlong_double_array[" + std::to_string(i) + "] (" + ptr_.str() + "): " + std::to_string(*ptr) + "\t" + std::get<1>(long_double_array[i]) + "\n";
+	}
+	const int_ void_ptr_array_size = void_ptr_array.size();
+	for(int_ i = 0;i < void_ptr_array_size;i++){
+		void* ptr = get_entry_pointer(void_ptr_array[i]);
+		char pointer_to_pointer[512];
+		int retval_to_ptr = snprintf(pointer_to_pointer, 512, "%p", ptr);
+		char pointer_to_data[512];
+		int retval_to_data = snprintf(pointer_to_data, 512, "%p", *(void**)ptr);
+		output += "\tvoid_ptr_array[" + std::to_string(i) + "]: (" + std::string(pointer_to_pointer) + "): " + std::string(pointer_to_data) + "\t" + std::get<1>(void_ptr_array[i]) + "\n";
 	}
 	long_double_lock.unlock();
 	output += "\n";
@@ -499,18 +580,12 @@ std::string array_t::print(){
 }
 
 std::vector<array_id_t> all_ids_of_type(std::string type){
-	std::vector<array_id_t> return_value;
-	const std::size_t type_hash = type_hash_function(type);
-	array_lock.lock();
-	for(uint_ i = 0;i < ARRAY_VECTOR_SIZE;i++){
-		if(array_vector[i] != nullptr){
-			if(array_vector[i]->data_type_hash == type_hash || array_vector[i]->data_type == type){
-				return_value.push_back(array_vector[i]->id);
-			}
-		}
+	int_ entry = type_to_type_entry(type);
+	if(entry > -1 && type_vector[entry].size() > 0){
+		return type_vector[entry];
+	}else{
+		return std::vector<array_id_t>({0});
 	}
-	array_lock.unlock();
-	return return_value;
 }
 
 bool valid_id(array_id_t a){
@@ -524,3 +599,4 @@ bool array_t::unlocked(){
 	}
 	return return_value;
 }
+

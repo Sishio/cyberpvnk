@@ -15,7 +15,19 @@ You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "../class/class_array.h"
 #include "loop_main.h"
+
+loop_t::loop_t() : array(this, "loop_t", ARRAY_SETTING_IMMUNITY){
+	target_rate = average_rate = 0;
+	settings = 0;
+	tick = 0;
+	array.long_double_array.push_back(std::make_pair(&target_rate, "target rate"));
+	array.long_double_array.push_back(std::make_pair(&average_rate, "average_rate"));
+	array.int_array.push_back(std::make_pair(&settings, "settings"));
+	array.int_array.push_back(std::make_pair(&tick, "tick"));
+	array.data_type = "loop_t";
+}
 
 static void stop_infinite_loop(loop_entry_t *tmp){
 	tmp->term = true;
@@ -28,12 +40,6 @@ static void infinite_loop_function(void(*code)(), bool *term_pointer){
 	while(likely(infinite_loop() && *term_pointer == false)){
 		code();
 	}
-}
-
-loop_t::loop_t(){
-	target_rate = 60;
-	average_rate = 0;
-	settings = 0;
 }
 
 loop_entry_t::loop_entry_t(){
@@ -67,13 +73,10 @@ static bool loop_entry_will_run(const loop_t *loop, const loop_entry_t *loop_ent
 }
 
 void loop_run(loop_t *a){
-	int settings = a->settings;
-	const bool print_this_time = (settings & LOOP_PRINT_THIS_TIME) != 0;
-	if(print_this_time){
-		FLIP_BIT(settings, LOOP_PRINT_THIS_TIME);
-		printf_("settings: " + std::to_string(settings) + "\n", PRINTF_VITAL);
+	if((a->settings & LOOP_PRINT_THIS_TIME) != 0){
+		printf_("settings: " + std::to_string(a->settings) + "\n", PRINTF_VITAL);
 	}
-	std::string summary = a->name + "\n";
+	std::string summary = a->array.name + "\n";
 	const uint_ code_size = a->code.size();
 	const long double start_time = get_time();
 	for(uint_ i = 0;i < a->code.size();i++){
@@ -115,13 +118,14 @@ void loop_run(loop_t *a){
 	}
 	a->average_rate += current_rate;
 	a->average_rate *= .5;
-	if(print_this_time){
-		summary += "current frame rate: " + std::to_string(current_rate) + "\naverage framerate: " + std::to_string(a->average_rate) + "\nloop_settings: " + std::to_string(settings) + "\n";
+	if((a->settings & LOOP_PRINT_THIS_TIME) != 0){
+		summary += "current frame rate: " + std::to_string(current_rate) + "\naverage framerate: " + std::to_string(a->average_rate) + "\nloop_settings: " + std::to_string(a->settings) + "\n";
 		summary += "\tTitle\tIteration Skip\n";
 		for(uint_ i = 0;i < a->code.size();i++){
 			summary += "\t" + a->code[i].name + "\t" + std::to_string(a->code[i].iteration_skip) + "\n";
 		}
 		printf("%s", summary.c_str());
+		a->settings &= ~LOOP_PRINT_THIS_TIME;
 	}
 	++a->tick;
 	if(check_for_parameter("--debug", argc_, argv_)) ms_sleep(1000);

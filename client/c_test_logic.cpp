@@ -4,7 +4,7 @@
 bool test_init = false;
 
 void test_logic_init(){
-	loop_add(&loop, loop_generate_entry(loop_entry_t(), "test_logic_loop", test_logic_loop));
+	loop_add(loop, loop_generate_entry(loop_entry_t(), "test_logic_loop", test_logic_loop));
 	test_init = true;
 }
 
@@ -15,5 +15,5 @@ void test_logic_loop(){
 }
 
 void test_logic_close(){
-	loop_del(&loop, test_logic_loop);
+	loop_del(loop, test_logic_loop);
 }

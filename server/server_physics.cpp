@@ -15,6 +15,9 @@ You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "server_main.h"
+#include "../main.h"
+#include "../util/util_main.h"
+#include "../class/class_main.h"
 #include "server_physics.h"
 
 extern int scan_model_for_id(int);
@@ -22,7 +25,6 @@ extern bool terminate;
 static void coord_physics_iteration(coord_t*);
 
 extern bool once_per_second;
-extern loop_t server_loop_code;
 
 static int_ physics_rules_type;
 
@@ -104,11 +106,11 @@ void coord_2d_input_functions::right(coord_t *a){
 }
 
 void physics_init(){
-	loop_add(&server_loop_code, loop_generate_entry(loop_entry_t(), "physics engine", physics_engine));
+	loop_add(server_loop_code, loop_generate_entry(loop_entry_t(), "physics engine", physics_engine));
 }
 
 void physics_close(){
-	loop_del(&server_loop_code, physics_engine);
+	loop_del(server_loop_code, physics_engine);
 }
 
 std::vector<array_id_t> coord_vector;
@@ -215,14 +217,13 @@ static void coord_collision_check(coord_t *coord){
 			}
 		}
 		if(collision){
-			coord->x_vel = -coord->x_vel;
-			coord->y_vel = -coord->y_vel;
-			coord->z_vel = -coord->z_vel;
-			current_coord->x_vel = -current_coord->x_vel;
-			current_coord->y_vel = -current_coord->y_vel;
-			current_coord->z_vel = -current_coord->z_vel;
-		}else{
-			printf_("WARNING: Couldn't make the two object collide\n", PRINTF_UNLIKELY_WARN);
+			coord->x_vel = -coord->x_vel*.8;
+			coord->y_vel = -coord->y_vel*.8;
+			coord->z_vel = -coord->z_vel*.8;
+			current_coord->x_vel = -current_coord->x_vel*.8;
+			current_coord->y_vel = -current_coord->y_vel*.8;
+			current_coord->z_vel = -current_coord->z_vel*.8;
+			coord_physics_iteration(coord); // no harm in running this again
 		}
 	}
 	coord->array.data_lock.unlock();
@@ -251,7 +252,7 @@ static void coord_physics_iteration(coord_t *a){ // don't send this until I find
 	a->array.data_lock.unlock();
 }
 
-physics_rules_t::physics_rules_t() : array(this, false){
+physics_rules_t::physics_rules_t() : array(this, "physics_rules_t", false){
 	array.data_type = "physics_rules_t";
 	array.long_double_array.push_back(std::make_pair(&acceleration, "acceleration"));
 	array.long_double_array.push_back(std::make_pair(&mysterious_downward_force, "mysterious downward force"));

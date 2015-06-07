@@ -16,18 +16,14 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef C_MAIN_H
 	#define C_MAIN_H
-	#include "../loop/loop_main.h"
-	#include "../main.h"
-	#include "../net/net_main.h"
-	#include "../input/input_main.h"
-	#include "../util/util_main.h"
-	#include "../class/class_main.h"
-	#include "../math/math_main.h"
 	#include "cstdio"
+	#include "../class/class_array.h"
+	#include "../main.h"
+	#include "../loop/loop_main.h"
 	#ifdef __linux
 		#include "signal.h"
 	#endif
-	extern loop_t loop;
+	extern loop_t *loop;
 	extern bool terminate;
 	extern bool once_per_second;
 	extern array_id_t self_id;

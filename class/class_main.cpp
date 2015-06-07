@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "../util/util_main.h"
 #include "limits.h"
 #include "class_main.h"
 
@@ -21,7 +22,7 @@ int_ coord_t::dimensions(){
 	return dimensions_;
 }
 
-coord_t::coord_t() : array(this, ARRAY_SETTING_SEND){
+coord_t::coord_t() : array(this, "coord_t", ARRAY_SETTING_SEND){
 	array.data_lock.lock();
 	array.long_double_lock.lock();
 	array.long_double_array.push_back(std::make_pair(&x, "x coordinate"));
@@ -41,7 +42,6 @@ coord_t::coord_t() : array(this, ARRAY_SETTING_SEND){
 	array.data_lock.unlock();
 	array.reset_values();
 	array.data_lock.lock();
-	array.data_type = "coord_t";
 	old_time = get_time();
 	dimensions_ = 2;
 	model_id = tile_id = 0;
@@ -72,8 +72,7 @@ void coord_t::set_y_angle(bool add, long double a){
 
 coord_t::~coord_t(){}
 
-model_t::model_t() : array(this, ARRAY_SETTING_SEND){
-	array.data_type = "model_t";
+model_t::model_t() : array(this, "model_t", ARRAY_SETTING_SEND){
 	array.string_array.push_back(std::make_pair(&entire_object_file, "entire object file"));
 }
 
@@ -131,7 +130,7 @@ void model_t::get_size(long double *x, long double *y, long double *z){
 	z[0] = z[1] = 0;
 }
 
-client_t::client_t(bool add) : array(this, ARRAY_SETTING_SEND){
+client_t::client_t(bool add) : array(this, "client_t", ARRAY_SETTING_SEND){
 	array.int_array.push_back(std::make_pair(&model_id, "model ID"));
 	array.int_array.push_back(std::make_pair(&coord_id, "coord ID"));
 	array.int_array.push_back(std::make_pair(&connection_info_id, "connection info ID"));
@@ -140,7 +139,7 @@ client_t::client_t(bool add) : array(this, ARRAY_SETTING_SEND){
 
 client_t::~client_t(){}
 
-net_ip_connection_info_t::net_ip_connection_info_t(bool add) : array(this, ARRAY_SETTING_SEND){
+net_ip_connection_info_t::net_ip_connection_info_t(bool add) : array(this, "net_ip_connection_info_t", ARRAY_SETTING_SEND){
 	array.data_type = "net_ip_connection_info_t";
 	array.int_array.push_back(std::make_pair(&port, "port"));
 	array.int_array.push_back(std::make_pair(&connection_type, "connection type"));

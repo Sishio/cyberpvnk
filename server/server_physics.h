@@ -18,9 +18,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define SERVER_PHYSICS_H
 	#define MAP_BOUNDS_DECREASE_RATE .5
 	#define GRAVITY_RATE 9.81 // give or take
-	#include "../main.h"
-	#include "../util/util_main.h"
-	#include "../class/class_main.h"
+	#include "../class/class_array.h"
 	#include "thread"
 	#include "cstring"
 	struct physics_rules_t{
@@ -34,7 +32,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		long double get_gravity();
 		long double get_acceleration();
 	};
-	extern std::vector<client_t*> client;
 	extern void physics_init();
 	extern void physics_close();
 	extern void physics_engine();

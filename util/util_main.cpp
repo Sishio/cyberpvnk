@@ -19,6 +19,12 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 
 bool once_per_second = false;
 
+std::string get_ptr(void* a){
+	char data[512];
+	snprintf(data, 512, "%p", a);
+	return std::string(data);
+}
+
 int_ util_shell(int_ function, std::string parameter){ // Keeps most of the OS pre-processor code isolated from the rest of the program
 	int_ return_value = 0;
 	std::string command = "";
@@ -53,12 +59,13 @@ void ms_sleep(long double ms_){
 	#endif
 }
 
-#define G_RANDOM 1
+//#define G_RANDOM 1
+#define CPP11_RANDOM
 
 uint_ gen_rand(uint_ a){ // range, from 1 to a
 	#ifdef CPP11_RANDOM
 		std::random_device rd;
-		std::mtt19937 gen(rd());
+		std::mt19937 gen(rd());
 		std::uniform_int_distribution<> cpp11_random(1, ~((unsigned long int)0));
 		return cpp11_random(gen);
 	#elif G_RANDOM // /g/ No. 48126030
@@ -88,16 +95,22 @@ int_ warn_if_true(bool a, char* details = NULL){
 long double last_time = 0;
 
 long double get_time(){
+	long double retval = 0;
 	#ifdef _WIN32
-		return (last_time = SDL_GetTicks()/1000); // piece of crap timer
+		retval = (last_time = SDL_GetTicks()/1000); // piece of crap timer
 	#elif __linux // possibly OS X?
 		timespec a;
 		clock_gettime(CLOCK_MONOTONIC, &a);
-		return (last_time = a.tv_sec + ((long double)a.tv_nsec/(long double)1000000000.0));
+		retval = (last_time = a.tv_sec + ((long double)a.tv_nsec/(long double)1000000000.0));
 	#endif
+	last_time = retval;
+	return retval;
 }
 
 long double get_last_time(){
+	if(last_time == 0){
+		last_time = get_time();
+	}
 	return last_time;
 }
 
@@ -230,23 +243,17 @@ std::string gen_binary(array_id_t a){
 }
 
 array_id_t strip_id(array_id_t id){
-	return id & 0x0000FFFF;
+	return id & 0x00000000FFFFFFFF;
 }
 
 array_id_t scramble_id(array_id_t id){
-	return (id | (gen_rand() << 16));
+	return (id | (gen_rand() << 32));
 }
 
 int_ print_level = -1;
 
 int_ printf_(std::string data_to_print, int_ status){
-	if(unlikely(print_level == -1)){
-		if(check_for_parameter("--debug", argc_, argv_)){
-			print_level = PRINTF_DEBUG;
-		}else{
-			print_level = PRINTF_LIKELY_WARN;
-		}
-	}
+	assert(print_level != -1);
 	if(status <= print_level){
 		std::cout << data_to_print;
 	}
@@ -263,7 +270,44 @@ void free_ram(){
 	printf_("ERROR: Ran out of RAM. DO SOMETHING\n", PRINTF_VITAL);
 }
 
+void test_random(){
+	uint_ old = 0;
+	for(uint_ i = 0;i < 8192;i++){
+		uint_ new_ = gen_rand();
+		assert(old != new_);
+		old = new_;
+	}
+}
+
+void test_ids(){
+	array_id_t id = ARRAY_VECTOR_SIZE;
+	array_id_t id_ = id;
+	id = scramble_id(id);
+	std::cout << "Scrambled ID: " << id << std::endl;
+	id = strip_id(id);
+	std::cout << "Re-stripped ID: " << id << std::endl;
+	if(id != id_){
+		std::cout << id << " " << id_ << std::endl;
+		assert(false);
+	}
+}
+
 void misc_init(){
+	if(check_for_parameter("--debug", argc_, argv_)){
+		print_level = PRINTF_DEBUG;
+	}else if(check_for_parameter("--spam", argc_, argv_)){
+		print_level = PRINTF_SPAM;
+	}else{
+		print_level = PRINTF_UNLIKELY_WARN;
+	}
 	// set_new_handler
 	std::set_new_handler(free_ram);
+	test_random();
+	test_ids();
+}
+
+void throw_if_nullptr(void* a){
+	if(a == nullptr){
+		throw std::logic_error("nullptr");
+	}
 }

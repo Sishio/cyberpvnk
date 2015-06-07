@@ -16,3 +16,5 @@ rm -r bin
 mkdir bin
 rm -r loop/obj
 mkdir loop/obj
+rm -r console/obj
+mkdir console/obj

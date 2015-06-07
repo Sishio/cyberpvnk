@@ -1,0 +1,32 @@
+stack_shift in_stack right
+stack_shift in_stack right
+stack_shift in_stack right
+stack_shift in_stack right
+stack_shift in_stack right
+stack_shift in_stack right
+stack_shift in_stack right
+stack_shift in_stack right
+
+0 in_stack 8_IS
+1 in_stack int
+2 in_stack 2
+3 in_stack NIL
+set
+
+0 pointer_int_stack
+0 in_stack 0_PSI
+1 in_stack 4
+modify bitwise xor
+
+stack_shift in_stack left
+stack_shift in_stack left
+stack_shift in_stack left
+stack_shift in_stack left
+stack_shift in_stack left
+stack_shift in_stack left
+stack_shift in_stack left
+stack_shift in_stack left
+1 in_stack int
+2 in_stack 2
+3 in_stack 0_OS
+set

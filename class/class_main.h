@@ -17,9 +17,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef CLASS_MAIN_H
 	#define CLASS_MAIN_H
 	#include "../main.h"
+	#include "../util/util_main.h"
 	#include "class_array.h"
 	#include "class_extra.h"
-	#include "../util/util_main.h"
 	#include "sstream"
 	#include "algorithm"
 	#include "vector"

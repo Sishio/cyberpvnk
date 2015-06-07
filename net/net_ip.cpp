@@ -1,3 +1,6 @@
+#include "../class/class_main.h"
+#include "../class/class_array.h"
+#include "../util/util_main.h"
 #include "net_ip.h"
 
 std::string pull_global_ip_address(){
@@ -96,7 +99,8 @@ void net_ip_t::update_inbound_port(array_id_t new_net_id){
 	inbound = new udp_socket_t(new_net_id);
 }
 
-net_ip_t::net_ip_t() : array(this, false){
+net_ip_t::net_ip_t() : array(this, "net_ip_t", false){
+	array.reset_values();
 }
 
 int_ net_ip_t::init(int_ argc, char** argv, array_id_t tmp_conn_id){

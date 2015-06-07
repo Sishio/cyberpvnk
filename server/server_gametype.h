@@ -1,5 +1,6 @@
 #ifndef SERVER_GAMETYPE_H
 	#define SERVER_GAMETYPE_H
+	#include "../class/class_array.h"
 	class gametype_t{
 	private:
 	public:

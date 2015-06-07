@@ -16,11 +16,9 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef SERVER_MAIN_H
 	#define SERVER_MAIN_H
-	#include "../main.h"
-	#include "../loop/loop_main.h"
 	#include "../class/class_main.h"
 	#include "../class/class_array.h"
-	#include "../util/util_main.h"
+	#include "../loop/loop_main.h"
 	#include "sstream"
 	#include "fstream"
 	#include "string"
@@ -35,11 +33,5 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	};
 	extern int_ argc_;
 	extern char** argv_;
-	extern std::vector<client_t*> client;
-	extern std::vector<coord_extra_t> coord_extra;
-	extern std::vector<coord_t*> coord;
-	extern std::vector<model_extra_t> model_extra;
-	extern std::vector<model_t*> model;
-	extern int_ loop_settings;
-	extern loop_t server_loop_code;
+	extern loop_t *server_loop_code;
 #endif

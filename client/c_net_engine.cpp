@@ -14,6 +14,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "../loop/loop_main.h"
+#include "../class/class_main.h"
+#include "../net/net_main.h"
+#include "../client/c_main.h"
+#include "../net/net_const.h"
 #include "c_net_engine.h"
 
 extern bool once_per_second;
@@ -28,7 +33,7 @@ extern char **argv_;
 
 net_t *net = nullptr;
 
-static loop_t net_loop_mt;
+static loop_t *net_loop_mt;
 
 static void net_module_loop(){
 	net->loop();
@@ -40,7 +45,12 @@ static void net_connect(){
 	net->write(packet, 0, host_info_id);
 	bool connection_established = false;
 	const long double start_time = get_time();
-	while((connection_established == false || get_time()-start_time < 5) && infinite_loop()){
+	for(int_ i = 0;i < 300;i++){
+		if(infinite_loop() == false) break;
+		if(check_signal(SIGNAL_QUIT_LOOP)){
+			printf_("Received SIGNAL_QUIT_LOOP\n", PRINTF_VITAL);
+			break;
+		}
 		net->loop();
 		std::string connecting_packet;
 		if((connecting_packet = net->read(NET_JOIN)) != ""){
@@ -49,9 +59,10 @@ static void net_connect(){
 			self_id = atoi(connecting_packet.c_str());
 			connection_established = true;
 		}
+		ms_sleep(100);
 	}
 	if(connection_established == false){
-		printf("The server didn't respond in time (5 seconds or until SIGNAL_QUIT_LOOP was caught). I am shutting down the entire network engine to save resources.\n");
+		printf("The server didn't respond in time (30 seconds or until SIGNAL_QUIT_LOOP was caught). I am shutting down the entire network engine to save resources.\n");
 		net_close();
 	}
 }
@@ -84,9 +95,9 @@ static void net_send_engine(){
 }
 
 static void net_init_loop(){
-	loop_add(&net_loop_mt, loop_generate_entry(loop_entry_t(), "net_module_loop", net_module_loop));
-	loop_add(&net_loop_mt, loop_generate_entry(loop_entry_t(), "net_receive_engine", net_receive_engine));
-	loop_add(&net_loop_mt, loop_generate_entry(loop_entry_t(), "net_send_engine", net_send_engine));
+	loop_add(net_loop_mt, loop_generate_entry(loop_entry_t(), "net_module_loop", net_module_loop));
+	loop_add(net_loop_mt, loop_generate_entry(loop_entry_t(), "net_receive_engine", net_receive_engine));
+	loop_add(net_loop_mt, loop_generate_entry(loop_entry_t(), "net_send_engine", net_send_engine));
 	net_ip_connection_info_t *self_info = new net_ip_connection_info_t;
 	net_ip_connection_info_t *host_info = new net_ip_connection_info_t;
 	self_info->array.data_lock.lock();
@@ -135,16 +146,15 @@ static void net_init_loop(){
 }
 
 void net_init(){
-	loop_add(&loop, loop_generate_entry(loop_entry_t(), "net_engine", net_engine));
+	loop_add(loop, loop_generate_entry(loop_entry_t(), "net_engine", net_engine));
+	net_loop_mt = new loop_t;
 }
 
 void net_engine(){
-	int_ loop_settings = 0;
-	SET_BIT(loop_settings, LOOP_CODE_NEVEREND_MT, 1);
 	if(unlikely(net == nullptr)){
 		net_init_loop();
 	}
-	loop_run(&net_loop_mt);
+	loop_run(net_loop_mt);
 }
 
 void net_close(){
@@ -152,8 +162,8 @@ void net_close(){
 		delete net;
 		net = nullptr;
 	}
-	loop_del(&net_loop_mt, net_module_loop);
-	loop_del(&net_loop_mt, net_send_engine);
-	loop_del(&net_loop_mt, net_receive_engine);
-	loop_del(&loop, net_engine);
+	loop_del(net_loop_mt, net_module_loop);
+	loop_del(net_loop_mt, net_send_engine);
+	loop_del(net_loop_mt, net_receive_engine);
+	loop_del(loop, net_engine);
 }

@@ -30,6 +30,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define PRINTF_LIKELY_WARN 3
 	#define PRINTF_STATUS 4
 	#define PRINTF_DEBUG 5
+	#define PRINTF_SPAM 6
 	#define NEW_NULLPTR_ERROR "ERROR: Couldn't allocate data\n"
 	#include "../math/math_main.h"
 	#include  "../main.h"
@@ -74,15 +75,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define FUNCTION_NO_CHECK_FOR_PARAMETER_NULLPTR 4
 	#define FUNCTION_NO_CHECK_FOR_PARAMETER_ITEMS_NULLPTR 8
 	#define FUNCTION_NO_CHECK_FOR_ANY_NULLPTR 12
-	struct function_parameter_t{
-	public:
-		int_ settings_;
-		function_parameter_t(){settings_=0;}
-		void set_setting(int_ a, bool b){(b)?(settings_|=a):(settings_&=~a);}
-		void set(int_ a, bool b){return set_setting(a,b);}
-		bool get_setting(int_ a){return (settings_&a)!=0;}
-		bool get(int_ a){return get_setting(a);}
-	};
 	extern int_ argc_;
 	extern char** argv_;
 	extern void update_progress_bar(long double);
@@ -114,4 +106,5 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern void hanging_debug();
 	extern long double get_last_time();
 	extern void misc_init();
+	extern void throw_if_nullptr(void* tmp);
 #endif

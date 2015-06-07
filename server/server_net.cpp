@@ -14,14 +14,16 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+#include "server_main.h"
+#include "../loop/loop_main.h"
+#include "../class/class_main.h"
+#include "../class/class_array.h"
 #include "server_net.h"
 
 static bool net_init_bool = false;
 static int_ class_data_settings = CLASS_DATA_UPDATE_EVERYTHING;
 net_t *net = nullptr;
-static loop_t net_loop_code;
-extern loop_t server_loop_code;
+static loop_t *net_loop_code;
 
 static bool net_check_pingout(client_t *tmp){
 	const long double current_time = get_time();
@@ -64,7 +66,8 @@ static void net_read_data();
 
 void net_init(){
 	if(net_init_bool == false){
-		net_loop_code.name = "net loop code";
+		net_loop_code = new loop_t;
+		net_loop_code->array.name = "net loop code";
 		net_ip_connection_info_t *tmp_conn_info = new net_ip_connection_info_t;
 		tmp_conn_info->ip = "127.0.0.1";
 		tmp_conn_info->port = NET_SERVER_PORT;
@@ -73,10 +76,10 @@ void net_init(){
 		SET_BIT(class_data_settings, CLASS_DATA_COORD_BIT, 1);
 		SET_BIT(class_data_settings, CLASS_DATA_MODEL_BIT, 1);
 		SET_BIT(class_data_settings, CLASS_DATA_CLIENT_BIT, 1);
-		loop_add(&net_loop_code, loop_generate_entry(loop_entry_t(), "net_read_data", net_read_data));
-		loop_add(&net_loop_code, loop_generate_entry(loop_entry_t(), "net_pingout", net_pingout));
-		loop_add(&net_loop_code, loop_generate_entry(loop_entry_t(), "net_send_data",  net_send_data));
-		loop_add(&server_loop_code, loop_generate_entry(loop_entry_t(), "net_engine",  net_engine));
+		loop_add(net_loop_code, loop_generate_entry(loop_entry_t(), "net_read_data", net_read_data));
+		loop_add(net_loop_code, loop_generate_entry(loop_entry_t(), "net_pingout", net_pingout));
+		loop_add(net_loop_code, loop_generate_entry(loop_entry_t(), "net_send_data",  net_send_data));
+		loop_add(server_loop_code, loop_generate_entry(loop_entry_t(), "net_engine",  net_engine));
 	}else{
 		printf("net_init has already been initalized, not re-running the initializer\n");
 	}
@@ -127,10 +130,10 @@ static void net_pingout(){
 	for(uint_ i = 0;i < client_vector_size;i++){
 		((client_t*)find_pointer(client_vector[i], "client_t"))->array.data_lock.lock();
 		if(net_check_pingout((client_t*)find_pointer(client_vector[i], "client_t")) == true){
-				((client_t*)find_pointer(client_vector[i], "client_t"))->array.data_lock.unlock();
-				delete (client_t*)find_pointer(client_vector[i], "client_t");
+			((client_t*)find_pointer(client_vector[i], "client_t"))->array.data_lock.unlock();
+			delete (client_t*)find_pointer(client_vector[i], "client_t");
 		}else{
-				((client_t*)find_pointer(client_vector[i], "client_t"))->array.data_lock.unlock();
+			((client_t*)find_pointer(client_vector[i], "client_t"))->array.data_lock.unlock();
 		}
 	}
 }
@@ -139,11 +142,11 @@ int_ net_loop_settings = 0;
 
 void net_engine(){
 	net->loop();
-	loop_run(&net_loop_code);
+	loop_run(net_loop_code);
 }
 
 void net_close(){
 	delete net;
 	net = nullptr;
-	loop_del(&server_loop_code, net_engine);
+	loop_del(server_loop_code, net_engine);
 }

@@ -20,7 +20,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "../main.h"
 	#include "cstdint"
 	typedef int_ array_id_t;
-	#include "../util/util_main.h"
 	#ifdef __linux
 		#include "signal.h"
 	#endif
@@ -31,9 +30,13 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "cstdio"
 	#include "cstdlib"
 	#include "vector"
+	#include "utility"
+	#include "mutex"
+	#include "thread"
 	#define ARRAY_RESERVE_INT_SIZE 2 // spawn iteration and ID
 	#define ARRAY_RESERVE_STRING_SIZE 1 // data_type
 	#define ARRAY_RESERVE_LONG_DOUBLE_SIZE 0 // nothing needed here yet (spawn_time?)
+	#define ARRAY_RESERVE_VOID_PTR_SIZE 1 // object
 	#define ARRAY_VECTOR_SIZE 65536
 	#define RESERVE_ID_SIZE 64
 	#define RESERVE_ID_ITERATOR 0xB00B0000 // hehehe
@@ -107,16 +110,121 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		// directly related to the pointer item
 		void* pointer;
 		std::string data_type;
-		std::size_t data_type_hash;
+		std::string name;
 		// directly related to the array iteself
+		bool put_inside_type_vector;
 		array_id_t id;
-		array_t(void*, int_); // TODO: put data_type in the initializer
+		array_t(void*, std::string, int_); // TODO: put data_type in the initializer
 		~array_t();
-		std::mutex data_lock;
-		std::mutex int_lock, long_double_lock, string_lock;
+		lock_t data_lock;
+		lock_t int_lock, long_double_lock, string_lock,  void_ptr_lock;
 		std::vector<std::pair<int_*, std::string> > int_array;
 		std::vector<std::pair<long double*, std::string> > long_double_array;
 		std::vector<std::pair<std::string*, std::string> > string_array;
+		std::vector<std::pair<void**, std::string> > void_ptr_array; // don't network this, just use it for console things
+		void int_in_bounds(uint_ a){
+			if(a >= int_array.size()){
+				throw std::out_of_range("int");
+			}
+		}
+		void long_double_in_bounds(uint_ a){
+			if(a >= long_double_array.size()){
+				throw std::out_of_range("long double");
+			}
+		}
+		void string_in_bounds(uint_ a){
+			if(a >= string_array.size()){
+				throw std::out_of_range("string");
+			}
+		}
+		void void_ptr_in_bounds(uint_ a){
+			if(a >= void_ptr_array.size()){
+				throw std::out_of_range("void_ptr");
+			}
+		}
+		// adders need the locks
+		void set_lock(lock_t *tmp){
+			data_lock.lock();
+			tmp->lock();
+		}
+		void unset_lock(lock_t *tmp){
+			data_lock.unlock();
+			tmp->unlock();
+		}
+		void add_int(std::pair<int_*, std::string> a){
+			set_lock(&int_lock);
+			int_array.push_back(a);
+			unset_lock(&int_lock);
+		}
+		void add_long_double(std::pair<long double*, std::string> a){
+			set_lock(&long_double_lock);
+			long_double_array.push_back(a);
+			unset_lock(&long_double_lock);
+		}
+		void add_string(std::pair<std::string*, std::string> a){
+			set_lock(&string_lock);
+			string_array.push_back(a);
+			unset_lock(&string_lock);
+		}
+		void add_void_ptr(std::pair<void**, std::string> a){
+			set_lock(&void_ptr_lock);
+			void_ptr_array.push_back(a);
+			unset_lock(&void_ptr_lock);
+		}
+		// so do the setters (the pointer shouldn't change, so these really shouldn't be needed)
+		void set_int(uint_ a, int_ b){
+			set_lock(&int_lock);
+			int_in_bounds(a);
+			*(std::get<0>(int_array[a])) = b;
+			unset_lock(&int_lock);
+		}
+		void set_long_double(uint_ a, long double b){
+			set_lock(&long_double_lock);
+			long_double_in_bounds(a);
+			*(std::get<0>(long_double_array[a])) = b;
+			unset_lock(&long_double_lock);
+		}
+		void set_string(uint_ a, std::string b){
+			set_lock(&string_lock);
+			string_in_bounds(a);
+			*(std::get<0>(string_array[a])) = b;
+			unset_lock(&string_lock);
+		}
+		void set_void_ptr(uint_ a, void* b){
+			set_lock(&void_ptr_lock);
+			void_ptr_in_bounds(a);
+			*(std::get<0>(void_ptr_array[a])) = b;
+			unset_lock(&void_ptr_lock);
+		}
+		// receive pointer to the object (useful for testing if an object exists)
+		int get_int(uint_ a){
+			set_lock(&int_lock);
+			int_in_bounds(a);
+			int retval = *(std::get<0>(int_array[a]));
+			unset_lock(&int_lock);
+			return retval;
+		}
+		long double get_long_double(uint_ a){
+			set_lock(&long_double_lock);
+			long_double_in_bounds(a);
+			long double retval = *(std::get<0>(long_double_array[a]));
+			unset_lock(&long_double_lock);
+			return retval;
+		}
+		std::string get_string(uint_ a){
+			set_lock(&string_lock);
+			string_in_bounds(a);
+			std::string retval = *(std::get<0>(string_array[a]));
+			unset_lock(&string_lock);
+			return retval;
+		}
+		void* get_void_ptr(uint_ a){
+			set_lock(&void_ptr_lock);
+			void_ptr_in_bounds(a);
+			void* retval = *(std::get<0>(void_ptr_array[a]));
+			unset_lock(&void_ptr_lock);
+			return retval;
+		}
 		std::string gen_updated_string(int_ what_to_update = ~0);
 		std::string gen_long_double_string();
 		std::string gen_int_string();
@@ -124,9 +232,11 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		bool updated(int_*);
 		void update_data();
 		// getter and setter functions
+		// DEPRECATED. Try and use the get_settings and set settings
 		bool get_send(){return settings_&ARRAY_SETTING_SEND;}
 		bool get_write_protected(){return settings_&ARRAY_SETTING_WRITE_PROTECTED;}
 		bool get_immunity(){return settings_&ARRAY_SETTING_IMMUNITY;}
+		// end dep.
 		bool get_setting(int_ x){return (settings_&x)!=0;} //comparing against 0 is pretty fast
 		void set_setting(int_ x, bool y){(y)?(settings_|=x):(settings_&=~x);}
 		void set_settings(int_ a){settings_=a;}
@@ -155,11 +265,12 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern array_t* find_array_pointer(array_id_t);
 	extern array_id_t array_highest_id();
 	extern array_t* array_vector[ARRAY_VECTOR_SIZE];
-	extern std::mutex array_lock;
+	extern lock_t array_lock;
 	extern void lock_array_of_data_type(std::vector<void*>, std::string);
 	extern std::vector<array_id_t> all_ids_of_type(std::string);
 	extern void delete_thread(std::thread*);
 	extern bool valid_id(array_id_t);
 	extern std::vector<std::string> generate_outbound_class_data();
+	extern void update_all_array_entries();
 	#include "../input/input_main.h"
 #endif

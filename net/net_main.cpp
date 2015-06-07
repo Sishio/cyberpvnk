@@ -60,7 +60,9 @@ static void net_ip_read_mt(net_ip_t *ip){
 	ip->loop_receive_mt();
 }*/
 
-net_t::net_t(int_ argc, char** argv, int_ b){
+net_t::net_t(int_ argc, char** argv, int_ b) : array(this, "net_t", ARRAY_SETTING_IMMUNITY){
+	array.void_ptr_array.push_back(std::make_pair((void**)&ip, "pointer to net_ip_t"));
+	array.reset_values();
 	ip = nullptr;
 	blank();
 	init_parse_parameters(argc,argv);

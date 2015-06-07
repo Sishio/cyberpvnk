@@ -16,10 +16,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef SERVER_NET_H
 	#define SERVER_NET_H
-	#include "server_main.h"
-	#include "../loop/loop_main.h"
-	#include "../class/class_main.h"
-	#include "../class/class_array.h"
 	#include "../net/net_main.h"
 	extern net_t *net;
 	extern void net_init();

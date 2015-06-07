@@ -14,10 +14,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "../loop/loop_main.h"
-#include "../class/class_main.h"
-#include "../render/render_main.h"
-#include "c_main.h"
 #include "c_render_engine.h"
 
 extern int_ argc_;
@@ -44,17 +40,15 @@ static std::string get_tile_filename(uint_ x, uint_ y){
 void background_init(){
 	uint_ current_x = 8;
 	uint_ current_y = 8;
-	screen_t *current_screen = render->get_current_screen();
-	throw_if_nullptr(current_screen);
+	screen_t *current_screen = (screen_t*)find_pointer(render->screen[0]);
 	current_screen->array.data_lock.lock();
-	for(uint_ i = 0;current_y <= current_screen->y_res;i++){
-		std::cout << current_x << " " << current_y << std::endl;
+	for(uint_ i = 0;true;i++){
 		std::string tile_filename = get_tile_filename(current_x, current_y);
 		coord_t *coord = new coord_t;
 		coord->array.data_lock.lock();
 		tile_t *tile = new tile_t;
 		tile->array.data_lock.lock();
-		image_t *image = (image_t*)find_pointer(search_for_image(tile_filename)); //search_for_image always returns a valid image
+		image_t *image = new image_t(tile_filename);
 		image->array.data_lock.lock();
 		for(uint_ i = 0;i < TILE_ANIMATION_SIZE;i++){
 			for(uint_ c = 0;c < TILE_IMAGE_SIZE;c++){
@@ -65,23 +59,28 @@ void background_init(){
 		coord->tile_id = tile->array.id;
 		coord->x = current_x;
 		coord->y = current_y;
+		bool end = false;
+		std::cout << current_x << " " << current_y << std::endl;
 		if(current_x <= current_screen->x_res){
 			current_x += 16;
 		}else{
 			current_x = 8;
 			if(current_y <= current_screen->y_res){
 				current_y += 16;
+			}else{
+				end = true;
 			}
 		}
 		coord->array.data_lock.unlock();
 		tile->array.data_lock.unlock();
 		image->array.data_lock.unlock();
+		if(end) break;
 	}
 	current_screen->array.data_lock.unlock();
 }
 
 void render_init(){
-	loop_add(loop, loop_generate_entry(loop_entry_t(), "render_engine", render_engine));
+	loop_add(&loop, "render_engine", render_engine);
 	render = new render_t(argc_, argv_);
 	screen_t *screen_ = new screen_t();
 	screen_->array.data_lock.lock();
@@ -101,7 +100,5 @@ void render_engine(){
 }
 
 void render_close(){
-	delete render;
-	render = nullptr;
-	loop_del(loop, render_engine);
+	loop_del(&loop, render_engine);
 }

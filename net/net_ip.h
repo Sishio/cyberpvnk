@@ -15,10 +15,7 @@ You should have received a copy of the GNU General Public License
 along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 */
 //#define ALPHA_NEGATIVE_SEPERATOR 1
-#include "../class/class_main.h"
-#include "../util/util_main.h"
 #include "net_const.h"
-#include "../class/class_array.h"
 #include "cstdio"
 #include "cstdlib"
 #include "vector"

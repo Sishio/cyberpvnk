@@ -1,6 +1,8 @@
 #ifndef RENDER_MAIN_H
 #define RENDER_MAIN_H
 #include "../main.h"
+#include "../class/class_main.h"
+#include "cassert"
 #include "cstdio"
 #if defined(__linux) || defined(OSX)
 #include "SDL2/SDL.h"
@@ -13,11 +15,16 @@
 #endif
 #include "string"
 #include "iostream"
-#define TILE_IMAGE_SIZE 128
+#define TILE_IMAGE_SIZE 8
+class render_t;
+struct image_t;
+struct tile_t;
+struct screen_t;
 struct image_t{
 private:
 	std::string filename;
 	SDL_Surface *surface;
+	SDL_Texture *texture;
 public:
 	void free_ram();
 	array_t array;
@@ -25,11 +32,12 @@ public:
 	~image_t();
 	void load();
 	void write_to_screen(int_, int_);
-	std::string get_filename(){return filename;}
+	std::string get_filename();
 	std::string get_image_string();
-	SDL_Surface *get_surface(){return surface;}
+	SDL_Surface *get_surface();
+	SDL_Texture *get_texture();
 };
-#define TILE_ANIMATION_SIZE 32
+#define TILE_ANIMATION_SIZE 8
 struct tile_t{
 private:
 	array_id_t image[TILE_ANIMATION_SIZE][TILE_IMAGE_SIZE];
@@ -38,11 +46,21 @@ public:
 	array_t array;
 	tile_t();
 	~tile_t();
-	image_t *get_image(uint_, uint_);
-	image_t *get_current_image();
+	array_id_t get_image_id(uint_, uint_);
+	array_id_t get_current_image_id();
 	uint_ get_current_animation_entry();
 	void set_current_animation_entry(uint_);
 	void set_image_id(uint_, uint_, array_id_t);
+};
+
+class render_t{
+public:
+	array_t array;
+	std::vector<array_id_t> screen;
+	render_t(int_, char**);
+	~render_t();
+	void loop();
+	screen_t *get_current_screen();
 };
 
 struct screen_t{
@@ -60,13 +78,5 @@ public:
 	void write_to_screen(coord_t*);
 };
 
-class render_t{
-public:
-	array_t array;
-	std::vector<array_id_t> screen;
-	render_t(int_, char**);
-	~render_t();
-	void loop();
-};
 extern array_id_t search_for_image(std::string);
 #endif

@@ -1,0 +1,3 @@
+The maps here are extracted from all of the array_t entries that are needed for this to work.
+That means these files aren't really editable by hand. You would probably need a hex editor or something like that for this to work.
+	The seperators I use aren't legitimate ASCII characters, so the hex editor is the only guaranteed way they can be edited by hand.

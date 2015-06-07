@@ -1,7 +1,6 @@
 #ifndef INPUT_MAIN_H
 	#define INPUT_MAIN_H
-	#include "../util/util_main.h"
-	#include "../class/class_main.h"
+	#include "../main.h"
 	#include "../class/class_array.h"
 	#if defined(__linux) || defined(OSX)
 		#include "SDL2/SDL.h"
@@ -10,21 +9,23 @@
 	#elif _WIN32
 		#include "SDL2.h"
 	#endif
+	#define KEYBOARD_MAP_SIZE 1024
 	class input_keyboard_map_t{
 	public:
 		array_t array;
-		int_ keyboard_map[1024];
+		int_ keyboard_map[KEYBOARD_MAP_SIZE];
 		input_keyboard_map_t();
 		~input_keyboard_map_t();
 	};
 	class input_t{
 	private:
 		array_id_t keyboard_map_id;
-		input_keyboard_map_t *keyboard_map;
 		void keyboard_to_signal();
 	public:
+		array_t array;
 		input_t(int argc, char** argv, array_id_t _keyboard_map_id = DEFAULT_INT_VALUE);
 		~input_t();
+		int_ nsig;
 		void loop();
 		bool query_key(int);
 	};

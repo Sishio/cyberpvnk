@@ -1,0 +1,2 @@
+Unified settings in the array_t type
+Update a time variable from inside of the function to get its current FPS and warn if it hangs
