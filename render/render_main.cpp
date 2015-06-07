@@ -77,8 +77,7 @@ void render_t::loop(){
 	}
 	tmp_screen->array.data_lock.lock();
 	std::vector<array_id_t> coord_vector = all_ids_of_type("coord_t");
-	uint_ i = 0;
-	for(;i < coord_vector.size();i++){
+	for(uint_ i = 0;i < coord_vector.size();i++){
 		try{
 			coord_t *tmp = (coord_t*)find_pointer(coord_vector[i]);
 			throw_if_nullptr(tmp);
@@ -117,18 +116,15 @@ screen_t::screen_t() : array(this , "screen_t", ARRAY_SETTING_IMMUNITY){
 }
 
 void screen_t::new_screen(){
-	screen = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, x_res, y_res, SDL_WINDOW_SHOWN);
-	if(screen == nullptr){
-		printf_("ERROR: SDL2 Window couldn't be initalized\n", PRINTF_VITAL);
-		return;
-	}
-	screen_surface = SDL_GetWindowSurface(screen);
-	if(screen_surface == nullptr){
-		printf_("ERROR: SDL2 Window's Surface couldn't be intialized\n", PRINTF_VITAL);
-	}
-	renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_SOFTWARE);
-	if(renderer == nullptr){
-		printf_("ERROR: SDL2 Window's Renderer couldn't be initialized\n", PRINTF_VITAL);
+	try{
+		screen = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, x_res, y_res, SDL_WINDOW_SHOWN);
+		throw_if_nullptr(screen);
+		screen_surface = SDL_GetWindowSurface(screen);
+		throw_if_nullptr(screen_surface);
+		renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_SOFTWARE);
+		throw_if_nullptr(renderer);
+	}catch(std::logic_error &e){
+		printf_("ERROR: Couldn't initialize the screen\n", PRINTF_ERROR);
 	}
 }
 

@@ -106,7 +106,7 @@ void coord_2d_input_functions::right(coord_t *a){
 }
 
 void physics_init(){
-	loop_add(server_loop_code, loop_generate_entry(loop_entry_t(), "physics engine", physics_engine));
+	loop_add(server_loop_code, loop_generate_entry(0, "physics engine", physics_engine));
 }
 
 void physics_close(){

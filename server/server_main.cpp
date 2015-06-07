@@ -57,7 +57,7 @@ void server_info_init(){
 void test_logic_engine();
 
 void test_logic_init(){
-	loop_add(server_loop_code, loop_generate_entry(loop_entry_t(), "test_logic_engine", test_logic_engine));
+	loop_add(server_loop_code, loop_generate_entry(0, "test_logic_engine", test_logic_engine));
 	net_ip_connection_info_t *tmp_conn_info = new net_ip_connection_info_t;
 	tmp_conn_info->ip = "127.0.0.1";
 	tmp_conn_info->port = NET_IP_SERVER_RECEIVE_PORT;

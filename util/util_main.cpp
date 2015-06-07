@@ -59,21 +59,53 @@ void ms_sleep(long double ms_){
 	#endif
 }
 
-//#define G_RANDOM 1
-#define CPP11_RANDOM
+#define G_RANDOM 1
+//#define CPP11_RANDOM
+//#define LINUX_RAND
+
+#ifdef LINUX_RAND
+std::ifstream random_stream("/dev/random");
+/*
+I should be able to change the amount of entropy the kernel has, right?
+*/
+#endif
+
+uint_ gen_seed(){
+	std::ifstream random_stream("/dev/random");
+	uint_ retval = 0;
+	char retval_[8];
+	random_stream.get(retval_, 8);
+	for(uint_ i = 0;i < 8;i++){
+		retval |= (retval_[i] << 8*i);
+	}
+	std::cout << "Random: " << retval << std::endl;
+	std::cout << "Random binary: " << gen_binary(retval) << std::endl;
+	random_stream.close();
+	return retval | 1;
+}
+
+uint_ r = gen_seed();
 
 uint_ gen_rand(uint_ a){ // range, from 1 to a
 	#ifdef CPP11_RANDOM
 		std::random_device rd;
 		std::mt19937 gen(rd());
-		std::uniform_int_distribution<> cpp11_random(1, ~((unsigned long int)0));
+		std::uniform_int_distribution<> cpp11_random(1, ~((uint_)0));
 		return cpp11_random(gen);
-	#elif G_RANDOM // /g/ No. 48126030
-		uint_ r = (uint_)get_last_time();
+	#elif defined(G_RANDOM) // /g/ No. 48126030
 		r += 0xE41682A9;
 		r ^= 0xE41682A9;
 		r = (r >> 1) | (r << 31) | 1;
 		return r;
+	#elif defined(LINUX_RAND)
+		uint_ retval = 0;
+		char retval_[8];
+		random_stream.get(retval_, 8);
+		for(uint_ i = 0;i < 8;i++){
+			retval |= (retval_[i] << 8*i);
+		}
+		std::cout << "Random: " << retval << std::endl;
+		return retval | 1;
 	#endif
 }
 
@@ -251,12 +283,14 @@ array_id_t scramble_id(array_id_t id){
 }
 
 int_ print_level = -1;
+int_ abort_print_level = -1;
 
 int_ printf_(std::string data_to_print, int_ status){
-	assert(print_level != -1);
+	assert(print_level != -1);	
 	if(status <= print_level){
 		std::cout << data_to_print;
 	}
+	assert(status > abort_print_level);
 	return 0;
 }
 
@@ -292,7 +326,7 @@ void test_ids(){
 	}
 }
 
-void misc_init(){
+void set_print_levels(){
 	if(check_for_parameter("--debug", argc_, argv_)){
 		print_level = PRINTF_DEBUG;
 	}else if(check_for_parameter("--spam", argc_, argv_)){
@@ -300,10 +334,22 @@ void misc_init(){
 	}else{
 		print_level = PRINTF_UNLIKELY_WARN;
 	}
-	// set_new_handler
+	if(check_for_parameter("--abort-error", argc_, argv_)){
+		abort_print_level = PRINTF_ERROR;
+	}else if(check_for_parameter("--abort-unlikely-warn", argc_, argv_)){
+		abort_print_level = PRINTF_UNLIKELY_WARN;
+	}else if(check_for_parameter("--abort-likely-warn", argc_, argv_)){
+		abort_print_level = PRINTF_LIKELY_WARN;
+	}else{
+		abort_print_level = 0; // PRINTF_VITAL should abort anyways
+	}
+}
+
+void misc_init(){
 	std::set_new_handler(free_ram);
 	test_random();
 	test_ids();
+	set_print_levels();
 }
 
 void throw_if_nullptr(void* a){

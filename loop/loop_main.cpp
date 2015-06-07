@@ -36,18 +36,27 @@ static void stop_infinite_loop(loop_entry_t *tmp){
 	tmp->thread = nullptr;
 }
 
-static void infinite_loop_function(void(*code)(), bool *term_pointer){
+static void infinite_loop_function(void(*code)(), int_ *term_pointer){
 	while(likely(infinite_loop() && *term_pointer == false)){
 		code();
 	}
 }
 
-loop_entry_t::loop_entry_t(){
+loop_entry_t::loop_entry_t() : array(this, "loop_entry_t", ARRAY_SETTING_IMMUNITY){
+	array.add_int(std::make_pair(&iteration_skip, "iteration skip"));
 	iteration_skip = 0;
+	array.add_void_ptr(std::make_pair((void**)&code, "code"));
 	code = nullptr;
-	settings = 0;
-	thread = nullptr;
+	array.add_int(std::make_pair(&term, "term"));
 	term = false;
+	array.add_int(std::make_pair(&settings, "settings"));
+	settings = 0;
+	array.add_void_ptr(std::make_pair((void**)&thread, "thread (neverend)"));
+	thread = nullptr;
+	array.add_long_double(std::make_pair(&start_time, "start time"));
+	start_time = 0;
+	array.add_long_double(std::make_pair(&end_time, "end time"));
+	end_time = 0;
 }
 
 bool loop_entry_t::get_settings(int_ settings_){
@@ -57,8 +66,8 @@ bool loop_entry_t::get_settings(int_ settings_){
 void loop_entry_t::set_settings(int_ settings_){
 	settings |= settings_;
 }
-void loop_add(loop_t *a, loop_entry_t b){
-	a->code.push_back(b);
+void loop_add(loop_t *a, loop_entry_t *b){
+	a->code.push_back(b->array.id);
 }
 
 static bool loop_entry_will_run(const loop_t *loop, const loop_entry_t *loop_entry){
@@ -80,36 +89,55 @@ void loop_run(loop_t *a){
 	const uint_ code_size = a->code.size();
 	const long double start_time = get_time();
 	for(uint_ i = 0;i < a->code.size();i++){
-		if(a->code[i].term == true){
-			if(a->code[i].thread != nullptr){
-				stop_infinite_loop(&(a->code[i]));
-			}else{
-				a->code.erase(a->code.begin()+i);
+		try{
+			loop_entry_t *tmp_entry = (loop_entry_t*)find_pointer(a->code[i]);
+			throw_if_nullptr(tmp_entry);
+			tmp_entry->array.data_lock.lock();
+			if(tmp_entry->term == true){
+				if(tmp_entry->thread != nullptr){
+					stop_infinite_loop(tmp_entry);
+				}else{
+					a->code.erase(a->code.begin()+i);
+				}
+			}else if(tmp_entry->code != nullptr){ // Deleting its place in the array allows for a seg fault if both pieces run
+				if(tmp_entry->get_settings(LOOP_CODE_PARTIAL_MT)){
+					if(tmp_entry->thread != nullptr){
+						stop_infinite_loop(tmp_entry);
+					}
+					tmp_entry->thread = new std::thread(tmp_entry->code);
+					tmp_entry->start_time = get_time();
+				}else if(tmp_entry->get_settings(LOOP_CODE_NEVEREND_MT)){
+					if(tmp_entry->thread == nullptr){
+						tmp_entry->thread = new std::thread(infinite_loop_function, tmp_entry->code, &(tmp_entry->term));
+						tmp_entry->start_time = get_time();
+					}
+				}else if(likely(tmp_entry->iteration_skip == 0 || a->tick%(tmp_entry->iteration_skip+1) == 0)){
+					if(tmp_entry->thread != nullptr){
+						stop_infinite_loop(tmp_entry);
+					}
+					tmp_entry->start_time = get_time();
+					tmp_entry->code();
+				}
 			}
-		}else if(a->code[i].code != nullptr){ // Deleting its place in the array allows for a seg fault if both pieces run
-			if(a->code[i].get_settings(LOOP_CODE_PARTIAL_MT)){
-				if(a->code[i].thread != nullptr){
-					stop_infinite_loop(&(a->code[i]));
-				}
-				a->code[i].thread = new std::thread(a->code[i].code);
-			}else if(a->code[i].get_settings(LOOP_CODE_NEVEREND_MT)){
-				if(a->code[i].thread == nullptr){
-					a->code[i].thread = new std::thread(infinite_loop_function, a->code[i].code, &(a->code[i].term));
-				}
-			}else if(likely(a->code[i].iteration_skip == 0 || a->tick%(a->code[i].iteration_skip+1) == 0)){
-				if(a->code[i].thread != nullptr){
-					stop_infinite_loop(&(a->code[i]));
-				}
-				a->code[i].code();
-			}
-		}
+			tmp_entry->array.data_lock.unlock();
+			/*
+			  WARNING: be careful of throwing something that misses a vital unlock
+			 */
+		}catch(std::logic_error &e){}
 	}
 	for(uint_ i = 0;i < a->code.size();i++){
-		if(a->code[i].get_settings(LOOP_CODE_PARTIAL_MT)){
-			a->code[i].thread->join();
-			delete a->code[i].thread;
-			a->code[i].thread = nullptr;
-		}
+		try{
+			loop_entry_t *tmp_entry = (loop_entry_t*)find_pointer(a->code[i]);
+			throw_if_nullptr(tmp_entry);
+			tmp_entry->array.data_lock.lock();
+			if(tmp_entry->get_settings(LOOP_CODE_PARTIAL_MT)){
+				tmp_entry->thread->join();
+				tmp_entry->end_time = get_time();
+				delete tmp_entry->thread;
+				tmp_entry->thread = nullptr;
+			}
+			tmp_entry->array.data_lock.unlock();
+		}catch(std::logic_error &e){}
 	}
 	const long double end_time = get_time();
 	const long double current_rate = 1/(end_time-start_time);
@@ -122,7 +150,10 @@ void loop_run(loop_t *a){
 		summary += "current frame rate: " + std::to_string(current_rate) + "\naverage framerate: " + std::to_string(a->average_rate) + "\nloop_settings: " + std::to_string(a->settings) + "\n";
 		summary += "\tTitle\tIteration Skip\n";
 		for(uint_ i = 0;i < a->code.size();i++){
-			summary += "\t" + a->code[i].name + "\t" + std::to_string(a->code[i].iteration_skip) + "\n";
+			try{
+				loop_entry_t *tmp = (loop_entry_t*)find_pointer(a->code[i]);
+				summary += "\t" + tmp->name + "\t" + std::to_string(tmp->iteration_skip) + "\n";
+			}catch(std::logic_error &e){}
 		}
 		printf("%s", summary.c_str());
 		a->settings &= ~LOOP_PRINT_THIS_TIME;
@@ -134,23 +165,37 @@ void loop_run(loop_t *a){
 void loop_del(loop_t *a, void(*b)()){
 	const uint_ code_size = a->code.size();
 	for(uint_ i = 0;i < code_size;i++){
-		if(a->code[i].code == b){
-			if(a->code[i].thread != nullptr){
-				stop_infinite_loop(&(a->code[i]));
+		try{
+			loop_entry_t *tmp = (loop_entry_t*)find_pointer(a->code[i]);
+			throw_if_nullptr(tmp);
+			tmp->array.data_lock.lock();
+			if(tmp->code == b){
+				if(tmp->thread != nullptr){
+					stop_infinite_loop(tmp);
+				}
+				a->code.erase(a->code.begin()+i);
+				tmp->array.data_lock.unlock();
+				return;
 			}
-			a->code.erase(a->code.begin()+i);
-			break;
-		}
+			tmp->array.data_lock.unlock();
+		}catch(std::logic_error &e){}
 	}
 }
 
 void loop_del(loop_t *a, std::string b){
 	const uint_ code_size = a->code.size();
 	for(uint_ i = 0;i < code_size;i++){
-		if(a->code[i].name == b){
-			a->code[i].term = true;
-			break;
-		}
+		try{
+			loop_entry_t *tmp = (loop_entry_t*)find_pointer(a->code[i]);
+			throw_if_nullptr(tmp);
+			tmp->array.data_lock.lock();
+			if(tmp->name == b){
+				tmp->term = true;
+				tmp->array.data_lock.unlock();
+				return;
+			}
+			tmp->array.data_lock.unlock();
+		}catch(std::logic_error &e){}
 	}
 }
 
@@ -160,8 +205,10 @@ bool infinite_loop(){
 
 void blank(){}
 
-loop_entry_t loop_generate_entry(loop_entry_t a, std::string name, void(*function)()){
-	a.name = name;
-	a.code = function;
+loop_entry_t* loop_generate_entry(int_ settings, std::string name, void(*function)()){
+	loop_entry_t *a = new loop_entry_t();
+	a->name = name;
+	a->code = function;
+	a->settings = settings;
 	return a;
 }

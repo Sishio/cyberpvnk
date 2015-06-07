@@ -95,9 +95,9 @@ static void net_send_engine(){
 }
 
 static void net_init_loop(){
-	loop_add(net_loop_mt, loop_generate_entry(loop_entry_t(), "net_module_loop", net_module_loop));
-	loop_add(net_loop_mt, loop_generate_entry(loop_entry_t(), "net_receive_engine", net_receive_engine));
-	loop_add(net_loop_mt, loop_generate_entry(loop_entry_t(), "net_send_engine", net_send_engine));
+	loop_add(net_loop_mt, loop_generate_entry(LOOP_CODE_PARTIAL_MT, "net_module_loop", net_module_loop));
+	loop_add(net_loop_mt, loop_generate_entry(LOOP_CODE_PARTIAL_MT, "net_receive_engine", net_receive_engine));
+	loop_add(net_loop_mt, loop_generate_entry(LOOP_CODE_PARTIAL_MT, "net_send_engine", net_send_engine));
 	net_ip_connection_info_t *self_info = new net_ip_connection_info_t;
 	net_ip_connection_info_t *host_info = new net_ip_connection_info_t;
 	self_info->array.data_lock.lock();
@@ -146,7 +146,7 @@ static void net_init_loop(){
 }
 
 void net_init(){
-	loop_add(loop, loop_generate_entry(loop_entry_t(), "net_engine", net_engine));
+	loop_add(loop, loop_generate_entry(0, "net_engine", net_engine));
 	net_loop_mt = new loop_t;
 }
 

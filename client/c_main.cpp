@@ -49,42 +49,44 @@ static void load_engines(){
 	init_->array.name = "init code";
 	end_->array.name = "close code";
 	init_->settings = end_->settings = 0;
-	loop_entry_t init_loop_template, end_loop_template;
+	int_ init_loop_settings = 0, end_loop_settings = 0;
 	if(check_for_parameter("--fast-init", argc_, argv_)){
-		init_loop_template.settings = LOOP_CODE_PARTIAL_MT;
+		init_loop_settings = LOOP_CODE_PARTIAL_MT;
 	}
 	if(check_for_parameter("--fast-close", argc_, argv_)){ // who needs this?
-		end_loop_template.settings = LOOP_CODE_PARTIAL_MT;
+		end_loop_settings = LOOP_CODE_PARTIAL_MT;
 	}
-	loop_add(init_, loop_generate_entry(init_loop_template, "console_init", console_init));
+	loop_add(init_, loop_generate_entry(init_loop_settings, "console_init", console_init));
 	switch(choice){
 	case 1:
 		if(!check_for_parameter("--render-disable", argc_, argv_)){
-			loop_add(init_, loop_generate_entry(init_loop_template, "render_init", render_init));
-			loop_add(end_, loop_generate_entry(end_loop_template, "render_close", render_close));
+			loop_add(init_, loop_generate_entry(init_loop_settings, "render_init", render_init));
+			loop_add(end_, loop_generate_entry(end_loop_settings, "render_close", render_close));
 		}
 		if(!check_for_parameter("--input-disable", argc_, argv_)){
-			loop_add(init_, loop_generate_entry(init_loop_template, "input_init", input_init));
-			loop_add(end_, loop_generate_entry(end_loop_template, "input_close", input_close));
+			loop_add(init_, loop_generate_entry(init_loop_settings, "input_init", input_init));
+			loop_add(end_, loop_generate_entry(end_loop_settings, "input_close", input_close));
 		}
 		if(!check_for_parameter("--net-disable", argc_, argv_)){
-			loop_add(init_, loop_generate_entry(init_loop_template, "net_init", net_init));
-			loop_add(end_, loop_generate_entry(end_loop_template, "net_close", net_close));
+			loop_add(init_, loop_generate_entry(init_loop_settings, "net_init", net_init));
+			loop_add(end_, loop_generate_entry(end_loop_settings, "net_close", net_close));
 		}
 		break;
 	case 2:
-		loop_add(init_, loop_generate_entry(init_loop_template, "test_logic_init", test_logic_init));
-		loop_add(end_, loop_generate_entry(end_loop_template, "test_logic_close", test_logic_close));
+		loop_add(init_, loop_generate_entry(init_loop_settings, "test_logic_init", test_logic_init));
+		loop_add(end_, loop_generate_entry(end_loop_settings, "test_logic_close", test_logic_close));
 		break;
 	case 3:
 		exit(0);
+		break;
+	case 4:
 		break;
 	default:
 		assert(false);
 		break;
 	}
-	loop_add(end_, loop_generate_entry(init_loop_template, "console_close", console_close));
-	// console should always be the last thing to open
+	loop_add(end_, loop_generate_entry(end_loop_settings, "console_close", console_close));
+	// console should always be the last thing to open for debugging purposes
 }
 
 int main(int argc, char **argv){

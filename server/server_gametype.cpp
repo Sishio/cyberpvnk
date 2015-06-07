@@ -22,7 +22,7 @@ static gametype_info_t gametype_info;
 void gametype_engine();
 
 void gametype_init(){
-	loop_add(server_loop_code, loop_generate_entry(loop_entry_t(), "gametype engine", gametype_engine));
+	loop_add(server_loop_code, loop_generate_entry(0, "gametype engine", gametype_engine));
 }
 
 void gametype_engine(){

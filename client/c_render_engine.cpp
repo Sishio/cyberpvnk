@@ -81,7 +81,7 @@ void background_init(){
 }
 
 void render_init(){
-	loop_add(loop, loop_generate_entry(loop_entry_t(), "render_engine", render_engine));
+	loop_add(loop, loop_generate_entry(0, "render_engine", render_engine));
 	render = new render_t(argc_, argv_);
 	screen_t *screen_ = new screen_t();
 	screen_->array.data_lock.lock();

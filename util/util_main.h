@@ -85,6 +85,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern int_ util_shell(int_, std::string);
 	extern void ms_sleep(long double);
 	extern uint_ gen_rand(uint_ a = 0);
+	extern std::string gen_binary(array_id_t);
 	extern int_ term_if_true(bool, char*);
 	extern int_ warn_if_true(bool, char*);
 	extern bool probably_equal(int_,int_);

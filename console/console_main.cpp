@@ -25,9 +25,21 @@ static long double* pointer_stack_long_double[STACK_SIZE] = {nullptr};
 static std::string* pointer_stack_string[STACK_SIZE] = {nullptr};
 static void* pointer_stack_void[STACK_SIZE] = {nullptr};
 
+void blank_commands(std::string *commands){
+	for(uint_ i = 0;i < STACK_SIZE;i++){
+		if(commands[i] == ""){
+			return;
+		}else{
+			commands[i] = "";
+		}
+	}
+}
+
 void convert_line_to_commands(std::string command_, std::string *command){
+	blank_commands(command);
 	std::stringstream ss(command_);
 	ss >> command[0] >> command[1] >> command[2] >> command[3] >> command[4] >> command[5] >> command[6] >> command[7];
+	if(command[0] == "done" && command[1] == "sleep") assert(false);
 	printf_("DEBUG: console command: " + command[0] + " " + command[1] + " " + command[2] + " " + command[3] + " " + command[4] + " " + command[5] + " " + command[6] + " " + command[7] + "\n", PRINTF_DEBUG);
 	for(uint_ i = 0;i < 8;i++){ // should work well enough (no tabs after the first char)
 		while(command[i][0] == '\t' || command[i][0] == '\n'){
@@ -53,52 +65,97 @@ shell_script_t::shell_script_t() : array(this, "shell_script_t", ARRAY_SETTING_I
 
 int run_command(std::string*);
 
+static bool valid_command_line(std::string *command_line){
+	return (*command_line)[0] != '#' || (*command_line)[0] != '\n' || (*command_line)[0] != '\r' || (*command_line)[0] != ' ';
+}
+
+static uint_ detect_end_of_conditional_statement(std::vector<std::string> *pointer_to_vector, uint_ start){
+	uint_ place_in_stack = 0;
+	std::string current_commands[STACK_SIZE];
+	for(uint i = 0;i < pointer_to_vector->size();i++){
+		if(valid_command_line(&(*pointer_to_vector)[i])){
+			convert_line_to_commands((*pointer_to_vector)[i], current_commands);
+			if(current_commands[0] == "if" || current_commands[0] == "while"){
+				place_in_stack++;
+			}else if(current_commands[0] == "done"){
+				place_in_stack--;
+			}
+			if(place_in_stack == 0){
+				return i;
+			}
+		}
+	}
+	printf_("ERROR: detect_end_of_conditional_statement: Couldn't detect the end of the conditonal, there is probably a syntax error in the script\n", PRINTF_ERROR);
+	throw std::logic_error("script syntax error");
+	return 0;
+}
+
+static uint_ run_conditional_statement(std::vector<std::string> *pointer_to_vector, uint_ start){
+	const uint_ end = detect_end_of_conditional_statement(pointer_to_vector, start); // return done slot, the iterator +1s it
+	printf_("DEBUG: run_conditional_statement: end of the current statement is line #" + std::to_string(end) + "\n", PRINTF_DEBUG);
+	std::string current_commands[STACK_SIZE];
+	std::string conditional_commands[STACK_SIZE];
+	do{
+		convert_line_to_commands((*pointer_to_vector)[start], conditional_commands);
+		uint_ command_start = 0;
+		std::string tmp = "";
+		if(conditional_commands[0] == "while" && conditional_commands[1] == "if"){
+			command_start = 1;
+		}else if(conditional_commands[0] == "if"){
+			command_start = 0;
+			tmp = conditional_commands[0];
+		}
+		if(run_command(&(conditional_commands[command_start])) != 0){
+			printf_("ERROR: run_conditional_statement: Couldn't run the initial conditional\n", PRINTF_ERROR);
+			assert(false);
+		}
+		if(tmp != ""){
+			conditional_commands[0] = tmp;
+		}
+		if(in_stack[CONDITION_STACK_ENTRY] != "0"){
+			for(uint_ i = start+1;i < end;i++){
+				blank_commands(current_commands);
+				if(valid_command_line(&(*pointer_to_vector)[i])){
+					convert_line_to_commands((*pointer_to_vector)[i], current_commands);
+					if(current_commands[0] == "if" || current_commands[0] == "while"){
+						printf_("STATUS: run_conditional_statement: Conditionals are recursive, running another instance of run_conditional_statement\n", PRINTF_DEBUG);
+						run_conditional_statement(pointer_to_vector, i); // i = start+1 makes it so the same conditional isn't repeated ad infinitum
+					}else if(run_command(current_commands) != 0){
+						printf_("ERROR: run_conditional_statement: run_command failed\n", PRINTF_ERROR);
+						assert(false);
+					}else{
+						printf_("STATS: run_conditional_statement: run_command finished successfully\n", PRINTF_STATUS);
+					}
+				}else{
+					printf_("SPAM: run_conditional_statement: Detected something that wasn't a command\n", PRINTF_SPAM);
+				}
+			}
+		}else{
+			printf_("DEBUG: run_conditional_statement: Condition is false, not running the code\n", PRINTF_DEBUG);
+		}
+	}while(conditional_commands[0] == "while" && in_stack[CONDITION_STACK_ENTRY] != "0");
+	return end;
+}
+
 int_ shell_script_t::run(){
-	printf_("DEBUG: Starting a shell script\n", PRINTF_DEBUG);
+	printf_("DEBUG: shell_script_t::run: Starting a shell script\n", PRINTF_DEBUG);
 	int_ level_of_statements = 0;
 	for(uint_ i = 0;i < commands.size();i++){
 		if(commands[i].size() != 0 && commands[i][0] != '#' && commands[i][0] != ' ' && commands[i][0] != '\n'){
 			std::string command[STACK_SIZE];
 			convert_line_to_commands(commands[i], command);
 			if(command[0] == "if" || command[0] == "while"){
-				int_ level_of_statements_ = level_of_statements; // the following code re-reads the first line and processes the whole chunk
-				uint_ c;
-				for(c = i;c < commands.size();c++){
-					std::string command_[STACK_SIZE];
-					convert_line_to_commands(commands[i], command_);
-					if(command_[0] == "if" || command_[0] == "while"){
-						level_of_statements_++;
-					}else if(command_[0] == "done"){
-						level_of_statements_--;
-					}
-					if(level_of_statements_ == level_of_statements){
-						if(command[0] == "if"){
-							break;
-						}else if(command[0] == "while"){
-							std::string *command_ptr = nullptr;
-							// changes while to 'if' if 'if' isn't following while
-							if(command[1] == "if"){
-								command_ptr = &command[1];
-							}else{
-								command[0] = "if";
-								command_ptr = &command[0];
-							}
-							run_command(command_ptr);
-							if(in_stack[CONDITION_STACK_ENTRY] == "1"){
-								c = i;
-							}else if(in_stack[CONDITION_STACK_ENTRY] == "0"){
-								break;
-							}
-						}
-					}
-				}
-				i = c; // skip to the end of this complicated bit
-			}else if(run_command(command) == -1){
-				printf_("ERROR: run_command on a shell script returned -1. Aborting the entire shell script.\n", PRINTF_ERROR);
+				printf_("DEBUG: shell_script_t::run: found a conditional, running the special run_conditional_statement function\n", PRINTF_DEBUG);
+				uint_ i_ = i;
+				i = run_conditional_statement(&commands, i);
+				printf_("DEBUG: shell_script_t::run: old i: " + std::to_string(i_) + " new i: " + std::to_string(i) + "\n", PRINTF_DEBUG);
+			}else if(run_command(command) != 0){
+				printf_("ERROR: shell_script_t::run: run_command on a shell script returned -1. Aborting the entire shell script.\n", PRINTF_ERROR);
 				return -1;
 			}else{
-				printf_("DEBUG: run_command ran successfully\n", PRINTF_DEBUG);
+				printf_("DEBUG: shell_script_t::run: run_command ran successfully\n", PRINTF_DEBUG);
 			}
+			blank_commands(command);
 		}
 	}
 	return 0;
@@ -271,9 +328,7 @@ void console_engine(){
 		}else{
 			std::cout << "run_command failed" << std::endl;
 		}
-		for(unsigned long int i = 0;i < STACK_SIZE;i++){
-			command[i] = "";
-		}
+		blank_commands(command);
 	}
 }
 
@@ -369,8 +424,20 @@ std::string get_target_value(std::string target_value, void* thing, std::string 
 	return return_value;
 }
 
+static std::string convert_commands_to_line(std::string *commands){
+	std::string retval;
+	for(uint_ i = 0;i < STACK_SIZE;i++){
+		if(commands[i] == ""){
+			return retval;
+		}
+		retval += commands[i] + " ";
+	}
+	return retval;
+}
+
 int run_command(std::string* command){
-	assert(command[0] != "done" || command[0] != "while");
+	assert(command[0] != "done" && command[0] != "while");
+	printf_("DEBUG: run_command: command == " + convert_commands_to_line(command) + "\n", PRINTF_DEBUG);
 	if(command[0] == "modify"){
 		if(command[1] == "bitwise"){
 			int_ var[2];
@@ -557,19 +624,19 @@ int run_command(std::string* command){
 			}
 		}else if(command[1] == "stacks"){
 			std::string output;
-			for(unsigned long int i = 0;i < STACK_SIZE;i++){
+			for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
 				output += "in_stack[" + std::to_string(i) + "]: " + in_stack[i] + "\n";
 			}
-			for(unsigned long int i = 0;i < STACK_SIZE;i++){
+			for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
 				output += "out_stack[" + std::to_string(i) + "]: " + out_stack[i] + "\n";
 			}
-			for(unsigned long int i = 0;i < STACK_SIZE;i++){
+			for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
 				output += "pointer_stack_int[" + std::to_string(i) + "]: " + ((pointer_stack_int[i] == nullptr) ? "nullptr" : std::to_string(*pointer_stack_int[i])) + "\n";
 			}
-			for(unsigned long int i = 0;i < STACK_SIZE;i++){
+			for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
 				output += "pointer_stack_long_double[" + std::to_string(i) + "]: " + ((pointer_stack_long_double[i] == nullptr) ? "nullptr" : std::to_string(*pointer_stack_long_double[i])) + "\n";
 			}
-			for(unsigned long int i = 0;i < STACK_SIZE;i++){
+			for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
 				output += "pointer_stack_string[" + std::to_string(i) + "]: " + ((pointer_stack_string[i] == nullptr) ? "nullptr" : *pointer_stack_string[i]) + "\n";
 			}
 			std::cout << output << std::endl;
@@ -670,6 +737,10 @@ int run_command(std::string* command){
 			in_stack[CONDITION_STACK_ENTRY] = std::to_string(get_target_value(command[2], &command[2], "string") == get_target_value(command[3], &command[3], "string"));
 		}else if(command[1] == "nequal"){
 			in_stack[CONDITION_STACK_ENTRY] = std::to_string(get_target_value(command[2], &command[2], "string") != get_target_value(command[3], &command[3], "string"));
+		}
+	}else if(command[0] == "do"){
+		if(in_stack[CONDITION_STACK_ENTRY] != "0"){ // Should I use != "0" or == "1"?
+			run_command(&command[1]);
 		}
 	}else{
 		return -1;

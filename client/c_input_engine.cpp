@@ -30,7 +30,7 @@ input_keyboard_map_t *local_keyboard_map = nullptr;
 array_id_t current_keyboard_map_id;
 
 void input_init(){
-	loop_add(loop, loop_generate_entry(loop_entry_t(), "input_engine", input_engine));
+	loop_add(loop, loop_generate_entry(0, "input_engine", input_engine));
 	local_keyboard_map = new input_keyboard_map_t();
 }
 

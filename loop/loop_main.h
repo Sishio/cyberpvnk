@@ -44,6 +44,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void wait();
 	};
 	struct loop_entry_t{
+		array_t array;
 		loop_entry_t();
 		void(*code)();
 		std::thread *thread;
@@ -51,8 +52,10 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		bool get_settings(int_);
 		void set_settings(int_);
 		int_ iteration_skip;
-		bool term;
+		int_ term;
 		std::string name;
+		long double start_time;
+		long double end_time;
 	};
 	struct loop_t{
 	public:
@@ -60,14 +63,14 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		loop_t();
 		long double target_rate;
 		long double average_rate;
-		std::vector<loop_entry_t> code;
+		std::vector<array_id_t> code;
 		int_ settings;
 		int_ tick;
 	};
-	extern void loop_add(loop_t*, loop_entry_t);
+	extern void loop_add(loop_t*, loop_entry_t*);
 	extern void loop_run(loop_t*);
 	extern void loop_del(loop_t*, void(*)());
 	extern void loop_del(loop_t*, std::string);
-	extern loop_entry_t loop_generate_entry(loop_entry_t, std::string, void(*)());
+	extern loop_entry_t* loop_generate_entry(int_ , std::string, void(*)());
 	extern bool infinite_loop();
 #endif
