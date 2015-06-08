@@ -10,6 +10,7 @@
 #define FUNCTION_PARAMETER_VOID_PTR 4
 #define FUNCTION_PARAMETER_VOID 8
 #define FUNCTION_PARAMETER_STRING 32
+#define MAX_RECURSION_COUNT 16 // this could be raised a lot
 extern void console_init();
 extern void console_engine();
 extern void console_close();

@@ -1,0 +1,7 @@
+0 in_stack 0
+1 in_stack 1
+while equal
+do modify math add 0_IS 1
+do 0 in_stack 0_OS
+do print variable 0_IS
+done

@@ -25,6 +25,8 @@ static long double* pointer_stack_long_double[STACK_SIZE] = {nullptr};
 static std::string* pointer_stack_string[STACK_SIZE] = {nullptr};
 static void* pointer_stack_void[STACK_SIZE] = {nullptr};
 
+static uint_ recursion_count = 0;
+
 void blank_commands(std::string *commands){
 	for(uint_ i = 0;i < STACK_SIZE;i++){
 		if(commands[i] == ""){
@@ -40,7 +42,6 @@ void convert_line_to_commands(std::string command_, std::string *command){
 	std::stringstream ss(command_);
 	ss >> command[0] >> command[1] >> command[2] >> command[3] >> command[4] >> command[5] >> command[6] >> command[7];
 	if(command[0] == "done" && command[1] == "sleep") assert(false);
-	printf_("DEBUG: console command: " + command[0] + " " + command[1] + " " + command[2] + " " + command[3] + " " + command[4] + " " + command[5] + " " + command[6] + " " + command[7] + "\n", PRINTF_DEBUG);
 	for(uint_ i = 0;i < 8;i++){ // should work well enough (no tabs after the first char)
 		while(command[i][0] == '\t' || command[i][0] == '\n'){
 			command[i].erase(command[i].begin());
@@ -51,6 +52,7 @@ void convert_line_to_commands(std::string command_, std::string *command){
 
 struct shell_script_t{
 public:
+	bool running;
 	shell_script_t();
 	~shell_script_t();
 	array_t array;
@@ -61,18 +63,19 @@ public:
 
 shell_script_t::shell_script_t() : array(this, "shell_script_t", ARRAY_SETTING_IMMUNITY){
 	array.string_array.push_back(std::make_pair(&name, "name"));
+	running = false;
 }
 
 int run_command(std::string*);
 
 static bool valid_command_line(std::string *command_line){
-	return (*command_line)[0] != '#' || (*command_line)[0] != '\n' || (*command_line)[0] != '\r' || (*command_line)[0] != ' ';
+	return (*command_line)[0] != '#' && (*command_line)[0] != '\n' && (*command_line)[0] != '\r' && (*command_line)[0] != ' ';
 }
 
 static uint_ detect_end_of_conditional_statement(std::vector<std::string> *pointer_to_vector, uint_ start){
 	uint_ place_in_stack = 0;
 	std::string current_commands[STACK_SIZE];
-	for(uint i = 0;i < pointer_to_vector->size();i++){
+	for(uint i = start;i < pointer_to_vector->size();i++){
 		if(valid_command_line(&(*pointer_to_vector)[i])){
 			convert_line_to_commands((*pointer_to_vector)[i], current_commands);
 			if(current_commands[0] == "if" || current_commands[0] == "while"){
@@ -92,71 +95,72 @@ static uint_ detect_end_of_conditional_statement(std::vector<std::string> *point
 
 static uint_ run_conditional_statement(std::vector<std::string> *pointer_to_vector, uint_ start){
 	const uint_ end = detect_end_of_conditional_statement(pointer_to_vector, start); // return done slot, the iterator +1s it
-	printf_("DEBUG: run_conditional_statement: end of the current statement is line #" + std::to_string(end) + "\n", PRINTF_DEBUG);
+	printf_("SPAM: run_conditional_statement: end of the current statement is line #" + std::to_string(end) + "\n", PRINTF_SPAM);
 	std::string current_commands[STACK_SIZE];
 	std::string conditional_commands[STACK_SIZE];
+	convert_line_to_commands((*pointer_to_vector)[start], conditional_commands);
+	bool loop_code;
+	beginning_of_conditional_statement:
 	do{
-		convert_line_to_commands((*pointer_to_vector)[start], conditional_commands);
-		uint_ command_start = 0;
-		std::string tmp = "";
-		if(conditional_commands[0] == "while" && conditional_commands[1] == "if"){
-			command_start = 1;
-		}else if(conditional_commands[0] == "if"){
-			command_start = 0;
-			tmp = conditional_commands[0];
+		if(run_command(conditional_commands) != 0){
+			throw std::logic_error("syntax error");
 		}
-		if(run_command(&(conditional_commands[command_start])) != 0){
-			printf_("ERROR: run_conditional_statement: Couldn't run the initial conditional\n", PRINTF_ERROR);
-			assert(false);
-		}
-		if(tmp != ""){
-			conditional_commands[0] = tmp;
-		}
-		if(in_stack[CONDITION_STACK_ENTRY] != "0"){
+		loop_code = in_stack[CONDITION_STACK_ENTRY] != "0" && conditional_commands[0] == "while";
+		if(in_stack[CONDITION_STACK_ENTRY] == "0"){
+			printf_("SPAM: Conditional returned false, not running the code\n", PRINTF_SPAM);
+			return end;
+		}else{
 			for(uint_ i = start+1;i < end;i++){
-				blank_commands(current_commands);
 				if(valid_command_line(&(*pointer_to_vector)[i])){
 					convert_line_to_commands((*pointer_to_vector)[i], current_commands);
 					if(current_commands[0] == "if" || current_commands[0] == "while"){
-						printf_("STATUS: run_conditional_statement: Conditionals are recursive, running another instance of run_conditional_statement\n", PRINTF_DEBUG);
-						run_conditional_statement(pointer_to_vector, i); // i = start+1 makes it so the same conditional isn't repeated ad infinitum
+						printf_("SPAM: Found recursive conditionals\n", PRINTF_DEBUG);
+						run_conditional_statement(pointer_to_vector, i);
 					}else if(run_command(current_commands) != 0){
-						printf_("ERROR: run_conditional_statement: run_command failed\n", PRINTF_ERROR);
-						assert(false);
-					}else{
-						printf_("STATS: run_conditional_statement: run_command finished successfully\n", PRINTF_STATUS);
+						throw std::logic_error("syntax error");
 					}
-				}else{
-					printf_("SPAM: run_conditional_statement: Detected something that wasn't a command\n", PRINTF_SPAM);
 				}
 			}
-		}else{
-			printf_("DEBUG: run_conditional_statement: Condition is false, not running the code\n", PRINTF_DEBUG);
 		}
-	}while(conditional_commands[0] == "while" && in_stack[CONDITION_STACK_ENTRY] != "0");
+	}while(loop_code);
+	printf_("DEBUG: loop_code is false, not running the code again (" + in_stack[CONDITION_STACK_ENTRY] + " " + conditional_commands[0] + "\n", PRINTF_DEBUG);
 	return end;
 }
 
 int_ shell_script_t::run(){
-	printf_("DEBUG: shell_script_t::run: Starting a shell script\n", PRINTF_DEBUG);
-	int_ level_of_statements = 0;
-	for(uint_ i = 0;i < commands.size();i++){
-		if(commands[i].size() != 0 && commands[i][0] != '#' && commands[i][0] != ' ' && commands[i][0] != '\n'){
-			std::string command[STACK_SIZE];
-			convert_line_to_commands(commands[i], command);
-			if(command[0] == "if" || command[0] == "while"){
-				printf_("DEBUG: shell_script_t::run: found a conditional, running the special run_conditional_statement function\n", PRINTF_DEBUG);
-				uint_ i_ = i;
-				i = run_conditional_statement(&commands, i);
-				printf_("DEBUG: shell_script_t::run: old i: " + std::to_string(i_) + " new i: " + std::to_string(i) + "\n", PRINTF_DEBUG);
-			}else if(run_command(command) != 0){
-				printf_("ERROR: shell_script_t::run: run_command on a shell script returned -1. Aborting the entire shell script.\n", PRINTF_ERROR);
-				return -1;
-			}else{
-				printf_("DEBUG: shell_script_t::run: run_command ran successfully\n", PRINTF_DEBUG);
-			}
-			blank_commands(command);
+	int_ retval = 0;
+	bool running_ = running;
+	if(running_){
+		printf_("WARNING: Recursion is happening, BE CAREFUL\n", PRINTF_UNLIKELY_WARN);
+		recursion_count++;
+	}
+	if(recursion_count > MAX_RECURSION_COUNT){
+		printf_("ERROR: The MAX_RECURSION_COUNT has been reached, aborting this script to prevent a crash\n", PRINTF_ERROR);
+	}else{
+		running = true;
+		printf_("SPAM: shell_script_t::run: Starting a shell script\n", PRINTF_SPAM);
+		int_ level_of_statements = 0;
+		for(uint_ i = 0;i < commands.size();i++){
+			if(commands[i].size() != 0 && commands[i][0] != '#' && commands[i][0] != ' ' && commands[i][0] != '\n'){
+				std::string command_array[STACK_SIZE];
+				convert_line_to_commands(commands[i], command_array);
+				if(command_array[0] == "if" || command_array[0] == "while"){
+					printf_("SPAM: shell_script_t::run: found a conditional, running the special run_conditional_statement function\n", PRINTF_SPAM);
+					uint_ i_ = i;
+					i = run_conditional_statement(&commands, i);
+					printf_("SPAM: shell_script_t::run: old i: " + std::to_string(i_) + " new i: " + std::to_string(i) + "\n", PRINTF_SPAM);
+				}else if(run_command(command_array) != 0){
+					printf_("ERROR: shell_script_t::run: run_command on a shell script returned -1. Aborting the entire shell script.\n", PRINTF_ERROR);
+					retval = -1;
+				}else{
+					printf_("SPAM: shell_script_t::run: run_command ran successfully\n", PRINTF_SPAM);
+				}
+				}
 		}
+	}
+	running = false;
+	if(running_){
+		recursion_count--;
 	}
 	return 0;
 }
@@ -351,7 +355,7 @@ std::string string_to_decimal_string(std::string a){
 
 std::string get_target_value(std::string target_value, void* thing, std::string type){
 	if(check_for_parameter("--debug", argc_, argv_)){
-		std::cout << "get_target_value: " << target_value << " " << thing << " " << type << std::endl;
+	//	std::cout << "get_target_value: " << target_value << " " << thing << " " << type << std::endl;
 	}
 	const bool psi_ = target_value.find("_PSI") != std::string::npos;
 	const bool pss_ = target_value.find("_PSS") != std::string::npos;
@@ -360,15 +364,15 @@ std::string get_target_value(std::string target_value, void* thing, std::string 
 	const bool is_ = target_value.find("_IS") != std::string::npos;
 	bool nil_ = target_value == "NIL";
 	if(check_for_parameter("--debug", argc_, argv_)){
-		std::cout << target_value << std::endl;
-		std::cout << psi_ << pss_ << psld_ << os_ << is_ << nil_ << std::endl;
+	//	std::cout << target_value << std::endl;
+	//	std::cout << psi_ << pss_ << psld_ << os_ << is_ << nil_ << std::endl;
 	}
 	last_used_pointer = thing;
 	if(target_value == "" && type != "string"){
 		nil_ = true;
 	}
 	if(!psi_ && !pss_ && !psld_ && !os_ && !is_ && !nil_){
-		printf_("DEBUG: No special conditions have been met, returning the target_value by itself ('" + target_value + "')\n", PRINTF_DEBUG);
+	//	printf_("DEBUG: No special conditions have been met, returning the target_value by itself ('" + target_value + "')\n", PRINTF_DEBUG);
 		return target_value; // no special conditions have been met
 	}
 	std::string return_value;
@@ -383,7 +387,7 @@ std::string get_target_value(std::string target_value, void* thing, std::string 
 		assert(false);
 	}
 	if(nil_){
-		printf_("DEBUG: Detected NIL, returning itself ('" + return_value + "')\n", PRINTF_DEBUG);
+		//printf_("DEBUG: Detected NIL, returning itself ('" + return_value + "')\n", PRINTF_DEBUG);
 		return return_value; // worst case scenario: nothing changes
 	}
 	int_ position_in_stack;
@@ -418,7 +422,6 @@ std::string get_target_value(std::string target_value, void* thing, std::string 
 	}else if(os_){
 		return out_stack[position_in_stack];
 	}else if(is_){
-		printf_("DEBUG: Detected _IS, returning '" + in_stack[position_in_stack] + "'\n", PRINTF_DEBUG);
 		return in_stack[position_in_stack];
 	}
 	return return_value;
@@ -436,17 +439,32 @@ static std::string convert_commands_to_line(std::string *commands){
 }
 
 int run_command(std::string* command){
-	assert(command[0] != "done" && command[0] != "while");
+	if(command[0] == "while"){ // loose typing, should do this another way
+		command[0] = "if";
+		int a = run_command(command);
+		command[0] = "while";
+		return a;
+	}
+	if(valid_command_line(&(command[0])) == false){
+		/*
+		^
+		|
+		That should take the entire line, not just the first entry. 
+		However, I don't feel like converting it, so it shall stay like this.
+		*/
+		printf_("WARNING: run_command: caught a non-command, this shouldn't have been reported\n", PRINTF_UNLIKELY_WARN);
+		return -1;
+	}
 	printf_("DEBUG: run_command: command == " + convert_commands_to_line(command) + "\n", PRINTF_DEBUG);
 	if(command[0] == "modify"){
 		if(command[1] == "bitwise"){
 			int_ var[2];
-			if(in_stack[1] == "" && command[2] == "not"){
-				in_stack[1] = "0"; // not
+			if(command[4] == "" && command[2] == "not"){
+				command[4] = "0"; // not
 			}
 			try{
-				var[0] = std::stoll(string_to_decimal_string(in_stack[0]));
-				var[1] = std::stoll(string_to_decimal_string(in_stack[1]));
+				var[0] = std::stoll(string_to_decimal_string(get_target_value(command[3], &command[3], "string")));
+				var[1] = std::stoll(string_to_decimal_string(get_target_value(command[4], &command[4], "string")));
 			}catch(std::invalid_argument){
 				printf_((std::string)"run_command: " + STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
 				return -1;
@@ -472,8 +490,8 @@ int run_command(std::string* command){
 				in_stack[1] = "0"; // sqrt
 			}
 			try{
-				var[0] = std::stoll(string_to_decimal_string(in_stack[0]));
-				var[1] = std::stoll(string_to_decimal_string(in_stack[1]));
+				var[0] = std::stoll(string_to_decimal_string(get_target_value(command[3], &command[3], "string")));
+				var[1] = std::stoll(string_to_decimal_string(get_target_value(command[4], &command[4], "string")));
 			}catch(std::invalid_argument){
 				printf_((std::string)"run_command: " + STD_INVALID_ARGUMENT_ERROR, PRINTF_ERROR);
 				return -1;
@@ -499,15 +517,15 @@ int run_command(std::string* command){
 	}else if(command[0] == "set"){ // set
 		/*
 		  set:
-		  in_stack[0]: array id of the desired variable
-		  in_stack[1]: the data type (long double, int_, std::string, etc...)
-		  in_stack[2]: the entry in this vector
-		  in_stack[3]: the target value
+		  command[1]: array id of the desired variable
+		  command[2]: the data type (long double, int_, std::string, etc...)
+		  command[3]: the entry in this vector
+		  command[4]: the target value
 		 */
-		const std::string array_id_ = in_stack[0];
-		const std::string set_type_ = in_stack[1];
-		const std::string entry_ = in_stack[2];
-		const std::string target_val_ = in_stack[3];
+		const std::string array_id_ = command[1];
+		const std::string set_type_ = command[2];
+		const std::string entry_ = command[3];
+		const std::string target_val_ = command[4];
 		array_id_t array_id;
 		int_ entry;
 		try{
@@ -624,22 +642,32 @@ int run_command(std::string* command){
 			}
 		}else if(command[1] == "stacks"){
 			std::string output;
-			for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
-				output += "in_stack[" + std::to_string(i) + "]: " + in_stack[i] + "\n";
-			}
-			for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
-				output += "out_stack[" + std::to_string(i) + "]: " + out_stack[i] + "\n";
-			}
-			for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
-				output += "pointer_stack_int[" + std::to_string(i) + "]: " + ((pointer_stack_int[i] == nullptr) ? "nullptr" : std::to_string(*pointer_stack_int[i])) + "\n";
-			}
-			for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
-				output += "pointer_stack_long_double[" + std::to_string(i) + "]: " + ((pointer_stack_long_double[i] == nullptr) ? "nullptr" : std::to_string(*pointer_stack_long_double[i])) + "\n";
-			}
-			for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
-				output += "pointer_stack_string[" + std::to_string(i) + "]: " + ((pointer_stack_string[i] == nullptr) ? "nullptr" : *pointer_stack_string[i]) + "\n";
+			if(command[2] == "in_stack"){
+				for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
+					output += "in_stack[" + std::to_string(i) + "]: " + in_stack[i] + "\n";
+				}
+			}else if(command[2] == "out_stack"){
+				for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
+					output += "out_stack[" + std::to_string(i) + "]: " + out_stack[i] + "\n";
+				}
+			}else if(command[2] == "pointer_stack_int"){
+				for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
+					output += "pointer_stack_int[" + std::to_string(i) + "]: " + ((pointer_stack_int[i] == nullptr) ? "nullptr" : std::to_string(*pointer_stack_int[i])) + "\n";
+				}
+			}else if(command[2] == "pointer_stack_long_double"){
+				for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
+					output += "pointer_stack_long_double[" + std::to_string(i) + "]: " + ((pointer_stack_long_double[i] == nullptr) ? "nullptr" : std::to_string(*pointer_stack_long_double[i])) + "\n";
+				}
+			}else if(command[2] == "pointer_stack_string"){
+				for(unsigned long int i = 0;i < WORKING_STACK_SIZE;i++){
+					output += "pointer_stack_string[" + std::to_string(i) + "]: " + ((pointer_stack_string[i] == nullptr) ? "nullptr" : *pointer_stack_string[i]) + "\n";
+				}
+			}else{
+				return -1;
 			}
 			std::cout << output << std::endl;
+		}else if(command[1] == "variable"){
+			printf_(get_target_value(command[2], &command[2], "string") + "\n", PRINTF_SCRIPT);
 		}else if(command[1] == "array_vector"){
 			// this special function works better for this since speed doesn't matter and the command can be blank and still work
 			for(uint_ i = 0;i < ARRAY_VECTOR_SIZE;i++){
@@ -711,7 +739,7 @@ int run_command(std::string* command){
 			if(tmp != nullptr){
 				if(tmp->name == command[1]){
 					int_ _retval = tmp->run();
-					std::cout << "script _retval: " << _retval << std::endl;
+					printf_("script _retval: " + std::to_string(_retval) + "\n", PRINTF_FORCE_PRINT);;
 					break;
 				}
 			}
@@ -737,11 +765,12 @@ int run_command(std::string* command){
 			in_stack[CONDITION_STACK_ENTRY] = std::to_string(get_target_value(command[2], &command[2], "string") == get_target_value(command[3], &command[3], "string"));
 		}else if(command[1] == "nequal"){
 			in_stack[CONDITION_STACK_ENTRY] = std::to_string(get_target_value(command[2], &command[2], "string") != get_target_value(command[3], &command[3], "string"));
-		}
+		}else return -1;
 	}else if(command[0] == "do"){
 		if(in_stack[CONDITION_STACK_ENTRY] != "0"){ // Should I use != "0" or == "1"?
 			run_command(&command[1]);
-		}
+		} // don't return in this instance
+	}else if(command[0] == "done"){
 	}else{
 		return -1;
 	}

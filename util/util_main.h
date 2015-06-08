@@ -25,12 +25,14 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define SET_BIT(var,pos,val) (var ^= (-val ^ var) & (1 << pos))
 	#define FLIP_BIT(var, pos) (var ^= (1 << pos))	
 	#define PRINTF_VITAL 0
-	#define PRINTF_ERROR 1
-	#define PRINTF_UNLIKELY_WARN 2
-	#define PRINTF_LIKELY_WARN 3
-	#define PRINTF_STATUS 4
-	#define PRINTF_DEBUG 5
-	#define PRINTF_SPAM 6
+	#define PRINTF_SCRIPT 1
+	#define PRINTF_FORCE_PRINT 2 //useful when forcing to update the console output
+	#define PRINTF_ERROR 3
+	#define PRINTF_UNLIKELY_WARN 4
+	#define PRINTF_LIKELY_WARN 5
+	#define PRINTF_STATUS 6
+	#define PRINTF_DEBUG 7
+	#define PRINTF_SPAM 8
 	#define NEW_NULLPTR_ERROR "ERROR: Couldn't allocate data\n"
 	#include "../math/math_main.h"
 	#include  "../main.h"

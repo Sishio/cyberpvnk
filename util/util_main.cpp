@@ -286,9 +286,12 @@ int_ print_level = -1;
 int_ abort_print_level = -1;
 
 int_ printf_(std::string data_to_print, int_ status){
-	assert(print_level != -1);	
-	if(status <= print_level){
-		std::cout << data_to_print;
+	assert(print_level != -1);
+	if(status <= print_level || print_level == PRINTF_FORCE_PRINT){
+		std::cout << "\r" << data_to_print;
+	}
+	if(status != PRINTF_SCRIPT){
+		std::cout << "]";
 	}
 	assert(status > abort_print_level);
 	return 0;

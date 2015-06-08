@@ -1,3 +1,2 @@
-while if equal 0_IN 0_IN
-do sleep 1
+while equal
 done
