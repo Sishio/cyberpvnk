@@ -25,9 +25,9 @@ extern char **argv_;
 
 render_t *render = nullptr;
 
-array_id_t background_coord[1024];
+array_id_t background_coord[8192];
 
-std::string background_filename[128][128]; // just guessing the numbers
+//std::string background_filename[128][128]; // just guessing the numbers
 
 static std::string get_tile_filename(uint_ x, uint_ y){
 	return "../image_data/background.png";
@@ -47,11 +47,8 @@ void background_init(){
 	screen_t *current_screen = render->get_current_screen();
 	throw_if_nullptr(current_screen);
 	current_screen->array.data_lock.lock();
-	for(uint_ i = 0;current_y <= current_screen->y_res;i++){
-		std::cout << current_x << " " << current_y << std::endl;
+	for(uint_ i = 0;current_y <= current_screen->y_res && i < 8192;i++){
 		std::string tile_filename = get_tile_filename(current_x, current_y);
-		coord_t *coord = new coord_t;
-		coord->array.data_lock.lock();
 		tile_t *tile = new tile_t;
 		tile->array.data_lock.lock();
 		image_t *image = (image_t*)find_pointer(search_for_image(tile_filename)); //search_for_image always returns a valid image
@@ -61,6 +58,8 @@ void background_init(){
 				tile->set_image_id(i, c, image->array.id);
 			}
 		}
+		coord_t *coord = new coord_t;
+		coord->array.data_lock.lock();
 		background_coord[i] = coord->array.id;
 		coord->tile_id = tile->array.id;
 		coord->x = current_x;
@@ -82,7 +81,7 @@ void background_init(){
 
 void render_init(){
 	loop_add(loop, loop_generate_entry(0, "render_engine", render_engine));
-	render = new render_t(argc_, argv_);
+	render = new render_t();
 	screen_t *screen_ = new screen_t();
 	screen_->array.data_lock.lock();
 	screen_->x_res = 640;

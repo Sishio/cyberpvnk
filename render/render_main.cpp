@@ -40,7 +40,7 @@ array_id_t search_for_image(std::string image_path){
 	in.close();
 }*/
 
-render_t::render_t(int_ argc, char** argv) : array(this, "render_t", ARRAY_SETTING_IMMUNITY){
+render_t::render_t() : array(this, "render_t", ARRAY_SETTING_IMMUNITY){
 	array.set_setting(ARRAY_SETTING_SEND, false);
 	array.set_setting(ARRAY_SETTING_IMMUNITY, true);
 	// settings are technically a part of the array_t type and aren't blanked
@@ -213,8 +213,21 @@ image_t::image_t(std::string filename_) : array(this, "image_t", ARRAY_SETTING_S
 }
 
 image_t::~image_t(){
+	del_surface();
+	del_texture();
+}
+
+void image_t::del_surface(){
 	if(surface != nullptr){
 		SDL_FreeSurface(surface);
+		surface = nullptr;
+	}
+}
+
+void image_t::del_texture(){
+	if(texture != nullptr){
+		SDL_DestroyTexture(texture);
+		texture = nullptr;
 	}
 }
 

@@ -23,8 +23,9 @@
 		void keyboard_to_signal();
 	public:
 		array_t array;
-		input_t(int argc, char** argv, array_id_t _keyboard_map_id = DEFAULT_INT_VALUE);
+		input_t();
 		~input_t();
+		void set_keyboard_map_id(array_id_t);
 		int_ nsig;
 		void loop();
 		bool query_key(int);

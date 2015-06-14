@@ -39,6 +39,8 @@ static int_ choice;
 
 loop_t *init_ = nullptr, *end_ = nullptr;
 
+static void add_functions();
+
 static void load_engines(){
 	misc_init(); // takes precedence over everything else
 	loop = new loop_t;
@@ -87,6 +89,31 @@ static void load_engines(){
 	}
 	loop_add(end_, loop_generate_entry(end_loop_settings, "console_close", console_close));
 	// console should always be the last thing to open for debugging purposes
+	add_functions();
+}
+
+static void add_functions(){
+	// module init
+	std::vector<std::pair<void*, std::string> > init;
+	init.push_back(std::make_pair((void*)net_init, "net_init"));
+	init.push_back(std::make_pair((void*)input_init, "input_init"));
+	init.push_back(std::make_pair((void*)render_init, "render_init"));
+	init.push_back(std::make_pair((void*)test_logic_init, "test_logic_init"));
+	for(uint_ i = 0;i < init.size();i++){
+		new function_t(std::get<0>(init[i]), std::get<1>(init[1]), FUNCTION_RETURN_VOID | FUNCTION_PARAMETER_VOID);
+	}
+	// module close
+	std::vector<std::pair<void*, std::string> > close;
+	close.push_back(std::make_pair((void*)net_close, "net_close"));
+	close.push_back(std::make_pair((void*)input_close, "input_close"));
+	close.push_back(std::make_pair((void*)render_close, "render_close"));
+	close.push_back(std::make_pair((void*)test_logic_close, "test_logic_close"));
+	for(uint_ i = 0;i < close.size();i++){
+		new function_t(std::get<0>(close[i]), std::get<1>(close[1]), FUNCTION_RETURN_VOID | FUNCTION_PARAMETER_VOID);
+	}	
+	// memory management
+	new function_t((void*)delete_all_data, "delete_all_data", FUNCTION_RETURN_VOID | FUNCTION_PARAMETER_VOID);
+	new function_t((void*)delete_array_and_pointer, "delete_array_and_pointer", FUNCTION_RETURN_VOID | FUNCTION_PARAMETER_INT_);
 }
 
 int main(int argc, char **argv){
@@ -102,7 +129,7 @@ int main(int argc, char **argv){
 	}
 	printf_("STATUS: Stopped main loop. Starting close loop\n", PRINTF_STATUS);
 	loop_run(end_);
-	//delete_all_data();
-	// this makes the program hang, so let's not do this here
+	delete_all_data();
+	last_thing_to_execute();
 	return 0;
 }

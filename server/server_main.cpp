@@ -11,6 +11,7 @@
 #include "server_gametype.h"
 
 server_info_t *server_info = nullptr;
+server_time_t *server_time = nullptr;
 net_ip_connection_info_t *self_info = nullptr; // TODO: rename this to prevent confusion with server_info
 
 loop_t *server_loop_code = nullptr;
@@ -61,7 +62,8 @@ void test_logic_init(){
 	net_ip_connection_info_t *tmp_conn_info = new net_ip_connection_info_t;
 	tmp_conn_info->ip = "127.0.0.1";
 	tmp_conn_info->port = NET_IP_SERVER_RECEIVE_PORT;
-	net = new net_t(argc_, argv_, tmp_conn_info->array.id);
+	net = new net_t();
+	net->set_inbound_info(tmp_conn_info->array.id);
 }
 
 void test_logic_engine(){
@@ -88,7 +90,7 @@ static void load_previous_server_state(){
 		const uint_ save_size = save.size();
 		for(uint_ i = 0;i < save_size;i++){
 			update_class_data(save[i], ~0);
-			update_progress_bar(i/save_size);
+			update_progress_bar(i/save_size, "load_previous_server_state");
 		}
 	}else{
 		printf("There doesn't appear to be a server_save file to use\n");
@@ -107,7 +109,6 @@ void init(int_ choice){
 	reserve_ids();
 	console_init();
 	load_previous_server_state();
-	misc_init();
 	server_loop_code->array.name = "server loop code";
 	//signal(SIGINT, simple_signal_handler);
 	switch(choice){
@@ -129,6 +130,7 @@ void init(int_ choice){
 		set_signal(SIGTERM, true);
 		break;
 	}
+	server_time = new server_time_t;
 }
 
 void close(){
@@ -150,15 +152,26 @@ int_ menu(){
 }
 
 int main(int argc, char **argv){
+	misc_init();
 	argc_ = argc;
 	argv_ = argv;
 	init(menu());
+	for(uint_ i = 0;i < server_loop_code->code.size();i++){
+		try{
+			loop_entry_t *tmp = (loop_entry_t*)find_pointer(server_loop_code->code[i]);
+			throw_if_nullptr(tmp);
+			tmp->settings = 0;
+		}catch(const std::logic_error &e){}
+	}
 	printf("Starting the main loop\n");
-	server_loop_code->settings |= LOOP_CODE_PARTIAL_MT;
 	while(likely(check_signal(SIGINT) == false && check_signal(SIGKILL) == false && check_signal(SIGTERM) == false)){
 		loop_run(server_loop_code);
 		once_per_second_update();
+		if(once_per_second){
+			server_time->update_timestamp(); // Should I make a new thread for this or is it good enough here w/ hangs?
+		}
 	}
 	close();
+	last_thing_to_execute();
 	return 0;
 }

@@ -132,8 +132,13 @@ void model_t::get_size(long double *x, long double *y, long double *z){
 
 client_t::client_t(bool add) : array(this, "client_t", ARRAY_SETTING_SEND){
 	array.int_array.push_back(std::make_pair(&model_id, "model ID"));
+	model_id = DEFAULT_INT_VALUE;
 	array.int_array.push_back(std::make_pair(&coord_id, "coord ID"));
+	coord_id = DEFAULT_INT_VALUE;
 	array.int_array.push_back(std::make_pair(&connection_info_id, "connection info ID"));
+	connection_info_id = DEFAULT_INT_VALUE;
+	array.int_array.push_back(std::make_pair(&keyboard_map_id, "keyboard map id"));
+	keyboard_map_id = DEFAULT_INT_VALUE;
 	array.data_type = "client_t";
 }
 
@@ -148,17 +153,21 @@ net_ip_connection_info_t::net_ip_connection_info_t(bool add) : array(this, "net_
 
 net_ip_connection_info_t::~net_ip_connection_info_t(){}
 
-void* class_new(std::string type){
-	if(type == "client_t"){
-		return new client_t;
-	}else if(type == "coord_t"){
-		return new coord_t;
-	}else if(type == "model_t"){
-		return new model_t;
-	}else if(type == "net_ip_connection_info_t"){
-		return new net_ip_connection_info_t;
-	}else{
-		printf("TODO: Make an allocator for '%s'\n", type.c_str());
-		return nullptr;
-	}
+server_time_t::server_time_t() : array(this, "server_time_t", ARRAY_SETTING_SEND){
+	array.int_array.push_back(std::make_pair(&current_unix_timestamp, "current_unix_timestamp"));
+} // should always send out the current UNIX timestamp
+
+void server_time_t::update_timestamp(){
+	current_unix_timestamp = time(NULL); // hopefully this has been updated by 2037
+}
+
+int_ server_time_t::get_timestamp(){
+	array.data_lock.lock();
+	int_ return_value = current_unix_timestamp;
+	array.data_lock.unlock();
+	return return_value;
+}
+
+server_time_t::~server_time_t(){
+	printf_("DEBUG: Closing server_time_t, hopefully the server is terminating\n", PRINTF_DEBUG);
 }

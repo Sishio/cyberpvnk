@@ -85,6 +85,10 @@ void loop_run(loop_t *a){
 	if((a->settings & LOOP_PRINT_THIS_TIME) != 0){
 		printf_("settings: " + std::to_string(a->settings) + "\n", PRINTF_VITAL);
 	}
+	if(check_for_parameter("--no-mt", argc_, argv_)){
+		a->settings &= ~LOOP_CODE_NEVEREND_MT;
+		a->settings &= ~LOOP_CODE_PARTIAL_MT;
+	}
 	std::string summary = a->array.name + "\n";
 	const uint_ code_size = a->code.size();
 	const long double start_time = get_time();
@@ -92,6 +96,10 @@ void loop_run(loop_t *a){
 		try{
 			loop_entry_t *tmp_entry = (loop_entry_t*)find_pointer(a->code[i]);
 			throw_if_nullptr(tmp_entry);
+			if(check_for_parameter("--no-mt", argc_, argv_)){
+				tmp_entry->set_settings(0);
+				tmp_entry->set_settings(0);
+			}
 			tmp_entry->array.data_lock.lock();
 			if(tmp_entry->term == true){
 				if(tmp_entry->thread != nullptr){
@@ -101,13 +109,12 @@ void loop_run(loop_t *a){
 				}
 			}else if(tmp_entry->code != nullptr){ // Deleting its place in the array allows for a seg fault if both pieces run
 				if(tmp_entry->get_settings(LOOP_CODE_PARTIAL_MT)){
-					if(tmp_entry->thread != nullptr){
-						stop_infinite_loop(tmp_entry);
-					}
+					//printf_("DEBUG: loop_run: Running the following loop_entry_t in its own thread (LOOP_CODE_PARTIAL_MT):" + tmp_entry->array.print() + "\n", PRINTF_DEBUG);
 					tmp_entry->thread = new std::thread(tmp_entry->code);
 					tmp_entry->start_time = get_time();
 				}else if(tmp_entry->get_settings(LOOP_CODE_NEVEREND_MT)){
 					if(tmp_entry->thread == nullptr){
+						//printf_("DEBUG: loop_run: Running the following loop_entry_t in its own thread (LOOP_CODE_NEVEREND_MT):" + tmp_entry->array.print() + "\n", PRINTF_DEBUG);
 						tmp_entry->thread = new std::thread(infinite_loop_function, tmp_entry->code, &(tmp_entry->term));
 						tmp_entry->start_time = get_time();
 					}
@@ -116,6 +123,7 @@ void loop_run(loop_t *a){
 						stop_infinite_loop(tmp_entry);
 					}
 					tmp_entry->start_time = get_time();
+					//printf_("DEBUG: loop_run: Running the following loop_entry_t in the current thread:" + tmp_entry->array.print() + "\n", PRINTF_DEBUG);
 					tmp_entry->code();
 				}
 			}

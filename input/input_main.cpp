@@ -58,21 +58,30 @@ input_keyboard_map_t::input_keyboard_map_t() : array(this, "input_keyboard_map_t
 input_keyboard_map_t::~input_keyboard_map_t(){
 }
 
-input_t::input_t(int argc, char** argv, array_id_t _keyboard_map_id) : array(this, "input_t", ARRAY_SETTING_IMMUNITY){
+input_t::input_t() : array(this, "input_t", ARRAY_SETTING_IMMUNITY){
+	array.data_lock.lock();
 	nsig = _NSIG;
 	array.int_array.push_back(std::make_pair(&keyboard_map_id, "keyboard map ID"));
 	array.int_array.push_back(std::make_pair(&nsig, "_NSIG macro"));
 	for(int i = 0;i < 32;i++){
 		signal(i, signal_function);
 	}
+	array.data_lock.unlock();
 	array.reset_values();
-	keyboard_map_id = _keyboard_map_id;
+	array.data_lock.lock();
 	signal(SIGKILL, signal_function);
 	signal(SIGTERM, signal_function);
 	signal(SIGINT, signal_function);
+	array.data_lock.unlock();
 }
 
 input_t::~input_t(){
+}
+
+void input_t::set_keyboard_map_id(array_id_t keyboard_map_id_){
+	array.data_lock.lock();
+	keyboard_map_id = keyboard_map_id_;
+	array.data_lock.unlock();
 }
 
 void input_t::loop(){
@@ -80,7 +89,7 @@ void input_t::loop(){
 	SDL_Event event;
 	input_keyboard_map_t *keyboard_map = nullptr;
 	try{
-		keyboard_map = (input_keyboard_map_t*)find_pointer(keyboard_map_id, "input_keyboard_map_t");
+		keyboard_map = (input_keyboard_map_t*)find_pointer(keyboard_map_id);
 		throw_if_nullptr(keyboard_map);
 	}catch(std::logic_error &e){
 		return;

@@ -35,12 +35,13 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		uint_ packet_id_count;
 	public:
 		array_t array;
-		int_ init_parse_parameters(int_,char**);
-		int_ init_initialize_subsystems(int_, char**, int_);
+		int_ init_parse_parameters();
+		int_ init_initialize_subsystems();
 		std::string encode_data(unsigned char, void*);
 		net_ip_t *ip;
 		void blank();
-		net_t(int_, char**, int_);
+		net_t();
+		void set_inbound_info(array_id_t);
 		int_ loop();
 		~net_t();
 		std::string read(std::string search = "");

@@ -129,46 +129,49 @@ void coord_loop(array_id_t a){
 }
 
 static void coord_process_input(array_id_t client_id){
-	client_t *tmp_client = (client_t*)find_pointer(client_id);
-	if(tmp_client == nullptr) return;
-	tmp_client->array.data_lock.lock();
-	coord_t *tmp_coord = (coord_t*)find_pointer(tmp_client->coord_id);
-	if(tmp_coord == nullptr) return;
-	tmp_coord->array.data_lock.lock();
-	input_keyboard_map_t *tmp = (input_keyboard_map_t*)find_pointer(tmp_client->keyboard_map_id);
-	if(tmp == nullptr) return;
-	tmp->array.data_lock.lock();
-	if(tmp->keyboard_map[SDL_SCANCODE_W]){
-		if(tmp_coord->dimensions() == 3){
-			coord_3d_input_functions::forward(tmp_coord);
-		}else{
-			coord_2d_input_functions::up(tmp_coord);
+	try{
+		client_t *tmp_client = (client_t*)find_pointer(client_id);
+		throw_if_nullptr(tmp_client);
+		tmp_client->array.data_lock.lock();
+		coord_t *tmp_coord = (coord_t*)find_pointer(tmp_client->coord_id);
+		throw_if_nullptr(tmp_coord);
+		tmp_coord->array.data_lock.lock();
+		input_keyboard_map_t *tmp = (input_keyboard_map_t*)find_pointer(tmp_client->keyboard_map_id);
+		throw_if_nullptr(tmp);
+		tmp->array.data_lock.lock();
+		if(tmp->keyboard_map[SDL_SCANCODE_W]){
+			if(tmp_coord->dimensions() == 3){
+				coord_3d_input_functions::forward(tmp_coord);
+			}else{
+				coord_2d_input_functions::up(tmp_coord);
+			}
 		}
-	}
-	if(tmp->keyboard_map[SDL_SCANCODE_S]){
-		if(tmp_coord->dimensions() == 3){
-			coord_3d_input_functions::backward(tmp_coord);
-		}else{
-			coord_2d_input_functions::down(tmp_coord);
+		if(tmp->keyboard_map[SDL_SCANCODE_S]){
+			if(tmp_coord->dimensions() == 3){
+				coord_3d_input_functions::backward(tmp_coord);
+			}else{
+				coord_2d_input_functions::down(tmp_coord);
+			}
 		}
-	}
-	if(tmp->keyboard_map[SDL_SCANCODE_A]){
-		if(tmp_coord->dimensions() == 3){
-			coord_3d_input_functions::left(tmp_coord);
-		}else{
-			coord_2d_input_functions::left(tmp_coord);
+		if(tmp->keyboard_map[SDL_SCANCODE_A]){
+			if(tmp_coord->dimensions() == 3){
+				coord_3d_input_functions::left(tmp_coord);
+			}else{
+				coord_2d_input_functions::left(tmp_coord);
+			}
 		}
-	}
-	if(tmp->keyboard_map[SDL_SCANCODE_D]){
-		if(tmp_coord->dimensions() == 3){
-			coord_3d_input_functions::right(tmp_coord);
-		}else{
-			coord_2d_input_functions::right(tmp_coord);
+		if(tmp->keyboard_map[SDL_SCANCODE_D]){
+			if(tmp_coord->dimensions() == 3){
+				coord_3d_input_functions::right(tmp_coord);
+			}else{
+				coord_2d_input_functions::right(tmp_coord);
+			}
 		}
+		tmp->array.data_lock.unlock();
+		tmp_coord->array.data_lock.unlock();
+		tmp_client->array.data_lock.unlock();
+	}catch(std::logic_error &e){
 	}
-	tmp->array.data_lock.unlock();
-	tmp_coord->array.data_lock.unlock();
-	tmp_client->array.data_lock.unlock();
 }
 
 void physics_engine(){

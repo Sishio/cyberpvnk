@@ -39,39 +39,27 @@ static void net_module_loop(){
 	net->loop();
 }
 
-static void net_connect(){
+static void net_connect_send(){
 	((net_ip_connection_info_t*)find_pointer(host_info_id, "net_ip_connection_info_t"))->array.print();
 	std::string packet = ((net_ip_connection_info_t*)find_pointer(self_info_id, "net_ip_connection_info_t"))->array.gen_updated_string(INT_MAX) + NET_JOIN;
 	net->write(packet, 0, host_info_id);
-	bool connection_established = false;
-	const long double start_time = get_time();
-	for(int_ i = 0;i < 300;i++){
-		if(infinite_loop() == false) break;
-		if(check_signal(SIGNAL_QUIT_LOOP)){
-			printf_("Received SIGNAL_QUIT_LOOP\n", PRINTF_VITAL);
-			break;
-		}
-		net->loop();
-		std::string connecting_packet;
-		if((connecting_packet = net->read(NET_JOIN)) != ""){
-			printf("Received '%s' from the server\n", connecting_packet.c_str());
-			connecting_packet.erase(connecting_packet.begin()+connecting_packet.find_first_of(NET_JOIN));
-			self_id = atoi(connecting_packet.c_str());
-			connection_established = true;
-		}
-		ms_sleep(100);
-	}
-	if(connection_established == false){
-		printf("The server didn't respond in time (30 seconds or until SIGNAL_QUIT_LOOP was caught). I am shutting down the entire network engine to save resources.\n");
-		net_close();
+}
+
+static void net_connect_receive(std::string connecting_packet){
+	if(connecting_packet != ""){
+		connecting_packet.erase(connecting_packet.begin()+connecting_packet.find_first_of(NET_JOIN));
+		self_id = std::stoi(connecting_packet);
 	}
 }
 
 static void net_receive_engine(){
-	std::string a;
 	for(int_ i = 0;i < 512;i++){
-		if((a = net->read()) != ""){
-			update_class_data(a, CLASS_DATA_UPDATE_EVERYTHING);
+		std::string a = net->read();
+		if(a.find_first_of(NET_JOIN) != std::string::npos){
+			printf_("DEBUG: Received the NET_JOIN packet\n", PRINTF_DEBUG);
+			net_connect_receive(a);
+		}else if(a != ""){
+			update_class_data(a, ~0);
 		}else{
 			break;
 		}
@@ -79,8 +67,9 @@ static void net_receive_engine(){
 }
 
 static void net_send_engine(){
-	client_t *client_tmp = (client_t*)find_pointer(self_id, "client_t");
-	if(likely(client_tmp != nullptr)){
+	try{
+		client_t *client_tmp = (client_t*)find_pointer(self_id, "client_t");
+		throw_if_nullptr(client_tmp);
 		client_tmp->array.data_lock.lock();
 		int_ what_to_update;
 		if(likely(once_per_second == false)){
@@ -91,10 +80,14 @@ static void net_send_engine(){
 		std::string data = client_tmp->array.gen_updated_string(what_to_update);
 		client_tmp->array.data_lock.unlock();
 		net->write(data.c_str(), 0, host_info_id);
+	}catch(const std::logic_error &e){
+		printf_("WARNING: self_id isn't valid, this should pass\n", PRINTF_UNLIKELY_WARN);
 	}
 }
 
-static void net_init_loop(){
+void net_init(){
+	loop_add(loop, loop_generate_entry(0, "net_engine", net_engine));
+	net_loop_mt = new loop_t;
 	loop_add(net_loop_mt, loop_generate_entry(LOOP_CODE_PARTIAL_MT, "net_module_loop", net_module_loop));
 	loop_add(net_loop_mt, loop_generate_entry(LOOP_CODE_PARTIAL_MT, "net_receive_engine", net_receive_engine));
 	loop_add(net_loop_mt, loop_generate_entry(LOOP_CODE_PARTIAL_MT, "net_send_engine", net_send_engine));
@@ -141,20 +134,17 @@ static void net_init_loop(){
 		self_info->ip = net_gen_ip_address(host_info->ip);
 		self_info->array.data_lock.unlock();
 	}
-	net = new net_t(argc_, argv_, ((net_ip_connection_info_t*)find_pointer(self_info_id, "net_ip_connection_info_t"))->array.id);
-	net_connect();
-}
-
-void net_init(){
-	loop_add(loop, loop_generate_entry(0, "net_engine", net_engine));
-	net_loop_mt = new loop_t;
+	net = new net_t();
+	net->set_inbound_info(self_info_id);
+	net_connect_send();
 }
 
 void net_engine(){
-	if(unlikely(net == nullptr)){
-		net_init_loop();
-	}
 	loop_run(net_loop_mt);
+	/*
+	  net_connect_receive is called from inside this loop.
+	  there is no need for first-run code or anything like it
+	*/
 }
 
 void net_close(){

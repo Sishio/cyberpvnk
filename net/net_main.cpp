@@ -36,18 +36,17 @@ std::string net_generate_ip_address(std::string prefix){
 void net_t::blank(){
 }
 
-int_ net_t::init_parse_parameters(int_ argc, char** argv){
-	for(int_ i = 0;i < argc;i++){
-		if(strcmp(argv[i],(char*)"--net-ip") == 0){
-			ip = new net_ip_t;
-		}
+int_ net_t::init_parse_parameters(){
+	if(check_for_parameter("--net-ip", argc_, argv_)){
+		printf_("STATUS: Initializing net_ip_t\n", PRINTF_STATUS);
+		ip = new net_ip_t();
 	}
 	return 0;
 }
 
-int_ net_t::init_initialize_subsystems(int_ argc, char** argv, int_ c){
+int_ net_t::init_initialize_subsystems(){
 	if(ip != nullptr){
-		ip->init(argc,argv,c);
+		ip->init();
 	}
 	return 0;
 }
@@ -60,20 +59,29 @@ static void net_ip_read_mt(net_ip_t *ip){
 	ip->loop_receive_mt();
 }*/
 
-net_t::net_t(int_ argc, char** argv, int_ b) : array(this, "net_t", ARRAY_SETTING_IMMUNITY){
+net_t::net_t() : array(this, "net_t", ARRAY_SETTING_IMMUNITY){
 	array.void_ptr_array.push_back(std::make_pair((void**)&ip, "pointer to net_ip_t"));
 	array.reset_values();
 	ip = nullptr;
 	blank();
-	init_parse_parameters(argc,argv);
-	init_initialize_subsystems(argc,argv,b);
+	init_parse_parameters();
+	init_initialize_subsystems();
 	packet_id_count = 0;
+	printf_("STATUS: Finished initializing net_t\n", PRINTF_STATUS);
+}
+
+void net_t::set_inbound_info(array_id_t self_info_id){
+	if(ip != nullptr){
+		ip->set_inbound_info(self_info_id);
+	}
 }
 
 int_ net_t::loop(){
 	if(ip != nullptr){
 		ip->loop(); // run this anyways because why not?
-	}//else printf_("No networking protocol has been selected. Your only option is --net-ip.\n", PRINTF_STATUS);
+	}else{
+		printf_("WARNING: net_t: No networking protocol has been selected. Your only option is --net-ip.\n", PRINTF_UNLIKELY_WARN);
+	}
 	return 0;
 }
 

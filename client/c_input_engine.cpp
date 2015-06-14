@@ -24,48 +24,40 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 
 extern array_id_t host_info_id;
 extern net_t *net;
-input_t *input = nullptr;
-
-input_keyboard_map_t *local_keyboard_map = nullptr;
-array_id_t current_keyboard_map_id;
 
 void input_init(){
 	loop_add(loop, loop_generate_entry(0, "input_engine", input_engine));
-	local_keyboard_map = new input_keyboard_map_t();
+	input_t *tmp = new input_t();
+	tmp->set_keyboard_map_id((new input_keyboard_map_t)->array.id);
 }
 
 void input_engine(){
-	client_t *client_ptr = (client_t*)find_pointer(self_id);
-	if(input != nullptr && client_ptr != nullptr && current_keyboard_map_id == client_ptr->keyboard_map_id){ // use the client map
-		delete input;
-		input = nullptr; // just in case Valgrind throws a hissy fit
-		input_keyboard_map_t *current_keyboard_map = (input_keyboard_map_t*)find_pointer(current_keyboard_map_id, "input_keyboard_map_t");
-		if(current_keyboard_map != nullptr){
-			input_keyboard_map_t *target_map = (input_keyboard_map_t*)find_pointer(((client_t*)client_ptr)->keyboard_map_id, "input_keyboard_map_t");
-			memcpy(target_map->keyboard_map, current_keyboard_map->keyboard_map, sizeof(int_)*1024);
-		} // copy all the keyboard data over so held keypresses don't get lost
-		current_keyboard_map_id = ((client_t*)client_ptr)->keyboard_map_id;
-		input = new input_t(argc_, argv_, current_keyboard_map_id); // just reset the module with the correct keyboard id
-	}
-	if(input == nullptr){
-		if(client_ptr != nullptr){
-			current_keyboard_map_id = ((client_t*)client_ptr)->keyboard_map_id;
-			input = new input_t(argc_, argv_, current_keyboard_map_id);
-		}else{
-			current_keyboard_map_id = local_keyboard_map->array.id;
-			input = new input_t(argc_, argv_, current_keyboard_map_id);
+	try{
+		input_t *input = (input_t*)find_pointer(all_ids_of_type("input_t")[0]);
+		throw_if_nullptr(input);
+		input->array.data_lock.lock(); // no throws are allowed beyond this point
+		client_t *self = (client_t*)find_pointer(self_id);
+		if(self != nullptr && self->keyboard_map_id != DEFAULT_INT_VALUE){
+			input->array.data_lock.unlock();
+			input->set_keyboard_map_id(self->keyboard_map_id);
+			input->array.data_lock.lock();
 		}
-	}
-	input->loop();
-	if(input->query_key(SDL_SCANCODE_ESCAPE)){
-		set_signal(SIGTERM, true);
+		input->loop();
+		if(input->query_key(SDL_SCANCODE_ESCAPE)){
+			set_signal(SIGTERM, true);
+		}
+		input->array.data_lock.unlock();
+	}catch(std::logic_error &e){
+		printf_("WARNING: input_t: cannot use the input library yet\n", PRINTF_UNLIKELY_WARN);
 	}
 }
 
 void input_close(){
-	delete input;
-	input = nullptr;
-	delete local_keyboard_map;
-	local_keyboard_map = nullptr;
+	try{
+		input_t *input = (input_t*)find_pointer(all_ids_of_type("input_t")[0]);
+		throw_if_nullptr(input);
+		delete input;
+		input = nullptr;
+	}catch(const std::logic_error &e){}
 	loop_del(loop, input_engine);
 }

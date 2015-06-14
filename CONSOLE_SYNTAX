@@ -1,0 +1,78 @@
+The console is constantly changing and new features are being added, so if you want a really up-to-date instruction set, just pop open the source code and look at the run_command function. 
+There are five main stacks:
+	  in_stack: the main stack where stuff is moved around in (variable values, math stuff, whatever).
+	  out_stack: commands will send their output here. You can move the variable from this point to anywhere in the main stack
+	  pointer_int_stack: an array of pointers to int_, a 64-bit integer (this ensures that the latest value will be used when the function is ran).
+	  pointer_string_stack: an array of pointers to std::strings
+	  pointer_long_double_stack: an array of pointers to long doubles
+You can feed a command anything from any of the stacks my using X_ID where X is the entry in the stack and ID is the unique ID corresponding to the stack:
+	IS = in_stack
+	OS = out_stack
+	PSI = pointer_stack_int
+	PSS = pointer_stack_string
+	PSLD = pointer_stack_long_double
+		 The order on the last three was originally a typo, but I went with it anyways.
+
+Anyways, here is the basic syntax:
+	set ID DATA_TYPE ENTRY NEW_VALUE
+		In the array ID, inside of the DATA_TYPE vector at point ENTRY, set the value to NEW_VALUE
+	modify
+		bitwise
+			xor A B
+			or A B
+			and A B
+			not A
+			left_shift A B
+			right_shift A B
+		math
+			add A B
+			sub A B
+			mul A B
+			div A B
+			pow A B
+			sqrt A
+		Both bitwise and math will store the output in out_stack[0]
+	Any number
+		in_stack A
+			sets a value in the in_stack
+		out_stack A
+			sets a value in the out_stack
+		pointer_int_stack (uses last_used_pointer)
+			sets a value in the pointer_int_stack
+		pointer_string_stack (uses last_used_pointer)
+			sets a value in the pointer_string_stack
+		pointer_long_double_stack (uses last_used_pointer)
+			sets a value in the pointer_long_double_stack
+		last_used_pointer is set by using the set command but setting the value to whatever you want to set the value to or NIL (doesn't write anything but puts the pointer in the slot anyways).
+	script
+		Runs a script that was loaded into memory. scripts are stored in the script_data folder.
+	function
+		Runs a C++ function. Not many are useable, but that will change.
+	print
+		array_vector TYPE (print everything if no type is specified)
+		stacks STACK (print the stack STACK, but only the first 32 places)
+		last_used_pointer (the last_used_pointer value, not the data)
+		variable VARIABLE (prints the value of VARIABLE: X_ID)
+		locked_arrays (prints all of the locked arrays, but only the entries since the data cannot be safely accessed)
+	test
+		net (tests networking stuff)
+	signal X (sends a signal X to the input library)
+	sleep x (sleep for X ms)
+	quit (quits the program)
+	abort (runs assert(false), nice for quickly debugging a hang)
+	while/if
+		equal A B
+		nequal A B
+		greater A B
+		less A B
+		All of these set in_stack[CONDITION_STACK_ENTRY] to either 1 or 0
+	do (prefixed before every command that relies on the prev. condition)
+	done (only used by the conditional functions that parse the data, doesn't do anything on its own).
+	stack_shift X (X is the stack: out_stack or in_stack)
+		left_shift (shifts the stack left by 32 (WORKING_STACK_SIZE))
+		right_shift (shifts the stack right by 32 (WORKINg_STACK_SIZE)
+
+NOTES:
+		There is a recursion limit on the scripts of 16 (at the time of writing) to ensure that we don't run out of space on the stacks.
+		There is no checking to ensure that ANY of the pointers are still valid. This has to be done in the script somehow.
+			  Search for the find_array_pointer function and give it the ID and check to see if the return value inside of the function_t type is null or not.

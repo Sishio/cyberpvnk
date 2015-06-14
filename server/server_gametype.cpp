@@ -17,21 +17,23 @@ gametype_info_t::gametype_info_t() : array(this, "gametype_info_t", true){
 
 gametype_info_t::~gametype_info_t(){}
 
-static gametype_info_t gametype_info;
+static gametype_info_t *gametype_info;
 
 void gametype_engine();
 
 void gametype_init(){
 	loop_add(server_loop_code, loop_generate_entry(0, "gametype engine", gametype_engine));
+	gametype_info = new gametype_info_t;
 }
 
 void gametype_engine(){
-	gametype_t *current_gametype = (gametype_t*)find_pointer(gametype_info.gametype_id, "gametype_t");
-	if(current_gametype == nullptr){
+	gametype_t *current_gametype = (gametype_t*)find_pointer(gametype_info->gametype_id, "gametype_t");
+	if(current_gametype != nullptr){
 		current_gametype->engine();
 	}
 }
 
 void gametype_close(){
 	loop_del(server_loop_code, gametype_engine);
+	delete gametype_info;
 }

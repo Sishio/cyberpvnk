@@ -26,15 +26,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "string"
 	#include "climits"
 	#include "cstdio"
-	#define CLASS_DATA_UPDATE_EVERYTHING	UINT_MAX
-	#define CLASS_DATA_COORD_BIT		0
-	#define CLASS_DATA_MODEL_BIT		1
-	#define CLASS_DATA_RENDER_BUFFER_BIT	2
-	#define CLASS_DATA_INPUT_BUFFER_BIT	3
-	#define CLASS_DATA_NET_IP_CONNECTION_INFO_BIT	4
-	#define CLASS_DATA_CLIENT_BIT		5
-	#define COORD_POINTER_SIZE 1024
-	#define MODEL_POINTER_SIZE 1024
 	#define INPUT_MOTION_FORWARD 0
 	#define INPUT_MOTION_BACKWARD 1
 	#define INPUT_MOTION_LEFT 2
@@ -142,5 +133,15 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		array_id_t keyboard_map_id;
 		client_t(bool add_to_array_vector = true);
 		~client_t();
+	};
+	class server_time_t{
+	public:
+		array_t array;
+		server_time_t();
+		~server_time_t();
+		int_ get_timestamp();
+		void set_timestamp(){update_timestamp();}
+		void update_timestamp();
+		int_ current_unix_timestamp;
 	};
 #endif

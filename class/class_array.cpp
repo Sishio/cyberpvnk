@@ -46,8 +46,9 @@ std::string all_types[TYPE_VECTOR_SIZE] = {
 	"loop_entry_t",
 	"function_t",
 	"tile_t",
-	"image_t",
-	"shell_script_t"
+	"image_t"
+	"shell_script_t",
+	"array_sync_t"
 };
 
 int_ type_to_type_entry(std::string a){
@@ -186,21 +187,15 @@ void array_t::parse_string_entry(std::string tmp_string){
 	#endif
 	last_update = get_time();
 	if(tmp_string.find_first_of(ARRAY_INT_SEPERATOR_START) != std::string::npos){
-		#ifdef CLASS_DEBUG_OUTPUT
-		printf("Parsing int_ from string\n");
-		#endif
+		printf_("DEBUG: array_t::parse_string_entry: Parsing int_ from string\n", PRINTF_DEBUG);
 		parse_int_from_string(tmp_string);
 	}
 	if(tmp_string.find_first_of(ARRAY_LONG_DOUBLE_SEPERATOR_START) != std::string::npos){
-		#ifdef CLASS_DEBUG_OUTPUT
-		printf("Parsing long_double from string\n");
-		#endif
+		printf_("DEBUG: array_t::parse_string_entry: Parsing long_double from string\n",  PRINTF_DEBUG);
 		parse_long_double_from_string(tmp_string);
 	}
 	if(tmp_string.find_first_of(ARRAY_STRING_SEPERATOR_START) != std::string::npos){
-		#ifdef CLASS_DEBUG_OUTPUT
-		printf("Parsing string from string\n");
-		#endif
+		printf_("DEBUG: array_t::parse_string_entry: Parsing string from string\n", PRINTF_DEBUG);
 		parse_string_from_string(tmp_string);
 	}
 	data_lock.unlock();
@@ -235,9 +230,7 @@ uint_ array_t::pull_starting_number(std::string a){
 	const int_ start = a.find_first_of(ARRAY_STARTING_START);
 	const int_ end = a.find_first_of(ARRAY_STARTING_END);
 	if(start == end){
-		#ifdef CLASS_DEBUG_OUTPUT
-		printf("pull_starting_number start==end %s\n", a.c_str());
-		#endif
+		printf_("ERROR: array_t::pull_starting_number: pull_starting_number start==end " + a + "\n", PRINTF_DEBUG);
 	}
 	return std::atoll(a.substr(start+1, end-start-1).c_str());
 }
@@ -261,9 +254,7 @@ std::vector<std::string> array_t::pull_items(char *x, std::string a, char *y, st
 		const int_ end = a.find_first_of(y);
 		std::string tmp_string_whole = a.substr(start+1, end-start-1);
 		const int_ start_number = pull_starting_number(tmp_string_whole);
-		#ifdef CLASS_DEBUG_OUTPUT
-		printf("tmp_string_whole: %s\n", tmp_string_whole.c_str());
-		#endif
+		printf_("DEBUG: array_t::pull_items: tmp_string_whole: " + tmp_string_whole + "\n", PRINTF_DEBUG);
 		const std::vector<std::string> tmp_vector = pull_items_data(ARRAY_ITEM_SEPERATOR_START, tmp_string_whole, ARRAY_ITEM_SEPERATOR_END);
 		for(uint_ i = 0;i < tmp_vector.size();i++){
 			entries_for_data->push_back((int_)i+(int_)start_number);
@@ -283,9 +274,7 @@ void array_t::parse_int_from_string(std::string a){
 	}
 	int_lock.lock();
 	for(uint_ i = 0;i < int_data_size;i++){
-		#ifdef CLASS_DEBUG_OUTPUT
-		printf("int_data[%d]: %s\n", entries_for_data[i], int_data[i].c_str());
-		#endif
+		printf_("int_data[%d]: " + std::to_string(entries_for_data[i]) + "\n", PRINTF_DEBUG);
 		*(std::get<0>(int_array[entries_for_data[i]])) = std::atoll(int_data[i].c_str());
 	}
 	int_lock.unlock();
@@ -314,9 +303,6 @@ void array_t::parse_string_from_string(std::string a){
 		add_string(std::make_pair(new std::string, "mysterious new variable"));
 	}
 	for(uint_ i = 0;i < string_data_size;i++){
-		#ifdef CLASS_DEBUG_OUTPUT
-		printf("string_array[%d]: %s\n",entries_for_data[i], string_data[i].c_str());
-		#endif
 		*(std::get<0>(string_array[entries_for_data[i]])) = string_data[i];
 	}
 	string_lock.unlock();
@@ -402,6 +388,19 @@ std::vector<std::string> generate_outbound_class_data(){
 	return return_value;
 }
 
+
+int fastest_string_hash(std::string a){
+	/*
+	  faster idea for short strings: bitwise shift and OR?
+	 */
+	const unsigned char a_size = a.size();
+	int retval = 0;
+	for(unsigned char i = 0;i < a_size;i++){
+		retval += a[i];
+	}
+	return retval;
+}
+
 void update_class_data(std::string a, int_ what_to_update){
 	array_id_t id = pull_id(a);
 	array_t *tmp = (array_t*)find_array_pointer(id);
@@ -415,8 +414,12 @@ void update_class_data(std::string a, int_ what_to_update){
 			tmp = &((new client_t)->array);
 		}else if(type == "net_ip_connection_info_t"){
 			tmp = &((new net_ip_connection_info_t)->array);
+		}else if(type == "array_sync_t"){
+			tmp = &((new array_sync_t)->array);
+		}else if(type == "server_time_t"){
+			tmp = &((new server_time_t)->array);
 		}else{
-			printf("TODO: make a special allocator for '%s'\n", type.c_str());
+			printf_("ERROR: update_class_data: make a special allocator for '" + a + "'\n", PRINTF_ERROR);
 			tmp = new array_t(nullptr, "", true);
 		}
 	}
@@ -436,13 +439,9 @@ void add_two_arrays(array_t *a, array_t *b){
 }
 
 array_t::~array_t(){
-	//printf_(print() + "DELETING AN ARRAY\n", PRINTF_STATUS);
 	array_lock.lock();
 	int_ array_pos_in_vector = strip_id(id);
-	//assert(array_vector[array_pos_in_vector] == this);
-	printf_(print(), PRINTF_DEBUG);
 	array_vector[array_pos_in_vector] = nullptr;
-	array_lock.unlock();
 }
 
 bool lower_id(array_t* a, array_t* y){
@@ -457,6 +456,7 @@ bool match_id(array_t* a){
 
 void *find_pointer(array_id_t id, std::string type){
 	const array_id_t truncated_id = strip_id(id);
+	assert(truncated_id < ARRAY_VECTOR_SIZE && truncated_id >= 0);
 	if(array_vector[truncated_id] != nullptr && array_vector[truncated_id]->id == id){
 		return array_vector[truncated_id]->pointer;
 	}
@@ -465,17 +465,14 @@ void *find_pointer(array_id_t id, std::string type){
 
 array_t* find_array_pointer(array_id_t id){
 	array_t *ptr = array_vector[strip_id(id)];
-	//if(ptr == nullptr){
-		//throw std::runtime_error(" ID is invalid");
-	//}
 	return ptr;
 }
 
-/*void delete_array_and_pointer(array_t *array){
+void delete_array_and_pointer(array_id_t id){
+	array_t *array = find_array_pointer(id);
 	if(array == nullptr){
 		return;
 	}
-	array->data_lock.lock();
 	void *ptr = array->pointer;
 	if(ptr == nullptr){
 		delete array;
@@ -501,20 +498,26 @@ array_t* find_array_pointer(array_id_t id){
 	}else if(type == "tile_t"){
 		delete (tile_t*)ptr;
 	}else if(type == "loop_t"){
-		//delete (loop_t*)ptr; // this is the only item that isn't dynamically allocated
+		delete (loop_t*)ptr;
 	}else if(type == "screen_t"){
 		delete (screen_t*)ptr;
 	}else{
 		printf_("delete_array_and_pointer: cannot delete the unknown data type '" + type + "'\n", PRINTF_ERROR);
 	}
+	array_lock.lock();
+	array_vector[strip_id(id)] = nullptr;
+	array_lock.unlock();
 }
 
 void delete_all_data(){
 	for(int_ i = 0;i < ARRAY_VECTOR_SIZE;i++){
-		delete_array_and_pointer(array_vector[i]);
-		array_vector[i] = nullptr;
+		update_progress_bar((long double)((long double)i/(long double)ARRAY_VECTOR_SIZE), "delete_all_data");
+		if(array_vector[i] != nullptr){
+			delete_array_and_pointer(array_vector[i]->id);
+		}
 	}
-}*/
+	update_progress_bar(1, "delete_all_data");
+}
 
 std::string array_t::gen_print_prefix(){
 	std::stringstream ss;
@@ -527,6 +530,7 @@ static void* get_entry_pointer(std::pair<void*, std::string> a){
 }
 
 std::string array_t::print(){
+	data_lock.lock();
 	std::string output;
 	std::stringstream ss_;
 	ss_ << this;
@@ -576,6 +580,7 @@ std::string array_t::print(){
 	std::stringstream ss;
 	ss << &data_lock;
 	output += "\tdata_lock address: " + ss.str() + "\n";
+	data_lock.unlock();
 	return output;
 }
 
@@ -600,3 +605,23 @@ bool array_t::unlocked(){
 	return return_value;
 }
 
+array_sync_t::array_sync_t() : array(this, "array_sync_t", ARRAY_SETTING_SEND){
+	for(uint_ i = 0;i < ARRAY_VECTOR_SIZE;i++){
+		array.int_array.push_back(std::make_pair(&array_vector_[i], "array_vector_ #" + std::to_string(i)));
+	}
+}
+
+void array_sync_t::read(){
+	array_lock.lock();
+	memcpy(array_vector_, array_vector, sizeof(int_)*ARRAY_VECTOR_SIZE);
+	array_lock.unlock();
+}
+
+void array_sync_t::write(){
+	array_lock.lock();
+	memcpy(array_vector, array_vector_, sizeof(int_)*ARRAY_VECTOR_SIZE);
+	array_lock.unlock();
+}
+
+array_sync_t::~array_sync_t(){
+}

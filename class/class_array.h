@@ -39,7 +39,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define ARRAY_RESERVE_VOID_PTR_SIZE 1 // object
 	#define ARRAY_VECTOR_SIZE 65536
 	#define RESERVE_ID_SIZE 64
-	#define RESERVE_ID_ITERATOR 0xB00B0000 // hehehe
+	#define RESERVE_ID_ITERATOR 0xB00B000000000000 // hehehe
 	//#define DEBUG_SEPERATOR 1
 	#ifndef DEBUG_SEPERATOR
 		#define ARRAY_ITEM_SEPERATOR_START		(char*)"\x01"
@@ -252,6 +252,15 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void parse_string_entry(std::string);
 		std::string print();
 	};
+	class array_sync_t{
+	public:
+		array_t array;
+		array_id_t array_vector_[ARRAY_VECTOR_SIZE];
+		array_sync_t();
+		~array_sync_t();
+		void read();
+		void write();
+	};
 	//extern std::vector<array_t*> array_vector;
 	extern array_id_t array_scan_for_id(array_id_t);
 	extern void add_two_arrays(array_t*, array_t*);
@@ -260,7 +269,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern void delete_array_from_vector(array_t*);
 	extern void delete_array_id(array_id_t);
 	extern void delete_all_data();
-	extern void delete_array_and_pointer(array_t*);
+	extern void delete_array_and_pointer(array_id_t);
 	extern void* find_pointer(array_id_t, std::string type = "");
 	extern array_t* find_array_pointer(array_id_t);
 	extern array_id_t array_highest_id();

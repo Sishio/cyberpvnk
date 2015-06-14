@@ -1,0 +1,6 @@
+Make install isn't present since you have to run it from the build directory (script_data, image_data, and map_data)
+If you cannot compile it with clang++, try clang++-X.Y where X is the major version and Y is the minor version.
+   I do all of my builds with the latest stable version in the Ubuntu PPA (3.6 at the time of writing).
+The default build has debugging flags enabled. If you want to speed up the code, you can use your own custom flags with the ADD macro).
+Every once in a while, I try compiling and running the code with different flags to see if anything wonky happens.
+Sometimes, I might push non-working code into the repo. I realize this and push a fix a minute later most of the time.

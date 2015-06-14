@@ -50,6 +50,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#endif
 	class net_ip_write_buffer_t{
 	public:
+		array_t array; // just used for locks
 		bool sent;
 		uint_ position;
 		int_ connection_info_id;
@@ -60,6 +61,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	};
 	class net_ip_read_buffer_t{
 	public:
+		array_t array;
 		net_ip_read_buffer_t(net_packet_id);
 		~net_ip_read_buffer_t();
 		void parse_packet_segment(std::string);
@@ -80,8 +82,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		std::mutex read_buffer_lock;
 		std::mutex write_buffer_lock;
 		uint_ total_sent_bytes;
-		std::vector<net_ip_read_buffer_t> read_buffer;
-		std::vector<net_ip_write_buffer_t> write_buffer;
 		UDPpacket *outbound_packet;
 		udp_socket_t *outbound; // no TCP yet
 		UDPpacket *inbound_packet;
@@ -91,11 +91,12 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 		void update_inbound_port(array_id_t);
 	public:
 		array_t array;
-		net_ip_t(); // ONLY USED TO FILL ARRAY
+		net_ip_t();
 		int_ new_read_buffer;
 		int_ new_write_buffer;
 		net_ip_connection_info_t self_info;
-		int_ init(int_,char**, array_id_t);
+		int_ init();
+		void set_inbound_info(array_id_t);
 		std::string read(std::string);
 		void write(std::string, int_, uint_);
 		void write_array_vector(std::vector<std::string>, uint_); // net_ip_connection_info ID

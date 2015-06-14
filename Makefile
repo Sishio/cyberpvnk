@@ -1,6 +1,6 @@
 CC=clang++
-ADD=-g -fno-omit-frame-pointer
-CFLAGS=-std=c++11 -pipe -Wall -Wextra -Wpedantic -Wno-error=unused-parameter $(ADD)
+ADD=-g -fno-omit-frame-pointer -fsanitize=undefined -fsanitize=function
+CFLAGS=-lstdc++ -std=c++11 -pipe -Wall -Wextra -Wpedantic -Wno-error=unused-parameter $(ADD)
 LINKER=-lSDL2 -lm -lGL -lSDL2_net -pthread -lSDL2_image
 
 all: client server
@@ -74,7 +74,7 @@ net: loop util
 	$(CC) -c $(CFLAGS) net/net_store.cpp -o net/obj/net_store.o
 	ld -r net/obj/net_main.o net/obj/net_ip.o net/obj/net_store.o -o net/obj/net.o
 
-util:
+util: render
 	$(CC) -c $(CFLAGS) util/util_main.cpp -o util/obj/util.o
 
 math:

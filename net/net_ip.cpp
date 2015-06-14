@@ -61,6 +61,7 @@ std::string pull_local_ip_address(std::string local_ip){
 					}
 				}
 			}
+			in.close();
 		}
 	#else
 		printf("Local IP pulling is a Linux only thing right now.\n");
@@ -103,38 +104,49 @@ net_ip_t::net_ip_t() : array(this, "net_ip_t", false){
 	array.reset_values();
 }
 
-int_ net_ip_t::init(int_ argc, char** argv, array_id_t tmp_conn_id){
+void net_ip_t::set_inbound_info(array_id_t inbound_info_id){
+	if(inbound == nullptr){
+		delete inbound;
+		inbound = nullptr;
+	}
+	inbound = new udp_socket_t(inbound_info_id);
+	net_ip_connection_info_t *inbound_info = (net_ip_connection_info_t*)find_pointer(inbound_info_id);
+	throw_if_nullptr(inbound_info);
+	printf_("STATUS: net_ip_t::init: inbound ip: " + inbound_info->ip + "\tinbound port: " + std::to_string(inbound_info->port) + "\n", PRINTF_STATUS);
+}
+
+int_ net_ip_t::init(){
 	SDLNet_Init();
-	net_ip_connection_info_t *tmp_conn_2 = new net_ip_connection_info_t;
-	tmp_conn_2->port = 0;
-	tmp_conn_2->ip = "127.0.0.1";
-	outbound = new udp_socket_t(tmp_conn_2->array.id);
-	inbound = new udp_socket_t(tmp_conn_id);
+	net_ip_connection_info_t *outbound_info = new net_ip_connection_info_t;
+	outbound_info->port = 0;
+	outbound_info->ip = "127.0.0.1";
+	outbound = new udp_socket_t(outbound_info->array.id);
+	printf_("STATUS: net_ip_t::init: outbound ip: " + outbound_info->ip + "\toutbound port: " + std::to_string(outbound_info->port) + "\n", PRINTF_STATUS);
 	outbound_packet = SDLNet_AllocPacket(512);
 	inbound_packet = SDLNet_AllocPacket(512);
 	return 0;
 }
 
 std::string net_ip_t::read(std::string search){
-	read_buffer_lock.lock();
-	std::string return_value = "";
+	std::string return_value;
+	std::vector<array_id_t> read_buffer = all_ids_of_type("net_ip_read_buffer_t");
 	const uint_ read_buffer_size = read_buffer.size();
 	for(uint_ i = 0;i < read_buffer_size;i++){
-		if(read_buffer[i].finished() && (search == "" || read_buffer[i].gen_string().find_first_of(search) != std::string::npos)){
-			return_value = read_buffer[i].gen_string();
-			read_buffer.erase(read_buffer.begin()+i);
-			break;
-		}
+		try{
+			net_ip_read_buffer_t* ptr = (net_ip_read_buffer_t*)find_pointer(read_buffer[i]);
+			throw_if_nullptr(ptr);
+			if(ptr->finished() && (search == "" || ptr->gen_string().find_first_of(search) != std::string::npos)){
+				return_value = ptr->gen_string();
+				delete ptr;
+				break;
+			}
+		}catch(const std::logic_error &e){}
 	}
-	read_buffer_lock.unlock();
 	return return_value;
 }
 
 void net_ip_t::write(std::string data, int_ b, uint_ packet_id){
-	net_ip_write_buffer_t write_buffer_tmp(data, b, packet_id);
-	write_buffer_lock.lock();
-	write_buffer.push_back(write_buffer_tmp);
-	write_buffer_lock.unlock();
+	new net_ip_write_buffer_t(data, b, packet_id);
 }
 
 std::string net_ip_t::receive_now(){
@@ -150,20 +162,21 @@ std::string net_ip_t::receive_now(){
 
 int_ net_ip_t::send_now(net_ip_write_buffer_t *data){
 	int_ return_value = 0;
-	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_pointer(data->connection_info_id);
+	data->array.data_lock.lock();
 	if(outbound == NULL){
-		printf("Cannot use outbound port. Check to see if you have proper permissions to use raw sockets\n");
+		printf_("ERROR: Cannot use outbound port. Check to see if you have proper permissions to use raw sockets\n", PRINTF_ERROR);
 		return_value = -1;
 		return return_value;
 	}
 	uint_ position = 0;
+	net_ip_connection_info_t *tmp_conn = (net_ip_connection_info_t*)find_pointer(data->connection_info_id);
 	if(tmp_conn != nullptr){
 		std::vector<std::string> raw_packets;
 		std::string data_prefix = wrap(NET_PACKET_ID_START, std::to_string(data->packet_id), NET_PACKET_ID_END);
 		if(data->data.size() > NET_MTU-NET_MTU_OVERHEAD){
 			while(data->data != ""){
 				uint_ chunk = NET_MTU-NET_MTU_OVERHEAD;
-				std::string pos_prefix = wrap(NET_PACKET_POS_START, std::to_string( position), NET_PACKET_POS_END);
+				std::string pos_prefix = wrap(NET_PACKET_POS_START, std::to_string(position), NET_PACKET_POS_END);
 				std::string tmp_string = data_prefix + pos_prefix + data->data.substr(0,chunk);
 				raw_packets.push_back(tmp_string);
 				if(chunk > data->data.size()){
@@ -173,6 +186,7 @@ int_ net_ip_t::send_now(net_ip_write_buffer_t *data){
 				position++;
 			}
 		}else{
+			printf_("SPAM: The data to send is small enough to put into one packet\n", PRINTF_SPAM);
 			std::string tmp;
 			tmp = wrap(NET_PACKET_ID_START, std::to_string(data->packet_id), NET_PACKET_ID_END);
 			tmp += wrap(NET_PACKET_POS_START, "0", NET_PACKET_POS_END);
@@ -180,6 +194,7 @@ int_ net_ip_t::send_now(net_ip_write_buffer_t *data){
 			raw_packets.push_back(tmp);
 		}
 		const uint_ raw_packets_size = raw_packets.size();
+		printf_("SPAM: net_ip_t::send_now: raw_packets_size: " + std::to_string(raw_packets_size) + "\n", PRINTF_SPAM);
 		raw_packets[0] = NET_PACKET_START + raw_packets[0];
 		raw_packets[raw_packets_size-1] += NET_PACKET_END;
 		IPaddress IP;
@@ -193,7 +208,9 @@ int_ net_ip_t::send_now(net_ip_write_buffer_t *data){
 			unsigned char* outbound_data = (unsigned char *)raw_packets[i].c_str();
 			outbound_packet->len = (int)(raw_packets[i].size()+1);
 			outbound_packet->data = outbound_data;
-			SDLNet_UDP_Send(outbound->socket, -1, outbound_packet);
+			if(SDLNet_UDP_Send(outbound->get_socket(), -1, outbound_packet) > 0){
+				printf_("SPAM: send_now: HOLY MOLEY! SOMETHING SENT\n", PRINTF_SPAM);
+			}
 			total_byte_size += outbound_packet->len;
 			if(unlikely(total_byte_size > max_total_sent_byte)){
 				// no packet loss if the client is sending data to itself
@@ -203,39 +220,48 @@ int_ net_ip_t::send_now(net_ip_write_buffer_t *data){
 		}
 		raw_packets.clear();
 	}else{
-		printf_("The connection ID (" + std::to_string(data->connection_info_id) + ") does not match up with anything here. CANNOT SEND THE DATA\n", PRINTF_STATUS);
+		printf_("WARNING: net_ip_t::send_now: The connection ID (" + std::to_string(data->connection_info_id) + ") does not match up with anything here. CANNOT SEND THE DATA\n", PRINTF_STATUS);
 	}
+	data->array.data_lock.unlock();
 	return return_value;
 }
 
 void net_ip_t::loop_send(){
+	const std::vector<array_id_t> write_buffer = all_ids_of_type("net_ip_write_buffer_t");
 	const uint_ write_buffer_size = write_buffer.size();
 	total_sent_bytes = 0;
-	write_buffer_lock.lock();
-	for(uint_ i = 0;i < write_buffer_size;i++){
-		send_now(&write_buffer[i]);
+	if(write_buffer_size != 0){
+		printf_("\tSPAM: net_ip_t::loop_send: write_buffer_size: " + std::to_string(write_buffer_size) + "\n", PRINTF_SPAM);
 	}
-	write_buffer.clear();
-	write_buffer_lock.unlock();
+	for(uint_ i = 0;i < write_buffer_size;i++){
+		try{
+			net_ip_write_buffer_t *ptr = (net_ip_write_buffer_t*)find_pointer(write_buffer[i]);
+			throw_if_nullptr(ptr);
+			send_now(ptr);
+			delete ptr;
+			ptr = nullptr;
+		}catch(const std::logic_error &e){}
+	}
 }
 
 bool net_ip_t::receive_check_read_array(std::string a, uint_ packet_id){
+	std::vector<array_id_t> read_buffer = all_ids_of_type("net_ip_read_buffer_t");
 	const uint_ read_buffer_size = read_buffer.size();
-	read_buffer_lock.lock();
 	bool return_value = false;
 	for(uint_ i = 0;i < read_buffer_size;i++){
-		if(read_buffer[i].packet_id == packet_id){
-			return_value = true;
-			read_buffer[i].parse_packet_segment(a);
-			break;
-		}
+		try{
+			net_ip_read_buffer_t *tmp = (net_ip_read_buffer_t*)find_pointer(read_buffer[i]);
+			throw_if_nullptr(tmp);
+			if(tmp->packet_id == packet_id){
+				return_value = true;
+				tmp->parse_packet_segment(a);
+				break;
+			}
+		}catch(const std::logic_error &e){}
 	}
 	if(return_value == false){
-		net_ip_read_buffer_t tmp_read((int)packet_id);
-		tmp_read.parse_packet_segment(a);
-		read_buffer.push_back(tmp_read);
+		(new net_ip_read_buffer_t((int)packet_id))->parse_packet_segment(a);
 	}
-	read_buffer_lock.unlock();
 	return return_value;
 }
 
@@ -266,39 +292,51 @@ void net_ip_t::close(){
 	SDLNet_Quit();
 }
 
-net_ip_write_buffer_t::net_ip_write_buffer_t(std::string a, net_packet_id b, int_ c){
+static net_packet_id net_packet_id_ = 0;
+
+net_ip_write_buffer_t::net_ip_write_buffer_t(std::string a, net_packet_id b, int_ c) : array(this, "net_ip_write_buffer_t", ARRAY_SETTING_IMMUNITY){
+	array.data_lock.lock();
 	data = a;
-	packet_id = b;
+	packet_id = ++net_packet_id_;
 	connection_info_id = c;
 	sent = false;
+	array.data_lock.unlock();
 }
 
 std::vector<std::string> net_ip_write_buffer_t::gen_string_vector(){
+	array.data_lock.lock();
 	std::vector<std::string> return_value;
 	std::string data_tmp = data;
 	while(data_tmp.size() > 0){
 		return_value.push_back(data_tmp.substr(0, NET_MTU-NET_MTU_OVERHEAD));
 		data_tmp = data_tmp.substr(NET_MTU-NET_MTU_OVERHEAD, data_tmp.size());
 	}
+	array.data_lock.unlock();
 	return return_value;
 }
 
 
-net_ip_read_buffer_t::net_ip_read_buffer_t(net_packet_id id){
+net_ip_read_buffer_t::net_ip_read_buffer_t(net_packet_id id) : array(this, "net_ip_read_buffer_t", ARRAY_SETTING_IMMUNITY){
+	array.data_lock.lock();
 	packet_id = id;
+	array.data_lock.unlock();
 }
 
 net_ip_read_buffer_t::~net_ip_read_buffer_t(){}
 
 void net_ip_read_buffer_t::parse_packet_segment(std::string segment){
+	array.data_lock.lock();
 	const uint_ start = segment.find_first_of(NET_PACKET_POS_START);
 	const uint_ end = segment.find_first_of(NET_PACKET_POS_END);
 	const std::string pos_str = segment.substr(start+1, end-start-1);
 	const uint_ pos = atoi(pos_str.c_str());
+	printf_("SPAM: net_ip_read_buffer_t::parse_packet_segment: pos: " + std::to_string(pos) + "\n", PRINTF_SPAM);
 	data_vector.insert(data_vector.begin()+pos, segment);
+	array.data_lock.unlock();
 }
 
 bool net_ip_read_buffer_t::finished(){
+	array.data_lock.lock();
 	const uint_ data_vector_size = data_vector.size();
 	bool return_value = false;
 	for(uint_ i = 0;i < data_vector_size;i++){
@@ -311,10 +349,12 @@ bool net_ip_read_buffer_t::finished(){
 			break;
 		}
 	}
+	array.data_lock.unlock();
 	return return_value;
 }
 
 std::string net_ip_read_buffer_t::gen_string(){
+	array.data_lock.lock();
 	std::string return_value;
 	const uint_ data_vector_size = data_vector.size();
 	for(uint_ i = 0;i < data_vector_size;i++){
@@ -334,6 +374,7 @@ std::string net_ip_read_buffer_t::gen_string(){
 		}
 		return_value += tmp_value;
 	}
+	array.data_lock.unlock();
 	return return_value;
 }
 
@@ -342,25 +383,27 @@ udp_socket_t::udp_socket_t(array_id_t tmp_connection_info_id){
 	net_ip_connection_info_t *tmp = (net_ip_connection_info_t*)find_pointer(connection_info_id);
 	socket = nullptr;
 	if(tmp == nullptr){
-		printf_("The net_ip_connection_info_t that this socket has to use does not exist (ID: " + std::to_string(tmp_connection_info_id) + ")\n", PRINTF_ERROR);
+		printf_("ERROR: The net_ip_connection_info_t that this socket has to use does not exist (ID: " + std::to_string(tmp_connection_info_id) + ")\n", PRINTF_ERROR);
 	}else{
 		socket = SDLNet_UDP_Open(tmp->port);
-		if(unlikely(!socket)){
-			printf_("Socket will not open (port: " + std::to_string(tmp->port) + ")\n", PRINTF_VITAL);
+		if(socket == nullptr){
+			printf_("VITAL: Socket will not open (port: " + std::to_string(tmp->port) + ")\n", PRINTF_VITAL);
 			assert(false);
+		}else{
+			printf_("STATUS: udp_socket_t::udp_socket_t: loaded socket correctly. ready for data transfers\n", PRINTF_STATUS);
 		}
 	}
 }
 
 udp_socket_t::~udp_socket_t(){
-	if(likely(!socket)){
+	if(socket != nullptr){
 		SDLNet_UDP_Close(socket);
 	}
 }
 
 UDPsocket udp_socket_t::get_socket(){
 	if(socket == nullptr){
-		printf_("ERROR: Socket is null (net_ip_connection_info_t ID (striped): " + std::to_string(strip_id(connection_info_id)) + "\n", PRINTF_VITAL);
+		printf_("VITAL: Socket is null (net_ip_connection_info_t ID (striped): " + std::to_string(strip_id(connection_info_id)) + "\n", PRINTF_VITAL);
 	}
 	return socket;
 }

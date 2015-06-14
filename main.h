@@ -20,7 +20,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#include "cstdint"
 	typedef std::int64_t int_;
 	typedef std::uint64_t uint_;
-	#define DEFAULT_INT_VALUE       -1
+	#define DEFAULT_INT_VALUE       0
 	#define DEFAULT_STRING_VALUE    ""
 	#define DEFAULT_LONG_DOUBLE_VALUE       0.0     //NaN?
 	#define TERMINATE -127

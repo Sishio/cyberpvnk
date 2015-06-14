@@ -1,0 +1,6 @@
+../script_data
+../script_data/recursive_1.script
+../script_data/infinite_loop.script
+../script_data/basic_math.script
+../script_data/recursive_2.script
+../script_data/loop_mt.script

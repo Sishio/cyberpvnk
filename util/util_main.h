@@ -25,14 +25,14 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define SET_BIT(var,pos,val) (var ^= (-val ^ var) & (1 << pos))
 	#define FLIP_BIT(var, pos) (var ^= (1 << pos))	
 	#define PRINTF_VITAL 0
-	#define PRINTF_SCRIPT 1
-	#define PRINTF_FORCE_PRINT 2 //useful when forcing to update the console output
-	#define PRINTF_ERROR 3
-	#define PRINTF_UNLIKELY_WARN 4
-	#define PRINTF_LIKELY_WARN 5
-	#define PRINTF_STATUS 6
-	#define PRINTF_DEBUG 7
-	#define PRINTF_SPAM 8
+	#define PRINTF_SCRIPT 7
+	#define PRINTF_FORCE_PRINT 8 //useful when forcing to update the console output
+	#define PRINTF_ERROR 1
+	#define PRINTF_UNLIKELY_WARN 2
+	#define PRINTF_LIKELY_WARN 3
+	#define PRINTF_STATUS 4
+	#define PRINTF_DEBUG 5
+	#define PRINTF_SPAM 6
 	#define NEW_NULLPTR_ERROR "ERROR: Couldn't allocate data\n"
 	#include "../math/math_main.h"
 	#include  "../main.h"
@@ -79,7 +79,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	#define FUNCTION_NO_CHECK_FOR_ANY_NULLPTR 12
 	extern int_ argc_;
 	extern char** argv_;
-	extern void update_progress_bar(long double);
+	extern void update_progress_bar(long double, std::string);
 	extern bool once_per_second;
 	extern void once_per_second_update();
 	extern std::string wrap(char *start, std::string data, char *end);
@@ -87,7 +87,7 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern int_ util_shell(int_, std::string);
 	extern void ms_sleep(long double);
 	extern uint_ gen_rand(uint_ a = 0);
-	extern std::string gen_binary(array_id_t);
+	extern std::string gen_binary(array_id_t, int size);
 	extern int_ term_if_true(bool, char*);
 	extern int_ warn_if_true(bool, char*);
 	extern bool probably_equal(int_,int_);
@@ -110,4 +110,6 @@ along with Czech_mate.  If not, see <http://www.gnu.org/licenses/>.
 	extern long double get_last_time();
 	extern void misc_init();
 	extern void throw_if_nullptr(void* tmp);
+	extern void run_function_with_lock(void*, lock_t*);
+	extern void last_thing_to_execute();
 #endif

@@ -10,7 +10,7 @@ input_t *input = nullptr;
 
 void input_init(){
 	loop_add(server_loop_code, loop_generate_entry(0, "input_engine", input_engine));
-	input = new input_t(argc_, argv_); // there is no keyboard_map needed
+	input = new input_t(); // there is no keyboard_map needed
 }
 
 void input_close(){

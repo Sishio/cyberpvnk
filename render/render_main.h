@@ -35,7 +35,9 @@ public:
 	std::string get_filename();
 	std::string get_image_string();
 	SDL_Surface *get_surface();
+	void del_surface();
 	SDL_Texture *get_texture();
+	void del_texture();
 };
 #define TILE_ANIMATION_SIZE 8
 struct tile_t{
@@ -57,7 +59,7 @@ class render_t{
 public:
 	array_t array;
 	std::vector<array_id_t> screen;
-	render_t(int_, char**);
+	render_t();
 	~render_t();
 	void loop();
 	screen_t *get_current_screen();

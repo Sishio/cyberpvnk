@@ -16,7 +16,7 @@
 #define WORKING_STACK_SIZE 32
 #define CONDITION_STACK_ENTRY WORKING_STACK_SIZE-1
 
-static std::thread console_thread;
+static std::thread *console_thread = nullptr;
 static std::string line;
 static std::string in_stack[STACK_SIZE];
 static std::string out_stack[STACK_SIZE];
@@ -49,21 +49,8 @@ void convert_line_to_commands(std::string command_, std::string *command){
 	}
 }
 
-
-struct shell_script_t{
-public:
-	bool running;
-	shell_script_t();
-	~shell_script_t();
-	array_t array;
-	std::vector<std::string> commands; // convert this to the commands when it is used to simplify editing
-	std::string name;
-	int_ run();
-};
-
 shell_script_t::shell_script_t() : array(this, "shell_script_t", ARRAY_SETTING_IMMUNITY){
 	array.string_array.push_back(std::make_pair(&name, "name"));
-	running = false;
 }
 
 int run_command(std::string*);
@@ -129,15 +116,10 @@ static uint_ run_conditional_statement(std::vector<std::string> *pointer_to_vect
 
 int_ shell_script_t::run(){
 	int_ retval = 0;
-	bool running_ = running;
-	if(running_){
-		printf_("WARNING: Recursion is happening, BE CAREFUL\n", PRINTF_UNLIKELY_WARN);
-		recursion_count++;
-	}
+	recursion_count++;
 	if(recursion_count > MAX_RECURSION_COUNT){
 		printf_("ERROR: The MAX_RECURSION_COUNT has been reached, aborting this script to prevent a crash\n", PRINTF_ERROR);
 	}else{
-		running = true;
 		printf_("SPAM: shell_script_t::run: Starting a shell script\n", PRINTF_SPAM);
 		int_ level_of_statements = 0;
 		for(uint_ i = 0;i < commands.size();i++){
@@ -155,39 +137,21 @@ int_ shell_script_t::run(){
 				}else{
 					printf_("SPAM: shell_script_t::run: run_command ran successfully\n", PRINTF_SPAM);
 				}
-				}
+			}
 		}
 	}
-	running = false;
-	if(running_){
-		recursion_count--;
-	}
+	recursion_count--;
 	return 0;
 }
 
 shell_script_t::~shell_script_t(){}
-
-struct function_t{
-public:
-	std::string name;
-	void* function;
-	array_t array;
-	function_t(void*, std::string, int_);
-	~function_t();
-	bool functions_equal(void *a){return a == function;}
-	std::string get_name();
-	int_ run();
-	int_ settings;
-	int_ int_value[8];
-	void * void_ptr_value[8];
-	std::string string_value[8];
-};
 
 function_t::function_t(void* function_, std::string name_, int_ settings_) : array(this, "function_t", ARRAY_SETTING_IMMUNITY){
 	array.data_type = "function_t";
 	function = function_;
 	name = name_;
 	settings = settings_;
+	array.string_array.push_back(std::make_pair(&return_value, "function return value"));
 	array.string_array.push_back(std::make_pair(&name, "function name"));
 	for(uint_ i = 0;i < 8;i++){
 		int_value[i] = DEFAULT_INT_VALUE;
@@ -224,14 +188,15 @@ int_ function_t::run(){
 		return 0;
 	}else if((settings & FUNCTION_RETURN_INT_) != 0){
 		if((settings & FUNCTION_PARAMETER_INT_) != 0){
-			return ((int_(*)(int_))function)(int_value[0]);
+			return_value = std::to_string(((int_(*)(int_))function)(int_value[0]));
 		}else if((settings & FUNCTION_PARAMETER_VOID) != 0){
-			return ((int_(*)(void))function)();
+			return_value = std::to_string(((int_(*)(void))function)());
 		}else if((settings & FUNCTION_PARAMETER_VOID_PTR) != 0){
-			return ((int_(*)(void*))function)(void_ptr_value[0]);
+			return_value = std::to_string(((int_(*)(void*))function)(void_ptr_value[0]));
 		}else if((settings & FUNCTION_PARAMETER_STRING) != 0){
-			return ((int_(*)(std::string))function)(string_value[0]);
+			return_value = std::to_string(((int_(*)(std::string))function)(string_value[0]));
 		}else return -1;
+		return 0;
 	}else return -1;
 }
 
@@ -285,6 +250,10 @@ static void *last_used_pointer = nullptr;
 #define INVALID_OBJECT_ERROR		"An error was reported: the object you requested doesn't exist\n"
 #define NOT_IMPLEMENTED_ERROR		"An error was reported: the command you have given has not been implemented yet\n"
 
+int_ check_if_id_exists(array_id_t id){
+	return find_array_pointer(id) != nullptr;
+}
+
 void load_shell_script(std::string data_){
 	std::ifstream script_fd(data_);
 	if(script_fd.is_open()){
@@ -294,6 +263,7 @@ void load_shell_script(std::string data_){
 		while(std::getline(script_fd, data)){
 			tmp->commands.push_back(data);
 		}
+		script_fd.close();
 	}else{
 		printf_("ERROR: load_shell_script: couldn't open '" + data_ + "'\n", PRINTF_ERROR);
 	}
@@ -308,16 +278,17 @@ static void load_all_shell_scripts(){
 		printf_("ERROR: load_shell_scripts: couldn't open script_list\n", PRINTF_ERROR);
 		return;
 	}
-	std::string data_;
+	std::string data_ = "";
 	while(std::getline(in, data_)){
 		load_shell_script(data_);
 	}
+	in.close();
 }
 
 void console_init(){
-	console_thread = std::thread(console_engine);
+	console_thread = new std::thread(console_engine);
+	new function_t((void*)check_if_id_exists, "check_if_id_exists", FUNCTION_RETURN_INT_ | FUNCTION_PARAMETER_INT_);
 	load_all_shell_scripts();
-	new function_t((void*)load_shell_script, "load shell script", FUNCTION_RETURN_VOID | FUNCTION_PARAMETER_STRING);
 }
 
 void console_engine(){
@@ -327,16 +298,21 @@ void console_engine(){
 		getline(std::cin, command[0]);
 		convert_line_to_commands(command[0], command);
 		long double start_time = get_time();
-		if(run_command(command) == 0){
+		int_ run_command_retval = run_command(command);
+		if(run_command_retval == 0){
 			std::cout << "run_command finished in " << get_time()-start_time << "s" << std::endl;
+		}else if(run_command_retval == 1){
+			return;
 		}else{
 			std::cout << "run_command failed" << std::endl;
 		}
-		blank_commands(command);
 	}
 }
 
 void console_close(){
+	console_thread->join();
+	delete console_thread;
+	console_thread = nullptr;
 }
 
 std::string string_to_decimal_string(std::string a){
@@ -692,24 +668,42 @@ int run_command(std::string* command){
 		}
 	}else if(command[0] == "test"){
 		if(command[1] == "net"){
-			std::vector<array_id_t> net_vector = all_ids_of_type("net_t");
-			net_t *net = nullptr;
-			if(net_vector.size() != 0 && (net = (net_t*)find_pointer(net_vector[0])) != nullptr){
-				net_ip_connection_info_t *tmp = new net_ip_connection_info_t;
-				tmp->ip = "127.0.0.1";
-				tmp->port = NET_IP_SERVER_RECEIVE_PORT;
-				net->write("temp", 0, tmp->array.id);
-				for(int i = 0;i < 8;i++) net->loop();
-				std::string read = net->read();
+			net_t *net_ = new net_t; // should automatically use whatever was set in the argv (the IP engine)
+			net_ip_connection_info_t *inbound_info = new net_ip_connection_info_t;
+			inbound_info->ip = "127.0.0.1";
+			inbound_info->port = 50005;
+			net_->set_inbound_info(inbound_info->array.id);
+			net_ip_connection_info_t *tmp = new net_ip_connection_info_t;
+			tmp->ip = "127.0.0.1";
+			tmp->port = 50005; // this net operates on a different port, so there should be no conflict (except with the outbound port 0, but that just means any port can be selected)
+			net_->write("temp", 0, tmp->array.id);
+			for(int i = 0;i < 5000;i++){
+				update_progress_bar(i/5000.0, "net test");
+				net_->loop();
+				std::string read = net_->read("temp");
 				if(read == "temp"){
 					std::cout << "Test was successful with four bytes" << std::endl;
-				}else{
+					break;
+				}else if(read != ""){
 					std::cout << "Test failed. Received '" << read << "'" << std::endl;
 				}
-				delete tmp;
-				tmp = nullptr;
-			}else{
-				return -1;
+				ms_sleep(1);
+			}
+			update_progress_bar(1, "net test");
+			delete net_;
+			net_ = nullptr;
+			delete tmp;
+			tmp = nullptr;
+			delete inbound_info;
+			inbound_info = nullptr;
+		}else if(command[2] == "server_connection"){
+			try{
+				server_time_t *time_ = (server_time_t*)find_pointer(all_ids_of_type("server_time_t")[0]);
+				throw_if_nullptr(time_);
+				printf_("server_time_t->get_timestamp() returned " + std::to_string(time_->get_timestamp()) + "\n", PRINTF_SCRIPT);
+				printf_("time(NULL) returned " + std::to_string(time(NULL)) + "\n", PRINTF_SCRIPT);
+			}catch(std::logic_error &e){
+				printf_("There is no server connection\n", PRINTF_SCRIPT);
 			}
 		}else{
 			return -1;
@@ -754,6 +748,7 @@ int run_command(std::string* command){
 		}catch(std::invalid_argument& e){}
 	}else if(command[0] == "quit"){
 		set_signal(SIGTERM, true);
+		return 1;
 	}else if(command[0] == "abort"){
 		assert(false);
 	}else if(command[0] == "if"){

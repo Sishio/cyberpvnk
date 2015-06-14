@@ -62,32 +62,34 @@ void ms_sleep(long double ms_){
 #define G_RANDOM 1
 //#define CPP11_RANDOM
 //#define LINUX_RAND
+#ifdef __linux
+//	#define LINUX_RAND
+#elif
+//	#define CPP11_RANDOM
+#endif
 
 #ifdef LINUX_RAND
 std::ifstream random_stream("/dev/random");
-/*
-I should be able to change the amount of entropy the kernel has, right?
-*/
 #endif
 
 uint_ gen_seed(){
 	std::ifstream random_stream("/dev/random");
-	uint_ retval = 0;
-	char retval_[8];
-	random_stream.get(retval_, 8);
-	for(uint_ i = 0;i < 8;i++){
-		retval |= (retval_[i] << 8*i);
+	uint_ retval = 1;
+	char retval_[8] = {0};
+	random_stream.get((char*)retval_, 8); // I'm imress
+	random_stream.close();
+	for(int i = 0;i < 8;i++){
+		retval *= retval_[i] | 1; // Cannot be zero (+1 on CHAR_MAX is undefined)
 	}
 	std::cout << "Random: " << retval << std::endl;
-	std::cout << "Random binary: " << gen_binary(retval) << std::endl;
-	random_stream.close();
+	std::cout << "Random binary: " << gen_binary(retval, sizeof(uint_)) << std::endl;
 	return retval | 1;
 }
 
 uint_ r = gen_seed();
 
 uint_ gen_rand(uint_ a){ // range, from 1 to a
-	#ifdef CPP11_RANDOM
+	#if defined(CPP11_RANDOM)
 		std::random_device rd;
 		std::mt19937 gen(rd());
 		std::uniform_int_distribution<> cpp11_random(1, ~((uint_)0));
@@ -98,13 +100,12 @@ uint_ gen_rand(uint_ a){ // range, from 1 to a
 		r = (r >> 1) | (r << 31) | 1;
 		return r;
 	#elif defined(LINUX_RAND)
-		uint_ retval = 0;
+		uint_ retval = 1;
 		char retval_[8];
 		random_stream.get(retval_, 8);
 		for(uint_ i = 0;i < 8;i++){
-			retval |= (retval_[i] << 8*i);
+			retval *= retval_[i] | 1;
 		}
-		std::cout << "Random: " << retval << std::endl;
 		return retval | 1;
 	#endif
 }
@@ -210,10 +211,9 @@ void sanatize_input(std::string *tmp){
 	}
 }
 
-void update_progress_bar(long double percent_complete){
+void update_progress_bar(long double percent_complete, std::string name){
 	const uint_ maximum_size_of_bar = 20;
-	const uint_ number_of_item = percent_complete/(100/maximum_size_of_bar);
-	printf("\r");
+	const uint_ number_of_item = percent_complete*maximum_size_of_bar;
 	std::string output = "[";
 	for(uint i = 0;i < maximum_size_of_bar;i++){
 		if(i <= number_of_item){
@@ -226,7 +226,11 @@ void update_progress_bar(long double percent_complete){
 		output[output.size()-1] = '>';
 	}
 	output += "]";
-	printf("%s %Lf %%", output.c_str(), percent_complete);
+	std::string suffix;
+	if(percent_complete == 1){
+		suffix = "\n";
+	}
+	printf_(name + " " + output + " " + std::to_string(percent_complete*100) + "%" + suffix, PRINTF_FORCE_PRINT);
 }
 
 void positive_to_negative_trick(unsigned char** tmp_char, int_ size){
@@ -266,10 +270,10 @@ bool valid_int(int_ a){
 	return a != DEFAULT_INT_VALUE;
 }
 
-std::string gen_binary(array_id_t a){
+std::string gen_binary(array_id_t a, int size){
 	std::string return_;
-	for(uint_ i = 0;i <= 32;i++){
-		return_ += (CHECK_BIT(a, i) == 1) ? "1" : "0";
+	for(int i = 0;i < size*8;i++){
+		return_ += (CHECK_BIT(a, i)) ? "1" : "0";
 	}
 	return return_;
 }
@@ -285,13 +289,13 @@ array_id_t scramble_id(array_id_t id){
 int_ print_level = -1;
 int_ abort_print_level = -1;
 
+std::thread *print_thread = nullptr;
+
 int_ printf_(std::string data_to_print, int_ status){
-	assert(print_level != -1);
-	if(status <= print_level || print_level == PRINTF_FORCE_PRINT){
-		std::cout << "\r" << data_to_print;
-	}
-	if(status != PRINTF_SCRIPT){
-		std::cout << "]";
+	if(status-print_level <= 0 || status == PRINTF_FORCE_PRINT){
+		printf("\r%s]", data_to_print.c_str());
+	}else if(status == PRINTF_SCRIPT){
+		printf("\r%s", data_to_print.c_str());
 	}
 	assert(status > abort_print_level);
 	return 0;
@@ -359,4 +363,16 @@ void throw_if_nullptr(void* a){
 	if(a == nullptr){
 		throw std::logic_error("nullptr");
 	}
+}
+void run_function_with_lock(void *a, lock_t *lock){
+	lock->lock();
+	void(*b)() = (void(*)())a;
+	b();
+	lock->unlock();
+}
+
+void last_thing_to_execute(){
+	printf("\n"); // so the console and the following command line aren't on the same line
+	// maybe print statistics about the runtine here?
+	// That would be hard since ALL data has been deleted
 }
